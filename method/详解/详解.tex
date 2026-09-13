@@ -1,0 +1,155 @@
+% !TEX program = xelatex
+% =====================================================================
+%  A 题 药材烘干 建模详解：数学推导与代码解释
+%  面向零基础读者，每一步都展开，不跳步
+%  编译：xelatex 详解.tex  （连续两遍，第二遍用于生成目录与页码）
+% =====================================================================
+\documentclass[12pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+
+\geometry{left=2.4cm,right=2.4cm,top=2.6cm,bottom=2.6cm}
+\linespread{1.32}
+\setlength{\parskip}{4pt}
+\captionsetup{font=small,labelfont=bf}
+
+\graphicspath{{fig/}}
+
+% 等宽字体换成 Consolas：它同时具备希腊字母，
+% 代码清单里的中文注释含 xi 与 theta 这类符号，默认等宽字体缺这些字形。
+\setmonofont{Consolas}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  columns=flexible,
+  keepspaces=true,
+  frame=single,
+  framexleftmargin=2pt,
+  xleftmargin=8pt,
+  showstringspaces=false,
+  commentstyle=\color{black!55},
+  keywordstyle=\bfseries,
+  extendedchars=true,
+}
+
+% 要点提示：不带参数，其后正文自动接在后面
+\newcommand{\keypoint}{\par\medskip\noindent
+  \rule{\linewidth}{0.7pt}\par\nobreak\vspace{3pt}\nobreak
+  \noindent\textbf{这一节要记住的}\quad\ignorespaces}
+
+\newcommand{\why}[1]{\par\medskip\noindent\textbf{为什么要这样做：}#1\par\medskip}
+
+% 分步推导框：\begin{stepbox}{步号}{这一步做什么} ... \end{stepbox}
+% 用上下两条细线包住，可以跨页断开，长推导不会挤在一页上。
+\newenvironment{stepbox}[2]{%
+  \par\medskip\noindent\rule{\linewidth}{0.4pt}\par\nobreak
+  \vspace{3pt}\nobreak
+  \noindent\textbf{第 #1 步\quad #2}\par\nobreak
+  \vspace{3pt}\nobreak
+}{%
+  \par\vspace{3pt}\noindent\rule{\linewidth}{0.4pt}\par\medskip
+}
+
+\title{\bfseries 药材烘干问题的数学推导与代码解释\\[4pt]
+\large 写给完全没有基础的读者}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\vspace{1em}
+\noindent
+这份文档的目标是让一个没有学过偏微分方程、没有写过科学计算程序的人，
+也能完整看懂 2026 年 A 题药材烘干问题的建模过程与程序实现。
+全文分成五个部分，先后关系如下。
+
+\begin{center}
+\begin{tabular}{@{}clp{8.6cm}@{}}
+\toprule
+部分 & 标题 & 内容 \\
+\midrule
+第一部分 & 数学与物理基础 & 偏导数、守恒、微分方程、边界条件，以及从物理规律推出控制方程的全过程 \\
+第二部分 & 数值方法原理 & 为什么算不出来、坐标变换、谱方法、时间推进、烘干时间的判定、收缩的处理 \\
+第三部分 & 代码逐行解释 & 主求解器、参数文件、闭式解、驱动脚本，每一段代码在做什么 \\
+第四部分 & 如何确认结果正确 & 用解析解、网格加密、多种方法互相验证 \\
+第五部分 & 其余程序逐行解释 & 两套对照格式、结果表格的生成、插图的生成，以及整条产出链 \\
+第六部分 & 问题一闭式解完整推导 & 齐次化、准静态分解、特征值问题、正交展开，从头推到尾 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+阅读建议：如果时间紧，可以只读第一部分第一到第三章、第二部分第五章和第六章，
+再读第三部分，这样能抓住主干。如果每一个符号都想弄懂，就按顺序读。
+
+\vspace{4pt}
+\noindent
+文档里有七张插图，全部由配套程序的同一套数据算出，可以用
+\texttt{python figs.py} 重新生成。插图分别是：控制体几何、两个场的剖面演化、
+坐标变换的几何意义、切比雪夫节点的来源、干燥曲线与终点放大、
+通量形式的谱配置、两种离散方式的收敛对比。
+
+\vspace{4pt}
+\noindent
+文档里出现的每一个数值都来自配套代码的实际运行结果，原始输出保存在
+\texttt{代码/复跑报告.txt}。如果某个数字与你自己运行的结果不一致，
+请以你的运行为准，并检查是否改动过参数。
+
+\vspace{8pt}
+\noindent\textbf{七个关键答案一览。}
+下面这张表把全题的关键答案集中列出。
+第三列是保留四位小数之前的完整数值，第四列是按题目要求保留四位小数的结果，
+第五列说明这个数在正文哪一部分被推导出来。
+
+\begin{center}
+\small
+\begin{tabular}{@{}lllll@{}}
+\toprule
+题目 & 量 & 完整数值 & 四位小数 & 推导出处 \\
+\midrule
+问题 1 & 中心温度 $T(0,1800)$ / $^\circ$C & $34.0424989153$ & $34.0425$ & 第六部分 \\
+问题 1 & 表面温度 $T(R_0,1800)$ / $^\circ$C & $37.1989219992$ & $37.1989$ & 第六部分 \\
+问题 1 & 表面含水 $C(R_0,1800)$ / (kg/kg) & $1.51091810$ & $1.5109$ & 第二部分 \\
+问题 2 & 中心温度 $T(0,3\,\mathrm{h})$ / $^\circ$C & $49.905089$ & $49.9051$ & 第二部分 \\
+问题 2 & 中心含水 $C(0,3\,\mathrm{h})$ / (kg/kg) & $1.767275$ & $1.7673$ & 第二部分 \\
+问题 2 & 表面含水 $C(R_0,3\,\mathrm{h})$ / (kg/kg) & $1.008288$ & $1.0083$ & 第二部分 \\
+问题 3 & 烘干时长 / s & $205574.519$ & $205574.5$ & 第二部分 \\
+问题 4 & 烘干时长 / s & $182778.281$ & $182778.3$ & 第二部分 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+问题 3 的 $205574.5$ 秒等于 $57.1040$ 小时，
+问题 4 的 $182778.3$ 秒等于 $50.7717$ 小时。
+问题 4 的答案依赖于附件 2 给出的半径收缩数据，
+收缩使扩散长度平方降到 $(R/R_0)^2=0.36$，
+这是它比问题 3 明显更快的主要原因。
+
+\newpage
+\tableofcontents
+\newpage
+
+\input{part1}
+\input{part2}
+\input{part3}
+\input{part4}
+\input{part5}
+\input{part6}
+
+\end{document}

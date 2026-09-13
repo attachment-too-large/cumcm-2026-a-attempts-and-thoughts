@@ -1,0 +1,396 @@
+% =============================================================================
+% 文件: sections/s5_model.tex   第五章 模型建立
+% =============================================================================
+\section{模型建立}
+
+\subsection{几何与坐标系}
+
+药材简化为半径 $R(t)$、长 $L=0.25\ \mathrm{m}$ 的圆柱，
+$L/(2\Rzero)=6.25\gg1$，忽略端面效应。取柱坐标 $(r,\theta,z)$，
+由轴对称与轴向均匀性，场量只依赖 $r$ 与 $t$：
+
+\begin{equation}
+T=T(r,t),\qquad C=C(r,t),\qquad 0\le r\le R(t),\quad t\ge0 .
+\end{equation}
+
+问题 1$\sim$3 中 $R(t)\equiv\Rzero$；问题 4 中 $R(t)$ 由附件 2 给出。
+
+\subsection{传质方程}
+
+取干基含水率 $C=\text{水的质量}/\text{干物质的质量}$。题目给出的
+$D$ 与 $h_m$ 均按“含水率变量的有效扩散/对流系数”定义，故采用标准的
+有效含水率 Fick 方程。这里不再把湿物料密度换算成质量通量；若改用绝对水分
+质量浓度，必须同时重新标定 $D$、$h_m$ 及边界驱动力。
+
+\begin{equation}
+\frac{\partial C}{\partial t}
+=\frac{1}{r}\frac{\partial}{\partial r}\left(rD(C,T)\frac{\partial C}{\partial r}\right),
+\label{eq:mass}
+\end{equation}
+
+其中 $D$ 为由附录 2/3/4 给出的有效水分扩散系数。因 $C$ 为无量纲
+含水率，左边量纲为 $\mathrm{s^{-1}}$；右边的 $r$ 与 $1/r$、两次
+径向微分的长度量纲相消，仅保留 $D$ 的 $\mathrm{m^2/s}$ 与二阶空间
+微分的 $\mathrm{m^{-2}}$，同样为 $\mathrm{s^{-1}}$。
+
+\subsection{传热方程}
+
+在同样的材料微元上写能量守恒，忽略黏性耗散与辐射，得到
+
+\begin{equation}
+\rho(C)c_p(C)\frac{\partial T}{\partial t}
+=\frac{1}{r}\frac{\partial}{\partial r}\left(rk(C)\frac{\partial T}{\partial r}\right),
+\label{eq:heat}
+\end{equation}
+
+其中 $\rho c_p\,\partial T/\partial t$ 的量纲为
+$[\mathrm{kg\,m^{-3}}][\mathrm{J\,kg^{-1}K^{-1}}][\mathrm{K\,s^{-1}}]
+=[\mathrm{W\,m^{-3}}]$，与右边（导热项）一致。
+式 \eqref{eq:mass}、\eqref{eq:heat} 通过
+$D(C,T)$、$\rho(C)$、$c_p(C)$、$k(C)$ 双向耦合：温度决定扩散快慢，
+含水率决定热物性。
+
+\subsection{边界条件与初始条件}
+
+\paragraph{中心对称条件}。$r=0$ 处由轴对称性可知径向通量为零：
+
+\begin{equation}
+\left.\frac{\partial T}{\partial r}\right|_{r=0}=0,\qquad
+\left.\frac{\partial C}{\partial r}\right|_{r=0}=0 .
+\end{equation}
+
+\paragraph{表面第三类（对流）条件}。表面与空气之间以对流方式交换热量与水分：
+
+\begin{equation}
+-k\left.\frac{\partial T}{\partial r}\right|_{r=R}=h\left(\Tair-\Ts\right),
+\qquad
+-D\left.\frac{\partial C}{\partial r}\right|_{r=R}=h_m\left(\Cs-\Cair\right),
+\label{eq:robin}
+\end{equation}
+
+$h=25\ \mathrm{W/(m^2\,K)}$、$h_m=8\times10^{-7}\ \mathrm{m/s}$。
+\textbf{符号自检（代表性正温差）}：取一个仅用于检查符号的组合，把式
+\eqref{eq:robin} 的第一个条件代入
+$\Tair=50\ ^\circ\mathrm{C}$、$\Ts=28\ ^\circ\mathrm{C}$，
+左端为 $-k\partial T/\partial r=25\times(50-28)=550\ \mathrm{W/m^2}>0$。
+由于 $\partial T/\partial r$ 是沿半径向外方向的温度梯度，
+$-k\partial T/\partial r>0$ 表示热量沿外法向流入药材，
+与环境比药材热的事实一致；若把符号写反，则模型会从 28 $^\circ$C 自发降温，
+与附件 1 的升温数据直接矛盾。传质条件同理：表面含水率高于空气时
+$\Cs-\Cair>0$，通量为正表示水分向外逸出。
+
+\paragraph{初始条件}。
+
+\begin{equation}
+T(r,0)=28\ ^\circ\mathrm{C},\qquad C(r,0)=2.55\ \mathrm{kg/kg},\qquad 0\le r\le R(0).
+\end{equation}
+
+\subsection{物性经验关系与量纲检查}
+
+三组物性分别用于不同问题（表 \ref{tab:props}）。所有含温度的公式内部
+统一把 $T$ 换算为热力学温度 $T_{\mathrm{K}}=T+273.15$。
+
+\begin{table}[H]
+\centering
+\caption{三组物性经验关系与来源}\label{tab:props}
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+问题 & 密度 $\rho$ / (kg/m$^3$) & 比热 $c_p$ / (J/(kg$\cdot$K)) & 导热 $k$ / (W/(m$\cdot$K)) \\
+\midrule
+问题 1（附录 2） & $820$ & $2600$ & $0.36$ \\
+问题 2、3（附录 3） & $650+128C$ & $1450+2736\dfrac{C}{C+1}$ & $0.21+0.38\dfrac{C}{C+1}$ \\
+问题 4（附录 4） & $760+90C$ & $1850+2150\dfrac{C}{C+1}$ & $0.12+0.20\dfrac{C}{C+1}$ \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+\begin{tabular}{@{}ll@{}}
+\toprule
+问题 & 水分扩散系数 $D$ / (m$^2$/s) \\
+\midrule
+问题 1（附录 2） & $D=7\times10^{-9}\mathrm{e}^{-0.89/C}$ \\
+问题 2、3（附录 3） & $D=2.4\times10^{-3}\mathrm{e}^{-0.45/C}\mathrm{e}^{-3850/T}$，$T$ 取 K \\
+问题 4（附录 4） & $D=4.2\times10^{-4}\mathrm{e}^{-0.30/C}\mathrm{e}^{-3850/T}$，$T$ 取 K \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{关于指数形式的说明}。附录 2--4 的原式均为
+$\mathrm{e}^{-a/C}$，本文按题面原式实现。对 $C>0$，含水率降低时该因子降低；
+且 $C\to0$ 时 $D\to0$，不会发散。程序中的 $C$ 下限只用于避免指数下溢，
+不改变终点 $C=0.15$ 附近的计算。若误把分式改为 $\mathrm{e}^{-aC}$，
+会改变题目给定经验关系，必须另行标注为替代模型。
+$\mathrm{e}^{-3850/T}$ 中的 $T$ 必须用 K：$T=301\ \mathrm{K}$ 时为
+$2.79\times10^{-6}$，$T=323\ \mathrm{K}$ 时为 $6.66\times10^{-6}$；
+若误用摄氏度代入则指数为 $\mathrm{e}^{-3850/50}=10^{-34}$，
+$D$ 将小到任何现实的干燥过程都不可能发生。
+
+\paragraph{物性取值范围}。由表 \ref{tab:props} 的公式计算，
+$\rho\in[669.2,976.4]\ \mathrm{kg/m^3}$、$c_p\in[1806.9,3415.3]\ \mathrm{J/(kg\,K)}$、
+$k\in[0.2596,0.4830]\ \mathrm{W/(m\,K)}$（以上为附录 3 在
+$C\in[0.15,2.55]$ 的区间）。附录 3 的 $D$ 在 $C=2.55$、$T=50\ ^\circ\mathrm{C}$
+时为 $1.35\times10^{-8}\ \mathrm{m^2/s}$；在 $C=0.15$、$T=28\ ^\circ\mathrm{C}$
+时降至 $3.35\times10^{-10}\ \mathrm{m^2/s}$，均落在农产食品热风干燥有效水分扩散系数的
+文献区间（$\sim10^{-11}\sim10^{-8}\ \mathrm{m^2/s}$）之内。
+附录 2 的 $D$ 在 $C=2.55$ 时为 $4.93\times10^{-9}\ \mathrm{m^2/s}$，
+与附录 3 同量级，说明两组公式在物理上可比。
+
+\paragraph{无量纲数}。取 $R=\Rzero$、$T=50\ ^\circ\mathrm{C}$、$C=1.0$：
+$\mathrm{Bi}_h=hR/k=1.25$（导热与表面对流阻力同量级，
+属于“混合控制”），$\mathrm{Bi}_m=h_mR/D=1.56$（传质同样由内外阻力共同控制）。
+传质特征时间 $R^2/D\approx10.8\ \mathrm{h}$，传热特征时间
+$R^2/\alpha\approx0.61\ \mathrm{h}$，两者相差近 18 倍。该尺度比较说明：
+在恒温阶段经过若干个传热时标后，温度场可近似跟随环境；但附件 1 的前
+$4\ \mathrm{h}$ 环境仍在升温，因此预热阶段仍按瞬态方程计算，不直接使用准稳态近似。
+
+\subsection{环境边界条件}
+
+\paragraph{预热平衡阶段（$t\le14400\ \mathrm{s}$）}。
+对附件 1 的两列数据分别做分段线性插值，逐点使用实测值，不引入拟合误差：
+
+\begin{equation}
+\Tair(t)=(1-\theta)T_i+\theta T_{i+1},\quad
+\Cair(t)=(1-\theta)C_i+\theta C_{i+1},\quad
+\theta=\frac{t-t_i}{t_{i+1}-t_i},\quad t_i\le t\le t_{i+1}.
+\end{equation}
+
+\paragraph{恒温干燥阶段（$t>14400\ \mathrm{s}$）}。
+附件 1 只覆盖前 $4\ \mathrm{h}$，而干燥过程长达 $2\sim3$ 天，
+因此必须补充一个平台假设：
+
+\begin{equation}
+\Tair(t)=\bar T_{\mathrm{tail}}=\frac{1}{n}\sum_{k=1}^{n}T_{N-k+1}=49.9957\ ^\circ\mathrm{C},\qquad
+\Cair(t)=\bar C_{\mathrm{tail}}=0.049991,
+\end{equation}
+
+其中 $n=60$ 对应末段 $3600\ \mathrm{s}$。该取值是\textbf{工艺假设}，
+在 7.5 节中以五种口径做灵敏度分析。作为对照，按代码实际的一阶指数拟合
+得到 $(T_\infty,C_\infty)=(50.1533\ ^\circ\mathrm{C},0.050653)$；它是外推
+口径而非实测值，因此本文不把它作为基准。由于末个实测点与末段均值不完全相同，
+$t=14400\ \mathrm{s}$ 的切换可能产生小的不连续；这属于平台假设的结构不确定性，
+已在 7.5 节用多种平台口径量化，而不是在数据上人为平滑。
+
+\subsection{问题 4：物质坐标下的收缩模型}
+
+\paragraph{坐标变换}。令
+
+\begin{equation}
+\xi=\frac{r}{R(t)},\qquad 0\le\xi\le1 ,
+\end{equation}
+
+把随时间的变动域 $[0,R(t)]$ 映射为固定区间 $[0,1]$。在长度固定、纯径向
+仿射收缩的假设下，每个径向材料点满足 $\xi=\text{const}$。
+
+\paragraph{附加对流项的消去}。记 $f(\xi,t)=C(r,t)$。由链式法则，
+
+\begin{equation}
+\left.\frac{\partial f}{\partial t}\right|_{\xi}
+=\left.\frac{\partial C}{\partial t}\right|_{r}+\frac{\partial C}{\partial r}
+\left.\frac{\partial r}{\partial t}\right|_{\xi}
+=\left.\frac{\partial C}{\partial t}\right|_{r}
++\xi\dot R\frac{\partial C}{\partial r}.
+\end{equation}
+
+另一方面，固定材料点的物质导数为
+
+\begin{equation}
+\frac{\mathrm{D}C}{\mathrm{D}t}
+=\left.\frac{\partial C}{\partial t}\right|_{r}
++\frac{\mathrm{d}r}{\mathrm{d}t}\frac{\partial C}{\partial r}
+=\left.\frac{\partial C}{\partial t}\right|_{r}+\xi\dot R\frac{\partial C}{\partial r}
+=\left.\frac{\partial f}{\partial t}\right|_{\xi},
+\end{equation}
+
+即\textbf{在材料坐标下对时间的偏导数就等于物质导数}，因此描述“随材料点运动的
+含水率变化”的守恒方程 $\mathrm{D}C/\mathrm{D}t=\nabla\cdot(D\nabla C)$
+在 $\xi$ 坐标下不含任何附加对流项，只需把扩散算子改写：
+
+\begin{equation}
+\left.\frac{\partial C}{\partial t}\right|_{\xi}
+=\frac{1}{\xi R(t)^2}\frac{\partial}{\partial\xi}
+\left(\xi D(C,T)\frac{\partial C}{\partial\xi}\right),
+\qquad
+\rho c_p\left.\frac{\partial T}{\partial t}\right|_{\xi}
+=\frac{1}{\xi R(t)^2}\frac{\partial}{\partial\xi}
+\left(\xi k(C)\frac{\partial T}{\partial\xi}\right).
+\label{eq:shrink}
+\end{equation}
+
+\paragraph{边界与初始条件}。中心对称条件不变；表面 $\xi=1$ 处的对流条件
+在物理坐标下仍为式 \eqref{eq:robin}，实现时把
+$\partial/\partial r=(1/R)\partial/\partial\xi$ 代入即可。
+初始条件为 $T=28\ ^\circ\mathrm{C}$、$C=2.55$。
+
+\paragraph{模型定位的声明}。附件 2 的 $R(t)$ 是\textbf{外部实测输入}，
+而 $\rho(C)$ 是经验物性，二者并未通过同一个固体质量守恒方程联立标定
+（定量证据见 7.6 节）。因此问题 4 的结论应表述为
+“\textbf{在给定实测收缩轨迹与经验物性下的预测}”，而不是完整的力学收缩模型。
+
+\subsection{空间离散：节点中心有限体积与半单元表面重构}
+
+\paragraph{网格}。把 $[0,1]$ 划分为 $N$ 个控制体，单元中心与界面分别取
+
+\begin{equation}
+\xi_i=\left(i+\tfrac12\right)\Delta\xi,\quad i=0,\dots,N-1,
+\qquad
+\xi_{i\pm1/2}=\left(i\pm\tfrac12\right)\Delta\xi,\quad
+\Delta\xi=\frac1N ,
+\end{equation}
+
+最后一个单元的\textbf{外界面恰好落在 $\xi=1$}，即真实表面。
+
+\paragraph{控制体积分}。对式 \eqref{eq:shrink} 在单元 $i$ 上以权 $\xi\dd\xi$
+积分（即物理体积分除以 $2\pi R^2$），得
+
+\begin{equation}
+V_i\frac{\dd C_i}{\dd t}
+=\frac{1}{R^2}\Big[\,g_{i-1/2}\left(C_{i-1}-C_i\right)
++g_{i+1/2}\left(C_{i+1}-C_i\right)\Big],
+\qquad
+V_i=\frac{\xi_{i+1/2}^2-\xi_{i-1/2}^2}{2},
+\label{eq:fv}
+\end{equation}
+
+其中\textbf{导流系数}定义为
+
+\begin{equation}
+g_{i+1/2}=\frac{\xi_{i+1/2}\,D_{i+1/2}}{\Delta\xi},\qquad
+D_{i+1/2}=\frac{2D_iD_{i+1}}{D_i+D_{i+1}} .
+\label{eq:harmonic}
+\end{equation}
+
+界面扩散系数取\textbf{调和平均}而不是算术平均：调和平均等价于把两个相邻控制体
+视为串联的扩散阻力，并保证正系数下界面通量守恒。配合隐式 Euler（$\theta=1$）
+的正容量与对角占优结构，离散系统具有 M 矩阵性质；温度方程的结构完全相同，
+只需把 $(C,D)$ 换成 $(T,k)$，并把容量系数 $V_i$ 换成 $\rho_ic_{p,i}V_i$。
+
+\paragraph{容量的正确形式}。式 \eqref{eq:fv} 中\textbf{左端容量系数不含
+$1/R^2$}，通量项整体除以 $R^2$。这一点极易出错：若把容量写成
+$V_i/R^2$，等价于把时间尺度整体放大 $R^2=4\times10^{-4}$ 倍，
+干燥时间会被错算成上千小时。本文在实现中把该因子固化在
+\texttt{\_assemble\_and\_solve} 一处，并用解析解对照做了回归
+（见 7.1 节）。
+
+\paragraph{表面半单元重构}。最后一个单元的未知量 $C_{N-1}$ 位于
+$\xi_{N-1}=1-\Delta\xi/2$，\textbf{它不是表面值}。表面值 $\Cs$ 由
+“半单元扩散阻力与表面膜阻力串联”的稳态关系确定：
+
+\begin{equation}
+\underbrace{\frac{D_{N-1}}{\Delta r/2}\left(C_{N-1}-\Cs\right)}_{\text{半单元内扩散}}
+=\underbrace{h_m\left(\Cs-\Cair\right)}_{\text{表面传质}},
+\qquad \Delta r=R\Delta\xi ,
+\end{equation}
+
+解得
+
+\begin{equation}
+\boxed{\ \Cs=\frac{a\,C_{N-1}+h_m\Cair}{a+h_m},\qquad
+a=\frac{2D_{N-1}}{R\Delta\xi}\ }
+\label{eq:csurf}
+\end{equation}
+
+于是表面通量可写成等效导流形式
+$h_m(\Cs-\Cair)=G_{\mathrm{eff}}(C_{N-1}-\Cair)$，其中
+
+\begin{equation}
+G_{\mathrm{eff}}=\frac{h_m a}{a+h_m},\qquad g_s=R\,G_{\mathrm{eff}} .
+\end{equation}
+
+把 $g_s$ 作为最后一个单元“外界面”的导流系数，即
+$V_{N-1}\dd C_{N-1}/\dd t=\{\cdots-g_s(C_{N-1}-\Cair)\}/R^2$
+的统一写法，可直接并入式 \eqref{eq:fv} 的三对角结构。热边界完全类似，
+把 $(C,D,h_m,\Cair)$ 换成 $(T,k,h,\Tair)$ 即可。
+这一重构正是题面要求“$r=2\ \mathrm{cm}$ 列”与“$2\ \mathrm{cm}$”列取值
+不同的原因：$C_{N-1}$ 与 $\Cs$ 相差 $O(\Delta r)$，
+在 $1800\ \mathrm{s}$ 时约为 $10^{-2}$ 量级（见 7.1 节）。
+
+\subsection{时间离散：隐式 Euler 与固定右端项的 Picard 迭代}
+
+\paragraph{$\theta$ 格式}。在 $t^n\to t^{n+1}$ 上对式 \eqref{eq:fv} 取
+$\theta$ 加权（$\theta=1$ 为隐式 Euler，$\theta=1/2$ 为 Crank--Nicolson）：
+
+\begin{equation}
+\frac{V_i\rho_ic_{p,i}}{\Delta t}\left(T_i^{n+1}-T_i^n\right)
+=\theta\,\mathcal{L}^{n+1}_i(T^{n+1})+(1-\theta)\,\mathcal{L}^{n}_i(T^{n})
+\label{eq:theta}
+\end{equation}
+
+其中 $\mathcal{L}$ 表示式 \eqref{eq:fv} 右端的离散扩散算子。
+
+\paragraph{Picard 迭代}。式 \eqref{eq:theta} 的系数（$\rho,c_p,k,D$）依赖
+待求的 $T^{n+1},C^{n+1}$，因此每个时间步内做不动点迭代：
+
+\begin{enumerate}[leftmargin=2.4em,itemsep=0.2em]
+  \item 取迭代初值 $T^{(0)}=T^n$、$C^{(0)}=C^n$；
+  \item 用上一次迭代值计算全部物性与导流系数；
+  \item 组装并求解关于 $T^{(m+1)}$ 的三对角方程组，再求解关于 $C^{(m+1)}$ 的方程组；
+  \item 检查 $\max\{\|T^{(m+1)}-T^{(m)}\|_\infty/\max(1,\|T^{(m+1)}\|_\infty),
+        \|C^{(m+1)}-C^{(m)}\|_\infty/\max(0.01,\|C^{(m+1)}\|_\infty)\}<\varepsilon$
+        （$\varepsilon=10^{-10}$），
+        满足则接受本时间步，否则继续迭代。
+\end{enumerate}
+
+\paragraph{关键实现细节：右端项必须固定在使用旧时间层。}
+式 \eqref{eq:theta} 右端出现的 $T_i^n$ 与 $\mathcal{L}^n_i(T^n)$ 必须
+\textbf{在进入 Picard 循环之前计算一次并保持冻结}。若在迭代过程中把右端
+改成当前迭代值，会改变所求的离散方程并破坏结果的可复现性。因此本文不把
+未经落盘的“错误版本对照”作为数值证据。
+
+\paragraph{容量系数的取值层次}。由于 $\rho(C)c_p(C)$ 显含随时间变化的 $C$，
+求解温度方程时容量系数应取\textbf{当前迭代的新时间层值} $\rho^{(m)}c_p^{(m)}$，
+而右端的 $T^n$ 与 $\mathcal{L}^n$ 取旧时间层。本文将容量取当前 Picard
+迭代值，是为了与写出的离散控制方程一致；“旧容量必然破坏 M 矩阵并产生
+$52\ ^\circ\mathrm{C}$”并非本文已落盘验证的结论，不作为模型依据。
+
+\subsection{干燥终点判据}
+
+题面要求“药材\textbf{各处}的水分浓度应低于 $0.15\ \mathrm{kg/kg}$”，
+因此终点判据必须是局部最大值而不是截面平均值：
+
+\begin{equation}
+t_{\mathrm{dry}}=\inf\left\{t>0:\ \max_{0\le r\le R(t)}C(r,t)<C_{\mathrm{crit}}\right\},
+\qquad C_{\mathrm{crit}}=0.15 .
+\end{equation}
+
+数值实现：每个时间步记录 $\max_i C_i$（同时包含重构后的表面值 $\Cs$ 以保证
+不漏掉任何位置），当相邻两步的该量跨越 $C_{\mathrm{crit}}$ 时，
+在区间上做线性插值求交点：
+
+\begin{equation}
+t_{\mathrm{dry}}=t^{n}+\frac{M^n-C_{\mathrm{crit}}}{M^n-M^{n+1}}\left(t^{n+1}-t^n\right),
+\qquad M^n=\max_i C_i^n .
+\end{equation}
+
+计算中最大值始终出现在中心附近（表面先干、中心后干），但程序仍对全场搜索最大值，
+不依赖这一先验判断。
+
+\subsection{算法流程与计算量}
+
+\begin{table}[H]
+\centering
+\caption{算法流程}\label{tab:algo}
+\small
+\begin{tabular}{@{}p{1.1cm}p{13.2cm}@{}}
+\toprule
+步骤 & 内容 \\
+\midrule
+1 & 读入附件 1、附件 2，构造环境函数 $\Tair(t),\Cair(t)$ 与半径函数 $R(t)$ \\
+2 & 离散化：生成 $\xi_i,V_i$，预计算插值权重与输出位置映射 \\
+3 & 时间推进：对每个时间步，在 Picard 循环内计算物性 $\to$ 调和平均界面系数
+    $\to$ 组装三对角矩阵（含表面等效导流 $g_s$）$\to$ 求解 $\to$ 收敛判别 \\
+4 & 每个时间步更新 $\max_iC_i,\min_iC_i,\max_iT_i$、总水量与累计表面逸出量，
+    用于守恒性与物理界检验 \\
+5 & 判定 $\max_iC_i<0.15$，插值给出 $t_{\mathrm{dry}}$ 并停止 \\
+6 & 后处理：按题目要求的位置与时刻输出四位小数结果表与 Excel 结果文件 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{计算量}。单个时间步需要求解两个 $N\times N$ 三对角方程组，
+标准 Thomas 算法或 LAPACK 带状求解的复杂度为 $O(N)$；设平均 Picard 迭代
+$m\approx3$ 次，则总计算量为 $O(m\,N\,t_{\mathrm{end}}/\Delta t)$。
+本文基准配置 $N=1600$、$\Delta t=1\ \mathrm{s}$ 时，
+$57\ \mathrm{h}$ 的过程约需 $2\times10^{5}$ 个时间步，
+在普通笔记本上约 5 分钟量级，完全可以在竞赛时间内完成参数扫描与
+灵敏度分析。

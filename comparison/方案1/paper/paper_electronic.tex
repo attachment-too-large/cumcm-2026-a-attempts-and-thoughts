@@ -1,0 +1,87 @@
+% =============================================================================
+% 文件名: paper_electronic.tex
+% 作用  : 电子版论文主文件。按 2026 年格式规范第九、十条, 电子版第一页必须为
+%         摘要专用页, 不得含承诺书与编号专用页, 因此使用 withoutpreface 选项,
+%         并且不调用 \maketitle(该命令在 withoutpreface 下不输出任何标题页)。
+% 编译  : xelatex paper_electronic.tex (连续编译两次以解析交叉引用)
+% =============================================================================
+\documentclass[UTF8,a4paper,12pt,withoutpreface,bwprint]{cumcmthesis}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs,longtable,array,tabularx,multirow}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage{siunitx}
+
+\graphicspath{{figures/}}
+
+% ---- 常用记号 ----
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\Cair}{C_{\mathrm{air}}}
+\newcommand{\Tair}{T_{\mathrm{air}}}
+\newcommand{\Cs}{C_{s}}
+\newcommand{\Ts}{T_{s}}
+\newcommand{\Rzero}{R_{0}}
+\newcommand{\dcell}{\Delta\xi}
+
+% ---- 代码清单样式(中文注释需保证字形完整, 已实测可编译) ----
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  frame=single,
+  framexleftmargin=4pt,
+  showstringspaces=false,
+  keywordstyle=\color{blue!70!black},
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{red!60!black},
+  language=Python,
+}
+
+\captionsetup{font=small}
+\setlength{\parindent}{2em}
+
+% 收紧行距与字号: 2026 年格式规范第八条明确字号/字体/行距不作统一要求,
+% 这里取 11pt + 行距 1.12, 以便正文满足"不超过 30 页"的硬约束;
+% 各级标题字号仍由模板的 \zihao 控制, 不受影响。
+\renewcommand*{\baselinestretch}{1.12}
+\AtBeginDocument{\fontsize{11}{13.2}\selectfont}
+
+\begin{document}
+
+% ============================ 摘要专用页(第 1 页) ============================
+\begin{center}
+  {\zihao{3}\bfseries 基于有限体积法的一维轴对称耦合传热传质模型}\\[0.35em]
+  {\zihao{4}\bfseries ——中药材热风烘干规律与烘干时长预测}
+\end{center}
+
+\vspace{0.4em}
+\input{sections/abstract}
+
+% ================================ 正文 =====================================
+\input{sections/s1_restate}
+\input{sections/s2_analysis}
+\input{sections/s3_assumptions}
+\input{sections/s4_notation}
+\input{sections/s5_model}
+\input{sections/s6_results}
+\input{sections/s7_verification}
+\input{sections/s8_evaluation}
+
+% ============================== 参考文献 ===================================
+\input{sections/refs}
+
+% =============================== 附录 ======================================
+\input{sections/s9_appendix}
+\input{sections/s10_supp_figures}
+
+\end{document}

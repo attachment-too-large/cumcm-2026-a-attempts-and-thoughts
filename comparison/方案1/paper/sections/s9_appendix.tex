@@ -1,0 +1,64 @@
+% =============================================================================
+% 文件: sections/s9_appendix.tex   附录
+% =============================================================================
+\newpage
+\appendix
+\renewcommand{\thesection}{附录\Alph{section}}
+
+\section{支撑材料文件列表}
+
+本论文的支撑材料为一个压缩包，其目录结构与文件清单如下
+（所有源程序均为可直接运行的 Python 3 脚本，不含任何身份信息）。
+
+\begin{center}
+\small
+\begin{longtable}{@{}p{4.5cm}p{9.8cm}@{}}
+\toprule
+文件 / 目录 & 内容说明 \\
+\midrule
+\endfirsthead
+\toprule
+文件 / 目录 & 内容说明 \\
+\midrule
+\endhead
+\texttt{code/drying\_core.py} & 核心物理与数值模块：物性关系、环境与半径历史、有限体积求解器、表面重构、干燥终点判据 \\
+\texttt{code/scenarios.py} & 四个问题的场景配置、结果 Excel 写入、位置换算 \\
+\texttt{code/plotstyle.py} & 论文绘图统一风格（中文字体、分辨率） \\
+\texttt{code/s01\_data\_analysis.py} & 第 2 步：附件数据探索与数据形态图 \\
+\texttt{code/s02\_solve\_p1.py} & 问题 1 求解、表 1/表 2、网格与时间步收敛 \\
+\texttt{code/s03\_solve\_p23.py} & 问题 2、3 求解、表 3/4/5、干燥时间与收敛证据 \\
+\texttt{code/s04\_solve\_p4.py} & 问题 4 求解、表 6、收缩轨迹与半径插值对比 \\
+\texttt{code/s05\_verification.py} & 解析解对照、独立方法互证、守恒检验、干物质守恒、合成数据反演 \\
+\texttt{code/s06\_sensitivity.py} & 单因素扰动、平台口径、含湿量口径、噪声注入、Monte Carlo \\
+\texttt{code/s07\_figures.py} & 论文全部插图的生成脚本 \\
+\texttt{code/s08\_make\_tables.py} & 由结果数据自动生成论文中的 LaTeX 表格 \\
+\texttt{data/input/} & 题目附件 1、附件 2 与结果模板（原始数据，未修改） \\
+\texttt{results/result1.xlsx} & 问题 1 结果：\texttt{温度}、\texttt{水分浓度} 两个工作表，$1\ \mathrm{s}\times0.1\ \mathrm{cm}$ \\
+\texttt{results/result2.xlsx} & 问题 2 结果：\texttt{温度}、\texttt{水分浓度} 两个工作表，$1\ \mathrm{s}\times0.1\ \mathrm{cm}$ \\
+\texttt{results/result3.xlsx} & 问题 3 结果：$60\ \mathrm{s}\times0.1\ \mathrm{cm}$ \\
+\texttt{results/result4.xlsx} & 问题 4 结果：$60\ \mathrm{s}\times0.1\ \mathrm{cm}$，末列为药材表面 \\
+\texttt{data/*.csv} & 论文表格对应的机器可读结果、收敛性、灵敏度与反演数据 \\
+\texttt{data/*.txt} & 各步骤的完整运行摘要（含守恒误差、收敛阶、检验结论） \\
+\texttt{figures/} & 论文全部插图（PNG, 220 dpi） \\
+\texttt{paper/} & 论文 LaTeX 源码、\texttt{cumcmthesis.cls} 模板与编译产物 \\
+\texttt{docs/自检报告.md} & 逐步自检记录（运行结果、遇到的问题与解决方式） \\
+\texttt{docs/参考文献来源.md} & 每篇参考文献的检索渠道、核实结论与支撑论点 \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\noindent 说明：压缩包内所有文件均不含任何显示参赛者身份、学校与赛区的信息。
+
+% 源程序清单由 code/s09_package.py 自动生成, 保证不漏项、与支撑材料一致
+\input{sections/s09_code_listing}
+
+\section{结果数据文件说明}
+
+\texttt{results/} 下的四个 Excel 文件严格按附件 3 模板的字段约定填写：
+每个工作表第 1 行为到药材中心的距离（单位 cm），第 1 列为时间（单位 s），
+其余为对应物理量，全部保留四位小数。问题 \texttt{result1}/\texttt{result2}
+包含 \texttt{温度} 与 \texttt{水分浓度} 两个工作表；
+\texttt{result3}/\texttt{result4} 为单表，只保存水分浓度。
+问题 4 因药材持续收缩，到药材中心的距离超过 $1.1\ \mathrm{cm}$ 后不再位于
+药材内部（末态半径仅 $1.198\ \mathrm{cm}$），故末列统一记为“药材表面”，
+其取值为 $r=R(t)$ 处的半单元重构值。

@@ -1,0 +1,219 @@
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex.fmt)
+ restricted \write18 enabled.
+entering extended mode
+(corrected_report.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(D:\miktex\tex/latex/ctex\ctexart.cls
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+(D:\miktex\tex/latex/ctex/config\ctexbackend.cfg)
+(D:\miktex\tex/latex/l3kernel\expl3.sty
+(D:\miktex\tex/latex/l3backend\l3backend-xetex.def))
+Document Class: ctexart 2026/08/11 v2.6.5 Chinese adapter for class article (CT
+EX)
+(D:\miktex\tex/latex/ctex\ctexhook.sty
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+) (D:\miktex\tex/latex/ctex\ctexpatch.sty
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+) (D:\miktex\tex/latex/base\fix-cm.sty (D:\miktex\tex/latex/base\ts1enc.def))
+(D:\miktex\tex/latex/ctex/config\ctexopts.cfg)
+(D:\miktex\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(D:\miktex\tex/latex/base\size12.clo))
+(D:\miktex\tex/latex/ctex/engine\ctex-engine-xetex.def
+(D:\miktex\tex/xelatex/xecjk\xeCJK.sty
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+(D:\miktex\tex/latex/l3packages/xtemplate\xtemplate.sty)
+(D:\miktex\tex/latex/fontspec\fontspec.sty
+(D:\miktex\tex/latex/l3packages/xparse\xparse.sty)
+(D:\miktex\tex/latex/fontspec\fontspec-xetex.sty
+(D:\miktex\tex/latex/base\fontenc.sty)
+(D:\miktex\tex/latex/fontspec\fontspec.cfg)))
+(D:\miktex\tex/xelatex/xecjk\xeCJK.cfg)))
+(D:\miktex\tex/latex/zhnumber\zhnumber.sty
+(D:\miktex\tex/latex/zhnumber\zhnumber-utf8.cfg))
+(D:\miktex\tex/latex/ctex/scheme\ctex-scheme-chinese-article.def
+(D:\miktex\tex/latex/ctex/config\ctex-name-utf8.cfg))
+(D:\miktex\tex/latex/ctex/fontset\ctex-fontset-windows.def))
+(D:\miktex\tex/latex/ctex/config\ctex.cfg)
+(D:\miktex\tex/latex/geometry\geometry.sty
+(D:\miktex\tex/latex/graphics\keyval.sty)
+(D:\miktex\tex/generic/iftex\ifvtex.sty (D:\miktex\tex/generic/iftex\iftex.sty)
+) (D:\miktex\tex/latex/geometry\geometry.cfg))
+(D:\miktex\tex/latex/hyperref\hyperref.sty
+(D:\miktex\tex/latex/kvsetkeys\kvsetkeys.sty)
+(D:\miktex\tex/generic/kvdefinekeys\kvdefinekeys.sty)
+(D:\miktex\tex/generic/pdfescape\pdfescape.sty
+(D:\miktex\tex/generic/ltxcmds\ltxcmds.sty)
+(D:\miktex\tex/generic/pdftexcmds\pdftexcmds.sty
+(D:\miktex\tex/generic/infwarerr\infwarerr.sty)))
+(D:\miktex\tex/latex/hycolor\hycolor.sty)
+(D:\miktex\tex/latex/hyperref\nameref.sty
+(D:\miktex\tex/latex/refcount\refcount.sty)
+(D:\miktex\tex/generic/gettitlestring\gettitlestring.sty
+(D:\miktex\tex/latex/kvoptions\kvoptions.sty)))
+(D:\miktex\tex/latex/etoolbox\etoolbox.sty)
+(D:\miktex\tex/generic/stringenc\stringenc.sty)
+(D:\miktex\tex/latex/hyperref\pd1enc.def)
+(D:\miktex\tex/generic/intcalc\intcalc.sty)
+(D:\miktex\tex/latex/hyperref\puenc.def) (D:\miktex\tex/latex/url\url.sty)
+(D:\miktex\tex/generic/bitset\bitset.sty
+(D:\miktex\tex/generic/bigintcalc\bigintcalc.sty)))
+(D:\miktex\tex/latex/hyperref\hxetex.def
+(D:\miktex\tex/latex/rerunfilecheck\rerunfilecheck.sty
+(D:\miktex\tex/generic/uniquecounter\uniquecounter.sty)))
+(D:\miktex\tex/latex/amsmath\amsmath.sty
+For additional information on amsmath, use the `?' option.
+(D:\miktex\tex/latex/amsmath\amstext.sty
+(D:\miktex\tex/latex/amsmath\amsgen.sty))
+(D:\miktex\tex/latex/amsmath\amsbsy.sty)
+(D:\miktex\tex/latex/amsmath\amsopn.sty))
+(D:\miktex\tex/latex/amsfonts\amssymb.sty
+(D:\miktex\tex/latex/amsfonts\amsfonts.sty)) (D:\miktex\tex/latex/tools\bm.sty)
+ (D:\miktex\tex/latex/booktabs\booktabs.sty)
+(D:\miktex\tex/latex/tools\array.sty) (D:\miktex\tex/latex/tools\longtable.sty)
+ (D:\miktex\tex/latex/makecell\makecell.sty)
+(D:\miktex\tex/latex/graphics\graphicx.sty
+(D:\miktex\tex/latex/graphics\graphics.sty
+(D:\miktex\tex/latex/graphics\trig.sty)
+(D:\miktex\tex/latex/graphics-cfg\graphics.cfg)
+(D:\miktex\tex/latex/graphics-def\xetex.def)))
+(D:\miktex\tex/latex/listings\listings.sty
+(D:\miktex\tex/latex/listings\lstpatch.sty)
+(D:\miktex\tex/latex/listings\lstmisc.sty)
+(D:\miktex\tex/latex/listings\listings.cfg))
+(D:\miktex\tex/xelatex/xecjk\xeCJK-listings.sty
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+)
+==> First Aid for listings.sty no longer applied!
+    Expected:
+        2024/09/23 1.10c (Carsten Heinz)
+    but found:
+        2025/11/14 1.11b (Carsten Heinz)
+    so I'm assuming it got fixed.
+(D:\miktex\tex/latex/xcolor\xcolor.sty
+(D:\miktex\tex/latex/graphics-cfg\color.cfg)
+(D:\miktex\tex/latex/graphics\mathcolor.ltx))
+(D:\miktex\tex/latex/caption\caption.sty
+(D:\miktex\tex/latex/caption\caption3.sty)
+(D:\miktex\tex/latex/caption\ltcaption.sty))
+(D:\miktex\tex/latex/enumitem\enumitem.sty)
+(D:\miktex\tex/latex/listings\lstlang1.sty) (corrected_report.aux)
+*geometry* driver: auto-detecting
+*geometry* detected driver: xetex
+(corrected_report.out) (corrected_report.out)
+(D:\miktex\tex/latex/amsfonts\umsa.fd) (D:\miktex\tex/latex/amsfonts\umsb.fd)
+(body_correct.tex
+Overfull \hbox (25.80373pt too wide) in paragraph at lines 25--34
+ [] 
+
+Overfull \hbox (857.83656pt too wide) in paragraph at lines 48--65
+ [] 
+[1]
+Overfull \hbox (32.04556pt too wide) in paragraph at lines 82--95
+ [] 
+
+Overfull \hbox (25.66295pt too wide) in paragraph at lines 106--114
+ [] 
+[2]
+Overfull \hbox (224.21852pt too wide) in paragraph at lines 133--147
+ [] 
+
+Overfull \hbox (184.48488pt too wide) in paragraph at lines 155--164
+ [] 
+[3]
+Overfull \hbox (25.23872pt too wide) detected at line 216
+[]\OT1/cmr/m/n/12 (+125\OML/cmm/m/it/12 :\OT1/cmr/m/n/12 8[])\OML/cmm/m/it/12 ;
+  []\OT1/cmr/m/n/12 ([])\OML/cmm/m/it/12 ;  []\OT1/cmr/m/n/12 (\OMS/cmsy/m/n/12
+ ^^@\OT1/cmr/m/n/12 11\OML/cmm/m/it/12 :\OT1/cmr/m/n/12 1[])
+
+Overfull \hbox (4.15968pt too wide) in paragraph at lines 245--254
+ [] 
+[4]
+Missing character: There is no ✓ in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no 中 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 心 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 表 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 面 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 表 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 面 in font [lmroman8-regular]:mapping=tex-text;!
+[5]
+Overfull \hbox (449.20271pt too wide) in paragraph at lines 396--404
+ [] 
+[6] [7]
+Overfull \hbox (3.63496pt too wide) in paragraph at lines 491--503
+ [] 
+
+Overfull \hbox (142.55386pt too wide) in paragraph at lines 524--534
+ [] 
+[8]
+Overfull \hbox (629.21259pt too wide) in paragraph at lines 548--561
+ [] 
+
+Overfull \hbox (375.88487pt too wide) in paragraph at lines 569--579
+ [] 
+
+Overfull \hbox (962.99748pt too wide) in paragraph at lines 605--614
+ [] 
+[9]
+Overfull \hbox (814.21611pt too wide) in paragraph at lines 625--637
+ [] 
+Missing character: There is no ✗ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ✗ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ✗ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ✓ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ✗ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ✓ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ✓ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ✓ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ✓ in font [lmroman10-regular]:mapping=tex-text;!
+[10]
+Overfull \hbox (117.5837pt too wide) in paragraph at lines 694--704
+ [] 
+[11]
+Overfull \hbox (73.44493pt too wide) in paragraph at lines 730--746
+ [] 
+) (body_patch.tex
+Overfull \hbox (1.15485pt too wide) in paragraph at lines 20--21
+[]\TU/FangSong(0)/m/n/12 严 格 守 恒 形 式\TU/lmtt/m/n/12 : d(rho_d C)/dt = (1/R^2 si
+gma) d_sigma( sigma rho_d D
+[12]
+Missing character: There is no ∫ in font [lmmono10-italic]:!
+Missing character: There is no σ in font [lmmono10-italic]:!
+Missing character: There is no ρ in font [lmmono10-italic]:!
+
+LaTeX Font Warning: Font shape `TU/FangSong(0)/m/it' undefined
+(Font)              using `TU/FangSong(0)/m/n' instead on input line 49.
+
+[13]
+Missing character: There is no 中 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 心 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 中 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 心 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 表 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 面 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 表 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 面 in font [lmroman8-regular]:mapping=tex-text;!
+[14]) [15] (corrected_report.aux)
+
+LaTeX Font Warning: Some font shapes were not available, defaults substituted.
+
+ )
+(see the transcript file for additional information)
+Output written on corrected_report.pdf (15 pages).
+Transcript written on corrected_report.log.

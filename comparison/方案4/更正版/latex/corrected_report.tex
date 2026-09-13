@@ -1,0 +1,24 @@
+% !TeX program = xelatex
+\documentclass[12pt,a4paper]{ctexart}
+\usepackage[a4paper,top=2.4cm,bottom=2.4cm,left=2.3cm,right=2.3cm]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs,array,longtable,makecell}
+\usepackage{graphicx,listings,xcolor,caption,enumitem}
+\definecolor{lstbg}{RGB}{248,248,248}
+\lstset{language=Python,backgroundcolor=\color{lstbg},
+  basicstyle=\ttfamily\fontsize{7}{8.4}\selectfont,
+  numbers=left,numberstyle=\tiny\color{gray},numbersep=5pt,frame=single,
+  breaklines=true,columns=flexible,keepspaces=true,
+  showstringspaces=false,extendedchars=true,tabsize=4}
+\captionsetup{font={small,bf},labelsep=quad}
+\title{\bfseries 更正版解答与自查报告\\[6pt]
+\large 2026 CUMCM A 题「药材的烘干问题」\\[2pt]
+\normalsize 按逐式审阅结论做出的更正 · 正确性验证 · 与答案 X 的偏离归因及自我反思}
+\author{}\date{2026 年 9 月}
+\begin{document}
+\maketitle
+\input{body_correct.tex}
+\appendix
+\input{body_patch.tex}
+\end{document}

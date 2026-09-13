@@ -1,0 +1,33 @@
+PROBLEM 4 diagnostics
+cells = 1600, schedule = [(7200.0, 1.0), (259200.0, 10.0)], steps = 32400, wall = 20.7 s
+R(0) = 2.0000 cm, R(14400 s) = 1.4770 cm, R(259200 s) = 1.1980 cm
+drying time t_dry = 182764.0146 s = 50.7678 h = 2.1153 d
+criterion evaluated on the FULL node field (n+1 = 1601 nodes);
+max_r C(r,t) - C(0,t) <= 1e-12*Cmax at every one of the 259200 output times: True (largest relative excess 6.1e-15)
+the argmax INDEX is the axis at 256746 of them; at the other 2454 the interior is still uniform to round-off so the index is a floating-point tie
+surface radius at t_dry = 1.2000 cm
+
+(a) MATERIAL coordinate xi = r/R(t) -- the complete profile:
+   t/h    R/cm   T_center T_surf  C(xi=0) C(.25)  C(.5)   C(.75)  C(xi=1)
+     0.0   2.000   28.000   28.000   2.5500  2.5500  2.5500  2.5500  2.4900
+     6.0   1.374   50.212   50.212   1.7157  1.6295  1.3782  0.9807  0.4228
+    12.0   1.248   50.212   50.212   0.7335  0.7012  0.6059  0.4482  0.1677
+    18.0   1.214   50.212   50.212   0.4062  0.3916  0.3475  0.2703  0.0899
+    24.0   1.204   50.212   50.212   0.2835  0.2749  0.2486  0.2008  0.0681
+    30.0   1.201   50.212   50.212   0.2251  0.2192  0.2006  0.1660  0.0603
+    36.0   1.200   50.212   50.212   0.1919  0.1873  0.1728  0.1453  0.0568
+    42.0   1.200   50.212   50.212   0.1705  0.1667  0.1547  0.1316  0.0550
+    48.0   1.200   50.212   50.212   0.1555  0.1522  0.1419  0.1218  0.0539
+
+(b) PHYSICAL radius r/cm -- what result4.xlsx and Table 6 hold;
+    a dash means the point is already outside the material:
+   t/h    R/cm       0.0     0.5     1.0     1.5  surface
+     6.0   1.374   1.7157  1.5345  1.0215       -   0.4228
+    12.0   1.248   0.7335  0.6512  0.4069       -   0.1677
+    18.0   1.214   0.4062  0.3665  0.2388       -   0.0899
+    24.0   1.204   0.2835  0.2596  0.1783       -   0.0681
+    30.0   1.201   0.2251  0.2083  0.1488       -   0.0603
+    36.0   1.200   0.1919  0.1788  0.1313       -   0.0568
+    42.0   1.200   0.1705  0.1597  0.1196       -   0.0550
+    48.0   1.200   0.1555  0.1462  0.1113       -   0.0539
+    50.8   1.200   0.1500  0.1413  0.1081       -   0.0535

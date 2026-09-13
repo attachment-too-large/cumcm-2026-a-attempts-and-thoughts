@@ -1,0 +1,876 @@
+% =====================================================================
+%  第一部分  数学与物理基础
+% =====================================================================
+\part{数学与物理基础}
+
+这一部分从最简单的概念开始，一直推到两个控制方程。
+如果你已经会偏导数，可以跳过第一章，直接从第二章读起。
+
+% =====================================================================
+\section{数学预备知识}
+
+\subsection{一个量可以同时依赖两个变量}
+
+先说一个日常例子。房间里某一点的温度，会随着时间变化，也会随着位置变化。
+房间中央和靠窗的位置温度不一样，同一个位置早上和中午也不一样。
+
+为了把这件事写清楚，我们用两个符号：
+
+\begin{itemize}[leftmargin=1.8em,itemsep=2pt]
+\item $t$ 表示时间，单位是秒，符号 s。
+\item $r$ 表示某个位置到中心的距离，单位是米，符号 m。
+\end{itemize}
+
+于是温度就写成一个函数
+
+\begin{equation}
+T = T(r,t).
+\end{equation}
+
+这个式子的读法是：温度 $T$ 由两个自变量 $r$ 和 $t$ 共同决定。
+括号里先写位置，后写时间，这个顺序一旦定下来就不能改。
+
+同样地，水分浓度也是两个自变量的函数，写作
+
+\begin{equation}
+C = C(r,t).
+\end{equation}
+
+水分浓度的单位是千克每千克，符号 kg/kg，它的确切含义我们在第二章讲。
+
+\subsection{偏导数：把一个变量当常数}
+
+现在的问题是：温度变化有多快？
+
+如果只问时间方向的变化快慢，那就把位置 $r$ 固定住不动，只看 $t$ 变化时 $T$ 怎么变。
+这种在一个变量变化、其余变量固定的情况下求出的变化率，叫做偏导数，写作
+
+\begin{equation}
+\frac{\partial T}{\partial t}.
+\end{equation}
+
+符号 $\partial$ 读作偏，它和普通导数符号 $\mathrm{d}$ 的区别只有一点：
+用 $\partial$ 的时候，暗示还有别的自变量存在，只是暂时被固定住了。
+
+计算规则很简单：把另一个变量真的当成一个普通常数去求导就行。举例说明。
+
+假设有一个函数
+
+\begin{equation}
+f(x,y) = 3x^2 y + 5y + 7 .
+\end{equation}
+
+要求 $\dfrac{\partial f}{\partial x}$，就把 $y$ 当成常数。此时 $3y$ 是常数，
+$5y+7$ 也是常数，常数求导为零，于是
+
+\begin{equation}
+\frac{\partial f}{\partial x} = 3y \cdot 2x = 6xy .
+\end{equation}
+
+要求 $\dfrac{\partial f}{\partial y}$，就把 $x$ 当成常数，于是 $3x^2$ 是常数，
+
+\begin{equation}
+\frac{\partial f}{\partial y} = 3x^2 \cdot 1 + 5 = 3x^2 + 5 .
+\end{equation}
+
+回到温度。$\dfrac{\partial T}{\partial t}$ 的含义是：
+站在药材的某一个固定位置上，看温度随时间涨得多快，单位是摄氏度每秒。
+
+$\dfrac{\partial T}{\partial r}$ 的含义是：
+在某个固定时刻，沿着半径方向走一小段，看温度变化多少，单位是摄氏度每米。
+这个量叫温度梯度，它是热量流动的直接原因。
+
+\subsection{二阶偏导数}
+
+偏导数本身还是一个函数，所以可以再对它求一次偏导数。
+对同一个变量求两次，得到
+
+\begin{equation}
+\frac{\partial^2 T}{\partial r^2}
+= \frac{\partial}{\partial r}\left(\frac{\partial T}{\partial r}\right).
+\end{equation}
+
+这个量的物理含义是温度梯度沿半径方向的变化快慢。
+如果 $\dfrac{\partial^2 T}{\partial r^2}$ 大于零，说明温度曲线是向上弯的，
+梯度在往外走的过程中越来越大。
+
+\subsection{圆柱坐标与那一项多出来的东西}
+
+平面上，一个点到原点的距离记作 $r$，它和直角坐标 $x$、$y$ 的关系是
+
+\begin{equation}
+r = \sqrt{x^2+y^2}.
+\end{equation}
+
+药材是圆柱形的，它的截面是一个圆，温度只和到圆心的距离 $r$ 有关，
+和转过的角度无关，这种情形叫做轴对称。
+
+在直角坐标里，温度对位置的全部二阶变化写成一个算子，叫拉普拉斯算子，
+
+\begin{equation}
+\nabla^2 T = \frac{\partial^2 T}{\partial x^2}+\frac{\partial^2 T}{\partial y^2}.
+\end{equation}
+
+换到圆柱坐标以后，这个算子变成
+
+\begin{equation}
+\nabla^2 T = \frac{1}{r}\frac{\partial}{\partial r}\left(r\frac{\partial T}{\partial r}\right).
+\label{eq:lap}
+\end{equation}
+
+这个式子里的 $1/r$ 和那个多出来的 $r$ 是从哪里来的，值得说清楚，
+因为它正是后面第五章要大动干戈的原因。
+
+推导过程如下。圆柱坐标下，面积微元是
+
+\begin{equation}
+\mathrm{d}A = r\,\mathrm{d}r\,\mathrm{d}\theta .
+\end{equation}
+
+径向的热流密度乘以周长 $2\pi r$ 才是总热流，所以圆周长里带一个 $r$。
+把通量沿径向的净变化除以面积 $2\pi r\,\mathrm{d}r$ 时，
+分子分母各有一个 $r$ 约不掉，最后就剩下这个形式。第二章会把这个过程完整写出来。
+
+把式 \eqref{eq:lap} 展开，得到另一种写法：
+
+\begin{equation}
+\frac{1}{r}\frac{\partial}{\partial r}\left(r\frac{\partial T}{\partial r}\right)
+= \frac{1}{r}\left[\frac{\partial T}{\partial r} + r\frac{\partial^2 T}{\partial r^2}\right]
+= \frac{\partial^2 T}{\partial r^2} + \frac{1}{r}\frac{\partial T}{\partial r}.
+\label{eq:lap-expand}
+\end{equation}
+
+中间那一步用到了乘积求导法则。设 $u=r$，$v=\dfrac{\partial T}{\partial r}$，
+则 $(uv)' = u'v + uv'$，也就是
+
+\begin{equation}
+\frac{\partial}{\partial r}\left(r\frac{\partial T}{\partial r}\right)
+= 1\cdot\frac{\partial T}{\partial r} + r\cdot\frac{\partial^2 T}{\partial r^2}.
+\end{equation}
+
+再除以 $r$ 就得到式 \eqref{eq:lap-expand}。
+
+\keypoint
+式 \eqref{eq:lap-expand} 里出现了 $1/r$。
+当 $r$ 趋向于零的时候，这一项看起来会变成无穷大。
+这是圆柱坐标带来的麻烦，第五章会用一个巧妙的换元把它消掉。
+
+\subsection{微分方程、阶、线性与非线性}
+
+一个方程里如果含有未知函数的导数，就叫微分方程。
+我们要求解的 $T$ 和 $C$ 都是未知函数，所以下面出现的都是微分方程。
+
+按最高阶导数的阶数命名。只出现一阶导数叫一阶方程，
+出现二阶导数叫二阶方程。本题的两个方程都是二阶的。
+
+按未知函数和它的导数是否以一次方的形式出现，分为线性与非线性。
+
+如果方程里的系数只依赖自变量，比如 $r$ 和 $t$，那么方程是线性的。
+线性方程有一个很好的性质：两个解加起来还是解。
+如果系数依赖未知函数本身，比如导热系数依赖温度，那就成了非线性方程，
+线性方程的许多便利就不能用了。
+
+本题中，问题一的所有物性都是常数，所以方程是线性的，
+而且是两个互不影响的线性方程。问题二到问题四的物性依赖 $C$ 和 $T$，
+方程变成非线性，两个方程还互相耦合，必须一起求解。
+
+\subsection{初值条件与边界条件}
+
+一个二阶微分方程要有唯一确定的解，需要补充条件。
+
+对时间方向，因为方程里出现 $\dfrac{\partial T}{\partial t}$，
+需要一个起始时刻的状态，叫做初值条件，也叫初始条件：
+
+\begin{equation}
+T(r,0)=28\,^\circ\mathrm{C}, \qquad C(r,0)=2.55\ \mathrm{kg/kg},
+\qquad 0\le r\le R_0 .
+\end{equation}
+
+读法是：在时间等于零的时刻，从圆心到表面每一个位置的温度和水分浓度都已知。
+题目给出的是这两组数。
+
+对空间方向，因为方程里出现 $\dfrac{\partial^2 T}{\partial r^2}$，
+需要在空间区域的两个端点各给一个条件。本题的空间区域是从圆心 $r=0$
+到表面 $r=R_0$，所以要在 $r=0$ 和 $r=R_0$ 各给一个条件，这叫边界条件。
+
+\subsection{三类边界条件}
+
+边界条件通常分三类，理解这三类对读懂本题很关键。
+
+\textbf{第一类，给定边界上的值。} 例如直接规定表面温度恒为 $80$ 摄氏度，
+写作 $T(R_0,t)=80$。这类条件叫狄利克雷条件。
+
+\textbf{第二类，给定边界上的通量。} 例如规定表面每平方米每秒流入多少焦耳的热量，
+写作 $-k\dfrac{\partial T}{\partial r}\Big|_{r=R_0}=q_0$。
+这里出现的是导数而不是函数值。这类条件叫诺伊曼条件。
+
+\textbf{第三类，给定边界值与外界的关系。} 例如表面通过空气对流换热，
+换热快慢取决于表面和空气的温差，写作
+
+\begin{equation}
+-k\left.\frac{\partial T}{\partial r}\right|_{r=R_0} = h\left(T(R_0,t)-T_{\mathrm{air}}(t)\right).
+\end{equation}
+
+这类条件叫罗宾条件，本题的表面条件正是这一种，
+因为热风烘干是靠空气流动把热量带到药材表面的。
+
+\keypoint
+初值条件管时间方向的起点，边界条件管空间方向的两端。
+两类条件都齐全，方程的解才唯一。
+
+% =====================================================================
+\section{从守恒律推出控制方程}
+
+这一章是整份文档的核心。我们从一个薄圆筒壳出发，
+用中学物理里的能量守恒和质量守恒，一步步推出两个控制方程。
+每一步的代数运算都会写全。
+
+\subsection{微元法的总思路}
+
+直接对整个圆柱列方程很难，因为圆柱内部各处的温度不一样。
+办法是取一个很小的区域，让这个小区域内部可以近似认为温度是均匀的，
+对这个小区域列方程，然后再让它缩小到一点，得到只描述该点的方程。
+
+这个小区域叫微元，也叫控制体。取法有很多种，本题取一个薄圆筒壳，
+因为它正好配合圆柱的轴对称性质。
+
+\subsection{傅里叶定律}
+
+热量总是从高温处流向低温处，流动的快慢与温度梯度成正比。
+这个经验规律叫傅里叶定律，一维形式写作
+
+\begin{equation}
+q_r = -k\frac{\partial T}{\partial r}.
+\label{eq:fourier}
+\end{equation}
+
+其中 $q_r$ 是沿半径方向的热流密度，单位是瓦特每平方米，符号 $\mathrm{W/m^2}$，
+它表示单位时间穿过单位面积的热量。
+$k$ 是导热系数，单位是瓦特每米每开尔文，符号 $\mathrm{W/(m\cdot K)}$，
+它衡量材料导热能力的强弱。
+
+式 \eqref{eq:fourier} 里的负号表示方向：
+如果温度沿半径向外降低，也就是 $\dfrac{\partial T}{\partial r}<0$，
+那么 $q_r>0$，热量朝外流，方向和温度降低的方向一致。
+如果温度沿半径向外升高，热量就朝内流。
+
+\subsection{圆柱薄壳的几何量}
+
+现在取微元。半径从 $r$ 到 $r+\mathrm{d}r$ 之间的一层薄壳，
+高度取药材的长度 $L$。
+
+这个薄壳的体积要算清楚，因为后面要用它表示内能。
+
+把薄壳看成一张卷起来的纸，展开以后它的长度是圆周长 $2\pi r$，
+高度是 $L$，厚度是 $\mathrm{d}r$。所以体积是
+
+\begin{equation}
+\mathrm{d}V = 2\pi r L\,\mathrm{d}r .
+\label{eq:dV}
+\end{equation}
+
+这里出现的 $2\pi r$ 就是圆周长，那个 $r$ 来自周长公式。
+请特别记住这一点，它是圆柱坐标里所有 $r$ 因子的来源。
+
+薄壳的质量等于体积乘密度，
+
+\begin{equation}
+\mathrm{d}m = \rho\,\mathrm{d}V = \rho\,2\pi r L\,\mathrm{d}r ,
+\label{eq:dm}
+\end{equation}
+
+其中 $\rho$ 是密度，单位是千克每立方米，符号 $\mathrm{kg/m^3}$。
+
+\subsection{能量守恒，一步不跳}
+
+对这个薄壳列能量守恒。表述是：
+
+\begin{equation}
+\text{薄壳内能的增加速率} = \text{单位时间净流入薄壳的热量}.
+\end{equation}
+
+先算左边。内能可以用比热容表示。比热容 $c_p$ 的含义是：
+让一千克物质升高一摄氏度需要吸收多少焦耳的热量，
+单位是焦耳每千克每开尔文，符号 $\mathrm{J/(kg\cdot K)}$。
+
+那么，质量为 $\mathrm{d}m$ 的物质，温度变化率为 $\dfrac{\partial T}{\partial t}$，
+内能增加速率就是
+
+\begin{equation}
+\text{内能增加速率} = c_p\,\mathrm{d}m\,\frac{\partial T}{\partial t}.
+\label{eq:lhs}
+\end{equation}
+
+把式 \eqref{eq:dm} 代进去，得到
+
+\begin{equation}
+\text{左边} = \rho c_p\,2\pi r L\,\mathrm{d}r\,\frac{\partial T}{\partial t}.
+\label{eq:lhs2}
+\end{equation}
+
+再算右边。热量从两个面进出：内表面 $r$ 处和外表面 $r+\mathrm{d}r$ 处。
+
+约定朝外为正方向。那么在 $r$ 处流入薄壳的热量，等于该处朝外的热流取负号：
+$-q_r(r)\cdot 2\pi r L$。这里 $2\pi r L$ 是内表面的面积。
+
+在 $r+\mathrm{d}r$ 处流出薄壳的热量是 $+q_r(r+\mathrm{d}r)\cdot 2\pi(r+\mathrm{d}r)L$。
+
+两者相加就是净流入：
+
+\begin{equation}
+\text{右边} = -q_r(r)\cdot 2\pi r L + q_r(r+\mathrm{d}r)\cdot 2\pi(r+\mathrm{d}r)L .
+\label{eq:rhs}
+\end{equation}
+
+这个式子可以改写成更紧凑的形式。注意右边正是函数 $q_r(r)\cdot 2\pi r L$
+在区间两端点的差，也就是
+
+\begin{equation}
+\text{右边} = \Big[q_r\cdot 2\pi r L\Big]_{r}^{r+\mathrm{d}r}.
+\label{eq:rhs2}
+\end{equation}
+
+让左右两边相等，得到
+
+\begin{equation}
+\rho c_p\,2\pi r L\,\mathrm{d}r\,\frac{\partial T}{\partial t}
+= \Big[q_r\cdot 2\pi r L\Big]_{r}^{r+\mathrm{d}r}.
+\label{eq:balance1}
+\end{equation}
+
+\subsection{从差分到微分}
+
+式 \eqref{eq:balance1} 的右边是一个差值，还不能直接用。
+回忆微积分里的一个基本事实：函数在区间上的增量，
+除以区间长度，在区间长度趋向于零时等于导数，即
+
+\begin{equation}
+\lim_{\mathrm{d}r\to0}\frac{f(r+\mathrm{d}r)-f(r)}{\mathrm{d}r} = \frac{\mathrm{d}f}{\mathrm{d}r}.
+\end{equation}
+
+所以，把式 \eqref{eq:balance1} 两边同时除以 $\mathrm{d}r$，得到
+
+\begin{equation}
+\rho c_p\,2\pi r L\,\frac{\partial T}{\partial t}
+= \frac{\Big[q_r\cdot 2\pi rL\Big]_{r}^{r+\mathrm{d}r}}{\mathrm{d}r}.
+\end{equation}
+
+再让 $\mathrm{d}r$ 趋向于零，右边就变成导数
+
+\begin{equation}
+\rho c_p\,2\pi r L\,\frac{\partial T}{\partial t}
+= \frac{\partial}{\partial r}\left(q_r\cdot 2\pi rL\right).
+\end{equation}
+
+式子两边都有因子 $2\pi L$，可以约掉。约掉以后
+
+\begin{equation}
+\rho c_p\,r\,\frac{\partial T}{\partial t}
+= \frac{\partial}{\partial r}\left(q_r\,r\right).
+\label{eq:balance2}
+\end{equation}
+
+现在把傅里叶定律 \eqref{eq:fourier} 代入，即 $q_r=-k\dfrac{\partial T}{\partial r}$，
+
+\begin{equation}
+\rho c_p\,r\,\frac{\partial T}{\partial t}
+= \frac{\partial}{\partial r}\left(-k\,r\,\frac{\partial T}{\partial r}\right).
+\end{equation}
+
+把右边的负号移出导数符号外面，
+
+\begin{equation}
+\rho c_p\,r\,\frac{\partial T}{\partial t}
+= -\frac{\partial}{\partial r}\left(k\,r\,\frac{\partial T}{\partial r}\right).
+\end{equation}
+
+两边同乘 $-1$，并注意 $k$ 在问题一中是常数，可以移到导数外面，
+
+\begin{equation}
+-\rho c_p\,r\,\frac{\partial T}{\partial t}
+= \frac{\partial}{\partial r}\left(k\,r\,\frac{\partial T}{\partial r}\right).
+\end{equation}
+
+这里出现了符号不一致的问题。我们换个做法：不把负号移出去，
+而是两边同除以 $r$，得到
+
+\begin{equation}
+\rho c_p\,\frac{\partial T}{\partial t}
+= \frac{1}{r}\frac{\partial}{\partial r}\left(r\,k\,\frac{\partial T}{\partial r}\right).
+\end{equation}
+
+这个式子形式漂亮，而且物理意义清楚：左边是单位体积的内能变化率，
+右边是净流入的热量。最后把它整理成标准写法
+
+\begin{equation}
+\boxed{\;
+\rho(C)\,c_p(C)\,\frac{\partial T}{\partial t}
+= \frac{1}{r}\frac{\partial}{\partial r}\left(r\,k(C)\,\frac{\partial T}{\partial r}\right).
+\;}
+\label{eq:energy}
+\end{equation}
+
+这就是第一个控制方程。
+
+我们把系数写成 $\rho(C)$、$c_p(C)$、$k(C)$ 是为了提醒：
+在问题二到问题四里，它们都随水分浓度 $C$ 变化，不是常数。
+在问题一里它们都是常数，方程是线性的。
+
+\why{为什么右边的 $r$ 不能约掉}
+左边分子分母各有一个 $r$ 看起来可以约，实际上不行。
+左边的 $r$ 来自体积公式里的圆周长，右边的 $r$ 在导数符号里面，
+它随 $r$ 变化，不是常数因子，不能拿到导数外面去。
+两者只是形式上一样，物理来源不同。
+
+\subsection{菲克定律与水分守恒}
+
+水分的迁移和热量类似，也是由浓度差驱动，规律叫菲克定律。一维形式写作
+
+\begin{equation}
+j_r = -D\frac{\partial C}{\partial r},
+\end{equation}
+
+其中 $j_r$ 是水分通量，$D$ 是水分扩散系数，单位是平方米每秒，符号 $\mathrm{m^2/s}$。
+负号的含义和傅里叶定律一样：水分从浓度高处流向浓度低处。
+
+但是这里有一个容易出错的地方。水分是存在药材内部的，
+药材本身在干燥过程中还会收缩，所以不能简单地把水分通量除以面积就完事。
+必须盯住干物质，因为干物质是不迁移的。
+
+正确的做法是，用干基含水率 $C$ 作为未知量，
+并且注意到控制体里的干物质质量不随时间变化。
+第二章下一小节详细说这件事。
+
+\subsection{干基含水率是什么}
+
+日常生活中说含水率，通常指湿基含水率，定义是
+
+\begin{equation}
+\text{湿基含水率} = \frac{\text{水的质量}}{\text{水的质量}+\text{干物质的质量}} .
+\end{equation}
+
+题目用的是干基含水率，定义是
+
+\begin{equation}
+C = \frac{\text{水的质量}}{\text{干物质的质量}} .
+\label{eq:drybasis}
+\end{equation}
+
+例如题目给初始值 $C_0=2.55$ kg/kg，意思是每 $1$ 千克干物质里含有 $2.55$ 千克水。
+
+\why{为什么用干基而不是湿基}
+因为干燥过程中水分不断减少，用湿基的话分母一直在变，
+写守恒方程时会出现额外的项。用干基的话，分母是干物质质量，
+而干物质不迁移也不增减，是一个固定的参考量。
+这样写出来的方程最干净，处理收缩问题也最方便。
+这是一个非常重要但常被忽略的建模技巧。
+
+\subsection{干物质不迁移这个事实}
+
+现在把控制体从按空间位置取，改成按干物质取。
+具体说，我们跟踪同一批干物质，看它内部的水分怎么变。
+
+这样取控制体的好处是：控制体自身的质量不变，
+水分的进出只能通过控制体的两个侧面，不会因为控制体自己收缩而凭空多出或少掉水。
+
+单位湿体积内的干物质质量记作
+
+\begin{equation}
+\rho_d = \frac{\rho}{1+C}.
+\end{equation}
+
+这个式子怎么来的？体积内总质量是 $\rho$，其中干物质占的比例是
+$\dfrac{1}{1+C}$。因为按式 \eqref{eq:drybasis}，每 $1$ 千克干物质对应 $C$ 千克水，
+所以总质量是干物质的 $1+C$ 倍。
+
+\subsection{水分守恒方程}
+
+仿照传热的做法。控制体内水分的变化率等于净流入的水分。
+
+水分通量按干物质计，写成
+
+\begin{equation}
+j_r = -\rho_d D\frac{\partial C}{\partial r}.
+\end{equation}
+
+单位时间流入控制体的水分是 $j_r$ 乘以侧面积 $2\pi rL$。
+控制体内的水分质量是 $C$ 乘以干物质质量，而干物质质量不变，
+所以水分质量变化率是
+
+\begin{equation}
+\text{干物质质量}\times\frac{\partial C}{\partial t}.
+\end{equation}
+
+于是守恒式是
+
+\begin{equation}
+\rho_d\,2\pi rL\,\mathrm{d}r\,\frac{\partial C}{\partial t}
+= \Big[j_r\cdot 2\pi rL\Big]_{r}^{r+\mathrm{d}r}.
+\end{equation}
+
+和前面完全一样的步骤：除以 $\mathrm{d}r$，让 $\mathrm{d}r$ 趋于零，
+两边约掉 $2\pi L$ 和 $\rho_d$，得到
+
+\begin{equation}
+r\,\frac{\partial C}{\partial t}
+= \frac{\partial}{\partial r}\left(r\,D\,\frac{\partial C}{\partial r}\right),
+\end{equation}
+
+再除以 $r$，
+
+\begin{equation}
+\frac{\partial C}{\partial t}
+= \frac{1}{r}\frac{\partial}{\partial r}\left(r\,D\,\frac{\partial C}{\partial r}\right).
+\end{equation}
+
+最后写成标准形式
+
+\begin{equation}
+\boxed{\;
+\frac{\partial C}{\partial t}
+= \frac{1}{r}\frac{\partial}{\partial r}\left(r\,D(C,T)\,\frac{\partial C}{\partial r}\right).
+\;}
+\label{eq:mass}
+\end{equation}
+
+这就是第二个控制方程。
+
+\why{两个方程的左边为什么不同}
+传热方程的左边是 $\rho c_p\dfrac{\partial T}{\partial t}$，
+水分方程的左边只有 $\dfrac{\partial C}{\partial t}$。
+原因在于未知量的选取方式不同。
+温度是单位质量的能量指标，要乘上密度和比热容才变成单位体积的能量。
+而 $C$ 已经是每千克干物质的水量，本身就是一个比值，
+控制体又跟着干物质走，所以左边干净。
+这两点如果搞混，方程就会写错。
+
+\subsection{无量纲分析：先判断哪边快}
+
+在动手算之前，先做一件事：估算两个过程的快慢，看哪个先完成。
+
+定义一个时间尺度，表示某个过程走完全程大概需要多久。
+传热的特征时间取
+
+\begin{equation}
+\tau_T = \frac{R_0^2}{\alpha}, \qquad \alpha = \frac{k}{\rho c_p},
+\end{equation}
+
+其中 $\alpha$ 叫热扩散率，单位是平方米每秒。
+传质的特征时间取
+
+\begin{equation}
+\tau_D = \frac{R_0^2}{D}.
+\end{equation}
+
+代入题目数据，问题一里
+
+\begin{equation}
+\alpha = \frac{0.36}{820\times2600} = 1.6886\times10^{-7}\ \mathrm{m^2/s},
+\end{equation}
+
+\begin{equation}
+\tau_T = \frac{0.02^2}{1.6886\times10^{-7}} = 2369\ \mathrm{s},
+\end{equation}
+
+而水分扩散系数在 $C=2.55$ 时等于
+
+\begin{equation}
+D = 7\times10^{-9}\times e^{-0.89/2.55} = 7\times10^{-9}\times0.7053
+= 4.9377\times10^{-9}\ \mathrm{m^2/s},
+\end{equation}
+
+\begin{equation}
+\tau_D = \frac{0.02^2}{4.9377\times10^{-9}} = 8.10\times10^4\ \mathrm{s}.
+\end{equation}
+
+两者相差三十多倍。结论很清楚：温度很快就能平衡，水分则慢得多。
+这个判断在第六章解释结果时会反复用到。
+
+\keypoint
+传热特征时间约 $2369$ 秒，传质特征时间约 $81000$ 秒。
+所以题目里说的前 $30$ 分钟，温度明显在上升，水分却几乎没有动。
+
+% =====================================================================
+\section{边界条件与初始条件}
+
+方程本身只描述了内部各点之间的相互关系，还需要补充端点与起始时刻的信息，
+才能得到唯一的解。这一章把四个条件一个一个推导出来。
+
+\subsection{圆心处的条件：对称性}
+
+在圆心 $r=0$ 处，温度不可能是无穷大，也不能有尖角。
+理由是对称性：圆心左边一点点和右边一点点到圆心的距离都是 $r$，
+由轴对称假设它们的温度必须相同。也就是说温度是 $r$ 的偶函数，
+偶函数在原点处的导数为零。所以
+
+\begin{equation}
+\left.\frac{\partial T}{\partial r}\right|_{r=0}=0,
+\qquad
+\left.\frac{\partial C}{\partial r}\right|_{r=0}=0 .
+\label{eq:sym}
+\end{equation}
+
+\why{这个条件为什么不能省}
+如果不用它，数学上会出现无穷多个解，其中大多数在物理上荒谬，
+比如温度在圆心附近无限升高。
+另外，它还保证了第一章里提到的 $1/r$ 那一项在原点不会真的发散，
+因为分子 $\dfrac{\partial T}{\partial r}$ 同时趋向于零。
+
+\subsection{表面处的条件：牛顿冷却定律}
+
+药材表面与热空气接触，热量通过空气流动带过来。这个过程叫对流换热。
+牛顿冷却定律说，单位面积上单位时间传入的热量与温差成正比，
+
+\begin{equation}
+q_{\text{传入}} = h\left(T_{\mathrm{air}}(t)-T(R_0,t)\right),
+\label{eq:newton}
+\end{equation}
+
+其中 $h$ 叫对流换热系数，单位是瓦特每平方米每开尔文，
+符号 $\mathrm{W/(m^2\cdot K)}$。题目给出 $h=25$。
+
+把式 \eqref{eq:newton} 转化成我们方程里的量。
+朝外为正的热流密度是 $q_r=-k\dfrac{\partial T}{\partial r}$。
+朝内传入的热量等于朝外热流的负值，所以
+
+\begin{equation}
+-k\left.\frac{\partial T}{\partial r}\right|_{r=R_0}
+= h\left(T(R_0,t)-T_{\mathrm{air}}(t)\right).
+\label{eq:robinT}
+\end{equation}
+
+左边是导热给出的通量，右边是对流给出的通量，两者必须相等，
+否则表面处的能量就不守恒。
+
+同样的推理用在水分上。水分由空气带走，传质系数记作 $h_m$，
+单位是米每秒，符号 $\mathrm{m/s}$，题目给出 $h_m=8\times10^{-7}$。
+
+朝外为正的水分通量是 $-D\dfrac{\partial C}{\partial r}$，于是
+
+\begin{equation}
+-D\left.\frac{\partial C}{\partial r}\right|_{r=R_0}
+= h_m\left(C(R_0,t)-C_{\mathrm{air}}(t)\right).
+\label{eq:robinC}
+\end{equation}
+
+\why{为什么左右两边的单位能对上}
+以温度为例。左边是导热系数乘以温度梯度，
+单位是 $\mathrm{W/(m\cdot K)}\times\mathrm{K/m}=\mathrm{W/m^2}$。
+右边是换热系数乘以温差，
+单位是 $\mathrm{W/(m^2\cdot K)}\times\mathrm{K}=\mathrm{W/m^2}$。
+两边都是热流密度，单位一致。这是一次必要的量纲检查，
+如果对不上就说明公式写错了。
+
+\subsection{初始条件}
+
+题目给出烘干开始时药材温度 $28$ 摄氏度，干基含水率 $2.55$ 千克每千克，
+且药材内部各处都相同。于是
+
+\begin{equation}
+T(r,0)=28\,^\circ\mathrm{C},\qquad C(r,0)=2.55\ \mathrm{kg/kg},
+\qquad 0\le r\le R_0 .
+\label{eq:ic}
+\end{equation}
+
+这里的 $0\le r\le R_0$ 表示整个径向范围都要满足，
+不是只在表面或者只在圆心。
+
+\subsection{烘房环境数据的处理}
+
+边界条件 \eqref{eq:robinT} 和 \eqref{eq:robinC} 里出现了两个量，
+烘房温度 $T_{\mathrm{air}}(t)$ 和烘房水分浓度 $C_{\mathrm{air}}(t)$。
+题目没有给出公式，而是给了附件一，里面是一张表：
+
+\begin{center}
+\begin{tabular}{@{}rrr@{}}
+\toprule
+时间 / s & 温度 / $^\circ$C & 水分浓度 / (kg/kg) \\
+\midrule
+0    & 28.000 & 0.01963 \\
+60   & 28.528 & 0.02002 \\
+120  & 29.192 & 0.02053 \\
+$\vdots$ & $\vdots$ & $\vdots$ \\
+14400 & 50.165 & 0.04986 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+一共 $241$ 行，每 $60$ 秒一行，时间从 $0$ 到 $14400$ 秒。
+
+问题来了：方程里的 $T_{\mathrm{air}}(t)$ 需要任意时刻的值，
+而表格只给了 $60$ 秒一个点。中间那些时刻怎么办？
+
+有两种做法。
+
+第一种做法是直接插值。两个相邻数据点之间连一条直线，
+任意时刻的值取直线上的对应点。这种做法最简单，但把测量噪声也带进来了。
+
+第二种做法是先识别数据的规律，用一条光滑曲线去代表它，
+再用这条曲线作为边界条件。这种做法叫数据拟合。
+
+从表里能看出明显的规律：温度从一个较低的值开始，
+快速上升，然后逐渐变慢，最后稳定在一个固定值附近。
+这种形状叫一阶惯性上升。它的数学形式是
+
+\begin{equation}
+T_{\mathrm{air}}(t)=T_{\mathrm{set}}-\left(T_{\mathrm{set}}-28\right)e^{-t/\tau_T}.
+\label{eq:fitted-T}
+\end{equation}
+
+这个式子有三个参数，逐个解释。
+
+$T_{\mathrm{set}}$ 是最终稳定的温度。当 $t$ 很大时，$e^{-t/\tau_T}$ 趋向于零，
+式子只剩下 $T_{\mathrm{set}}$，所以它代表终值。
+
+$28$ 是初始温度，直接取表格第一行的实测值，不参与拟合。
+
+$\tau_T$ 叫时间常数，它控制上升的快慢，单位是秒。
+当 $t=\tau_T$ 时，指数项等于 $e^{-1}=0.368$，
+也就是说温度已经走完了全程的 $63.2\%$。
+
+含湿量用同样的形式，
+
+\begin{equation}
+C_{\mathrm{air}}(t)=C_{\mathrm{set}}-\left(C_{\mathrm{set}}-0.01963\right)e^{-t/\tau_C}.
+\label{eq:fitted-C}
+\end{equation}
+
+\subsection{最小二乘拟合是怎么做的}
+
+现在要确定 $T_{\mathrm{set}}$ 和 $\tau_T$ 这两个数，
+使得曲线尽量贴近表格里的 $241$ 个实测点。
+
+贴近的程度用残差平方和衡量。对第 $i$ 个数据点，记实测温度是 $y_i$，
+时间是 $t_i$，模型给出的值是 $T_{\mathrm{air}}(t_i)$，则残差是
+
+\begin{equation}
+r_i = y_i - T_{\mathrm{air}}(t_i).
+\end{equation}
+
+残差平方和是
+
+\begin{equation}
+S(T_{\mathrm{set}},\tau_T)=\sum_{i=1}^{241} r_i^2
+= \sum_{i=1}^{241}\left[y_i-\left(T_{\mathrm{set}}-\left(T_{\mathrm{set}}-28\right)e^{-t_i/\tau_T}\right)\right]^2 .
+\label{eq:lsq}
+\end{equation}
+
+我们要找让 $S$ 最小的那一组参数。这就是最小二乘法的含义：
+让所有点的偏差平方加起来最小。
+
+\why{为什么用平方而不是绝对值}
+用平方有两个好处。一是平方函数处处可导，可以用求导的办法找最小值；
+绝对值在零点不可导，处理起来麻烦。二是平方会让大偏差受到更重的惩罚，
+拟合结果不会为了照顾某个点而牺牲整体。
+
+\why{为什么把 $S$ 对参数求导等于零就能找到最小值}
+在最小值点，函数沿任何方向的切线都是水平的，也就是偏导数为零。
+所以令
+
+\begin{equation}
+\frac{\partial S}{\partial T_{\mathrm{set}}}=0,\qquad
+\frac{\partial S}{\partial \tau_T}=0,
+\end{equation}
+
+解这个方程组就得到最优参数。因为式 \eqref{eq:lsq} 里 $\tau_T$ 出现在指数上，
+这两个方程无法用代数方法解出来，只能用迭代的办法逐步逼近。
+这种算法叫 Levenberg–Marquardt 算法，是数值优化的常用方法。
+实际计算时我们调用现成的程序，不需要自己写。
+
+\subsection{拟合结果}
+
+对附件一的数据做上述拟合，得到
+
+\begin{center}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+参数 & 拟合值 & 标准误 & 均方根误差 & 决定系数 \\
+\midrule
+$T_{\mathrm{set}}$ & $50.2121\ ^\circ$C & $0.0303$ & \multirow{2}{*}{$0.336\ ^\circ$C} & \multirow{2}{*}{$0.9957$} \\
+$\tau_T$ & $1877.49$ s & $12.74$ & & \\
+$C_{\mathrm{set}}$ & $0.050908$ kg/kg & $9.3\times10^{-5}$ & \multirow{2}{*}{$8.1\times10^{-4}$} & \multirow{2}{*}{$0.9901$} \\
+$\tau_C$ & $2776.34$ s & $31.71$ & & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+表里几个量要解释一下。
+
+标准误衡量这个参数估得准不准。$T_{\mathrm{set}}$ 的标准误是 $0.0303$ 摄氏度，
+意思是这个值大概有正负 $0.03$ 度的不确定度。
+
+均方根误差是残差平方和除以点数再开方，
+
+\begin{equation}
+\mathrm{RMSE}=\sqrt{\frac{1}{n}\sum_{i=1}^{n}r_i^2},
+\end{equation}
+
+它表示平均每个点偏离曲线多少。温度的平均偏差是 $0.336$ 摄氏度，
+这个量级和测量仪表的噪声相当，说明拟合是合理的。
+
+决定系数 $R^2$ 衡量曲线解释了数据的多大比例，定义是
+
+\begin{equation}
+R^2 = 1-\frac{\sum_{i=1}^{n}r_i^2}{\sum_{i=1}^{n}\left(y_i-\bar{y}\right)^2},
+\end{equation}
+
+其中 $\bar{y}$ 是实测值的平均。$R^2$ 越接近 $1$ 越好。
+温度是 $0.9957$，含湿量是 $0.9901$，都在 $0.99$ 以上，说明拟合质量可以接受。
+
+\why{计算时为什么把参数取成 50.212 而不是 50.2121}
+拟合给出的完整数值是 $50.2121$，计算时取了 $50.212$。
+这样做的影响在表面温度上大约是 $6\times10^{-5}$ 摄氏度，
+而拟合本身的标准误是 $0.030$ 摄氏度，前者比后者小三个数量级。
+换句话说，纠结最后一位小数是没有意义的，
+因为标定数据本身就没那么准。但为了结果能与他人核对，
+文档中明确写出使用了哪一组数值。
+
+\subsection{工艺分段}
+
+观察附件一可以发现，温度在 $t$ 大约等于 $4$ 小时，也就是 $14400$ 秒时，
+已经升到接近终值并稳定下来。题目也说整个烘干过程分为预热平衡和恒温干燥两个阶段。
+
+所以从 $14400$ 秒往后，烘房环境就当作恒定的：
+
+\begin{equation}
+(T_{\mathrm{air}},C_{\mathrm{air}})=
+\begin{cases}
+\text{按式 \eqref{eq:fitted-T} 和 \eqref{eq:fitted-C} 变化}, & 0\le t\le 14400\ \mathrm{s},\\
+\left(50.212\,^\circ\mathrm{C},\ 0.050908\ \mathrm{kg/kg}\right), & t>14400\ \mathrm{s}.
+\end{cases}
+\label{eq:stage}
+\end{equation}
+
+\why{恒温阶段为什么含湿量也不变}
+烘房在持续排湿。如果不排湿，药材蒸发出来的水分会留在烘房里，
+含湿量会不断上升，最后趋于饱和，干燥就无法继续。
+实际生产中排湿速率会把含湿量稳定在一个较低的值上，
+所以当作常数处理是合理的。
+
+\subsection{第一部分小结}
+
+到这里，模型已经完整了。把所有式子集中写在一起：
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+类别 & 式子 \\
+\midrule
+传热方程 & $\rho c_p\dfrac{\partial T}{\partial t}=\dfrac{1}{r}\dfrac{\partial}{\partial r}\left(rk\dfrac{\partial T}{\partial r}\right)$ \\
+传质方程 & $\dfrac{\partial C}{\partial t}=\dfrac{1}{r}\dfrac{\partial}{\partial r}\left(rD\dfrac{\partial C}{\partial r}\right)$ \\
+圆心条件 & $\dfrac{\partial T}{\partial r}=\dfrac{\partial C}{\partial r}=0$，当 $r=0$ \\
+表面条件 & $-k\dfrac{\partial T}{\partial r}=h\left(T-T_{\mathrm{air}}\right)$，当 $r=R_0$ \\
+表面条件 & $-D\dfrac{\partial C}{\partial r}=h_m\left(C-C_{\mathrm{air}}\right)$，当 $r=R_0$ \\
+初始条件 & $T=28$，$C=2.55$，当 $t=0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+问题二和问题三用同一组方程，只是物性换成附录三给出的关系式。
+问题四还要加上半径随时间变化这一条，那部分在第二部分第九章讲，本章没有展开。
+
+\keypoint
+第一部分讲完了从物理守恒到两个偏微分方程的全过程。
+核心有三点。第一，微元法加守恒律给出方程。
+第二，干基含水率让水分方程变得干净。
+第三，边界条件分对称条件和表面对流条件两类。

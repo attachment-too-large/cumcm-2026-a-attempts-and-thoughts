@@ -1,0 +1,15 @@
+entries=58  testzip=OK
+utf8-flag on first entry: True
+OK   report/report.pdf
+OK   report/report.tex
+OK   README.md
+OK   新解法说明.md
+OK   题目与附件/附件/附件3/result1.xlsx
+OK   题目与附件/附件/附件3/result4.xlsx
+OK   code/spectral.py
+OK   code/step13_verify_results.txt
+OK   参考论文/paper_electronic.pdf
+OK   题目与附件/联想截图_20260912035339.png
+report.pdf sha256 identical: True
+result1 温度: sheets=['温度', '水分浓度'] rows=1801 cols=22  T(0,1800)=34.0425
+zip size = 8.94 MB

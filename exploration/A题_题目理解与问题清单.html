@@ -1,0 +1,209 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>2026 CUMCM A 题 题目理解与问题清单</title><style>
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Microsoft YaHei", "Noto Sans SC", "SimSun", sans-serif;
+  font-size: 10.5pt; line-height: 1.75; color: #1a1a1a;
+  margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+h1 { font-size: 19pt; text-align: center; margin: 0 0 4mm 0; padding-bottom: 3mm;
+     border-bottom: 2.5px solid #1f4e79; color: #12395c; letter-spacing: .5px; }
+h2 { font-size: 14pt; color: #12395c; margin: 8mm 0 3mm 0; padding: 1.6mm 0 1.6mm 3mm;
+     border-left: 4px solid #1f4e79; background: #eef4fa; page-break-after: avoid; }
+h3 { font-size: 12pt; color: #1f4e79; margin: 5.5mm 0 2mm 0; page-break-after: avoid; }
+h4 { font-size: 11pt; color: #333; margin: 4mm 0 1.5mm 0; page-break-after: avoid; }
+p { margin: 1.8mm 0; }
+strong { color: #0d2f4d; }
+ul, ol { margin: 1.5mm 0 1.5mm 0; padding-left: 7mm; }
+li { margin: .9mm 0; }
+code { font-family: Consolas, "Courier New", monospace; font-size: 9.4pt;
+       background: #f2f4f7; padding: .3mm 1mm; border-radius: 2px; color: #b0004a; }
+table { border-collapse: collapse; width: 100%; margin: 2.5mm 0 3.5mm 0;
+        font-size: 9.3pt; page-break-inside: avoid; }
+th { background: #1f4e79; color: #fff; font-weight: 600; padding: 1.5mm 1.6mm;
+     border: 1px solid #7f9db9; text-align: left; }
+td { padding: 1.3mm 1.6mm; border: 1px solid #b9c9d9; vertical-align: top; }
+tbody tr:nth-child(even) td { background: #f6f9fc; }
+blockquote { margin: 2.5mm 0; padding: 2mm 3mm; background: #fffbf0;
+             border-left: 4px solid #e0a83c; color: #5a4a20; font-size: 9.8pt; }
+blockquote p { margin: 1mm 0; }
+hr { border: none; border-top: 1px dashed #b9c9d9; margin: 5mm 0; }
+.math { font-family: "Cambria Math", "Times New Roman", serif; font-size: 10.5pt; }
+.mathblock { text-align: center; margin: 3mm 0; font-family: "Cambria Math", "Times New Roman", serif;
+             font-size: 11pt; page-break-inside: avoid; }
+sub, sup { font-size: 7.5pt; }
+.meta { text-align: center; color: #5a6b7a; font-size: 9.2pt; margin-bottom: 5mm; }
+</style></head><body><h1>2026 高教社杯 A 题《药材的烘干问题》题目理解与问题清单</h1>
+<p><strong>独立复核报告</strong> · 依据题面原文、附件 1/2、附录 2/3/4 及已有求解实现 <strong>复核方式</strong>：题面逐句解读 + 数据独立核查 + <strong>自行编写的独立有限体积求解器</strong>复算</p>
+<hr>
+<h2>0 结论速览</h2>
+<table>
+<thead><tr><th>项目</th><th>结论</th></tr></thead>
+<tbody>
+<tr><td>题目实质</td><td>一个<strong>轴对称热湿耦合扩散正问题</strong>：给定烘房环境、物性与边界系数，求圆柱形药材的温度/含水率时空分布与达标时长</td></tr>
+<tr><td>主干结论</td><td><strong>经独立复算成立</strong>：问题 3 = <strong>57.15 h</strong>（独立复算 57.17 h，差 0.03 %）；问题 4 仿射基线 = <strong>50.81 h</strong>（独立复算 50.78 h，差 0.06 %）；<code>result1—result4</code> 场量逐点差 ≤0.4 %</td></tr>
+<tr><td>最重要的一处缺陷</td><td>已有实现的<strong>非均匀收缩模型（M1）容量项量纲不一致</strong>：其积分水量与真实物理水量差 v₀/I 倍（实测 1.43→2.40，随时间漂移）。该路线的 <strong>47.62 h 不可用</strong>；修正该因子后结果约为 <strong>101.7 h</strong>（方向反转）。<strong>基线（问题 1—4）不受影响</strong></td></tr>
+<tr><td>其他需修补之处</td><td>① 结果表末尾"恰好 0.1500"与"严格 &lt; 0.15"冲突；② 恒温段环境取常值未论证（影响 +0.5 %～0.7 %）；③ 题给比热容与升温曲线量级不匹配（约 30 倍）；④ 停止阈值附近解对网格不敏感但对<strong>时间步</strong>敏感</td></tr>
+<tr><td>一句话判断</td><td>题目参数自带量级不自洽，答案在很大程度上是"题给参数口径下的答案"；这一点与 M1 的缺陷都必须在论文里写明，否则是评审的扣分点</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>1 题面解读</h2>
+<h3>1.1 已知与目标</h3>
+<p>药材近似为<strong>圆柱体</strong>：长 25 cm、半径 2 cm。初始温度 28 °C、干基含水率 2.55 kg/kg。烘房温度与水分浓度随时间变化由附件 1 给出（<strong>0—14400 s，每 60 s，共 241 点</strong>）。</p>
+<table>
+<thead><tr><th>问题</th><th>任务</th><th>关键要求</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>建立<strong>预热平衡阶段</strong>温湿度模型（参数用附录 2）</td><td>表 1/表 2：7 个时刻 × 5 个位置；<code>result1.xlsx</code> 每 1 s、每 0.1 cm</td></tr>
+<tr><td>2</td><td>建立<strong>整个烘干过程</strong>（2—3 天）模型（经验公式统一用附录 3）</td><td>表 3/表 4：3 h 内每 0.5 h；<code>result2.xlsx</code> 全部过程每 1 s、每 0.1 cm</td></tr>
+<tr><td>3</td><td>求<strong>烘干时长</strong>，判据：各处水分浓度 &lt; 0.15 kg/kg</td><td>表 5：每 6 h × 每 0.5 cm，含"烘干结束时间"行；<code>result3.xlsx</code> 每 60 s</td></tr>
+<tr><td>4</td><td>计入<strong>尺寸变化</strong>（附件 2 的 R(t)），求烘干时长（经验公式用附录 4）</td><td>表 6：列头为 0、0.5、…、<strong>药材表面</strong>；<code>result4.xlsx</code> 每 60 s</td></tr>
+</tbody>
+</table>
+<h3>1.2 附件与附录的分工（读题要点）</h3>
+<ul><li><strong>附件 1</strong>：烘房环境 T∞(t)、C∞(t) —— 只到 14400 s（4 h）；</li><li><strong>附件 2</strong>：药材半径 R(t) —— 0—259200 s（72 h），每 1800 s，从 2.000 cm 单调降到 1.198 cm，<strong>10 h 后基本不再收缩</strong>；</li><li><strong>附录 2</strong>（问题 1）：常物性 —— ρ=820、cₚ=2600、k=0.36、h=25、kₘ=8×10⁻⁷，D=7×10⁻⁹e^(-0.89/C)；</li><li><strong>附录 3</strong>（问题 2、3）：变物性 —— ρ=650+128C，cₚ=1450+2736(C)/(C+1)，k=0.21+0.38(C)/(C+1)，D=2.4×10⁻³e^(-0.45/C)e^(-3850/T)；</li><li><strong>附录 4</strong>（问题 4）：变物性 —— ρ=760+90C，cₚ=1850+2150(C)/(C+1)，k=0.12+0.20(C)/(C+1)，D=4.2×10⁻⁴e^(-0.30/C)e^(-3850/T)。</li></ul>
+<blockquote><strong>已用 PDF 字符级坐标（字号 10.56 → 7.56 的上标 + 分式横线）核验指数结构</strong>：附录 1 的 D=7×10⁻⁹e^(-0.89/C)、附录 3 的 D=2.4×10⁻³e^(-0.45/C)e^(-3850/T) 中，-0.89/C、-0.45/C、-3850/T 都是<strong>指数</strong>，<strong>不是</strong>乘积形式 e^(-0.89) C。已有实现的解释正确。</blockquote>
+<hr>
+<h2>2 数学模型的完整表述</h2>
+<h3>2.1 控制方程（问题 1—3，定尺寸）</h3>
+<p>温度场与水分场在 r∈[0,R₀] 上（R₀=0.02 m）：</p>
+<div class="mathblock">ρ(C)cₚ(C)(∂ T)/(∂ t)=(1)/(r)(∂)/(∂ r)(rk(C)(∂ T)/(∂ r)), (∂ C)/(∂ t)=(1)/(r)(∂)/(∂ r)(rD(C,T)(∂ C)/(∂ r))</div>
+<h3>2.2 边界与初始条件</h3>
+<div class="mathblock">r=0: (∂ T)/(∂ r)=(∂ C)/(∂ r)=0; r=R₀: -k(∂ T)/(∂ r)=h(T-T∞(t)), -D(∂ C)/(∂ r)=kₘ(C-C∞(t))</div>
+<div class="mathblock">t=0: T=28 °C, C=2.55 kg/kg</div>
+<h3>2.3 收缩域（问题 4）</h3>
+<p>令材料坐标 ξ=r/R(t)，可得</p>
+<div class="mathblock">(∂ C)/(∂ t)=(1)/(R²ξ)(∂)/(∂ ξ)(ξ D(∂ C)/(∂ξ)), ρ cₚ(∂ T)/(∂ t)=(1)/(R²ξ)(∂)/(∂ ξ)(ξ k(∂ T)/(∂ξ))</div>
+<div class="mathblock">r=R(t): -(D)/(R)(∂ C)/(∂ ξ)=kₘ(C-C∞), -(k)/(R)(∂ T)/(∂ ξ)=h(T-T∞)</div>
+<p><strong>关键点</strong>：因为 C 是<strong>干基</strong>含水率（定义在干物质上），仿射收缩 r=ξ R(t) 下材料单元内的干物质质量守恒，方程在这一坐标下<strong>恰好退化为纯扩散形式</strong>，<strong>不应</strong>再额外添加体积收缩引起的"对流增浓项"。已有实现对此的守恒反例论证是正确的。</p>
+<h3>2.4 常用派生量</h3>
+<div class="mathblock">Bi_T=(hR₀)/(k)=1.39, Biₘ=(kₘR₀)/(D)=2.29, α_T=(k)/(ρ cₚ)=1.69×10⁻⁷ m²/s</div>
+<hr>
+<h2>3 独立复算与验证</h2>
+<p>为验证已有解答，我<strong>未使用其代码</strong>，另写了一个求解器：均匀 ξ 网格节点中心有限体积、面系数取<strong>调和平均</strong>（已有实现取算术平均）、隐式欧拉 dt=60 s、系数延迟一步处理。</p>
+<h3>3.1 烘干时长</h3>
+<table>
+<thead><tr><th>情形</th><th>已有实现</th><th>独立复算（N=800）</th><th>相对差</th></tr></thead>
+<tbody>
+<tr><td>问题 3（附录 3，定尺寸）</td><td><strong>57.1471 h</strong></td><td><strong>57.1667 h</strong></td><td>0.03 %</td></tr>
+<tr><td>问题 4 基线（附录 4，仿射收缩）</td><td><strong>50.8119 h</strong></td><td><strong>50.7833 h</strong></td><td>0.06 %</td></tr>
+</tbody>
+</table>
+<p><strong>网格收敛一致性</strong>：独立求解器 N=100/200/400/800 → 71.13 / 58.45 / 57.28 / 57.17 h；已有实现报告 N=200/400/800 → 57.16/57.15/57.15 h。两者在细网格上收敛到同一值。</p>
+<blockquote><strong>注意（时间步效应）</strong>：在阈值穿越点附近，解对<strong>空间网格</strong>不敏感但对<strong>时间步</strong>不敏感度低。<br>实测 N=800 时 dt=60 s → 205800 s，dt=15 s → 205740 s（差 60 s）。<br>已有实现生产用步长在 1—60 s 之间自适应（前 600 s 用 0.05—1 s，600 s 后用 15—60 s），<br>属合理选择；但论文中应说明"结论对时间步不敏感"是<strong>在远离阈值处</strong>成立，阈值附近存在 1 个时间步的不确定度。</blockquote>
+<h3>3.2 场量逐点对照（独立复算 vs <code>result3.xlsx</code> 存储值）</h3>
+<table>
+<thead><tr><th>时刻</th><th>0 cm</th><th>1.0 cm</th><th>2.0 cm</th></tr></thead>
+<tbody>
+<tr><td>6 h</td><td>1.0156 / 1.0172</td><td>0.9006 / 0.9020</td><td>0.5335 / 0.5353</td></tr>
+<tr><td>12 h</td><td>0.4548 / 0.4551</td><td>0.4019 / 0.4022</td><td>0.1640 / 0.1646</td></tr>
+<tr><td>24 h</td><td>0.2371 / 0.2370</td><td>0.2161 / 0.2161</td><td>0.0663 / 0.0662</td></tr>
+<tr><td>48 h</td><td>0.1614 / 0.1614</td><td>0.1503 / 0.1503</td><td>0.0536 / 0.0536</td></tr>
+<tr><td>54 h</td><td>0.1535 / 0.1535</td><td>0.1433 / 0.1433</td><td>0.0528 / 0.0528</td></tr>
+</tbody>
+</table>
+<p>（左：文件存储值；右：独立复算值）<strong>相对差 ≤ 0.35 %</strong>，温度场对照最大绝对差 ≤ 0.04 °C（3 h）。</p>
+<h3>3.3 解析核对（圆柱对流边界的首模估计）</h3>
+<p>等温近似下圆柱扩散方程的首特征值 λ₁≈1.8805：</p>
+<div class="mathblock">t_dry≈(R₀²)/(λ₁²D) ln ((2J₁(λ₁))/(λ₁J₀(λ₁))·(C₀-C∞)/(0.15-C∞))=57.0 h</div>
+<p>与数值解 57.15 h 相差 0.3 %。说明：<strong>题给参数下扩散时间尺度与"2—3 天"完全吻合</strong>，题目在这一点上是自洽的。</p>
+<h3>3.4 结果文件合规性核查</h3>
+<table>
+<thead><tr><th>文件</th><th>行×列</th><th>时间栅格</th><th>结论</th></tr></thead>
+<tbody>
+<tr><td><code>result1.xlsx</code></td><td>1801 × 21（温度/水分浓度双表）</td><td>0—1800 s 每 1 s</td><td>合规</td></tr>
+<tr><td><code>result2.xlsx</code></td><td>205730 × 21</td><td>0—205729 s 每 1 s</td><td>合规（全流程，口径正确）</td></tr>
+<tr><td><code>result3.xlsx</code></td><td>3430 × 21</td><td>3429 个 60 s 点 + 终点行</td><td>合规</td></tr>
+<tr><td><code>result4.xlsx</code></td><td>3050 × 22（含"药材表面"列 + "表面位置"工作表）</td><td>3049 个 60 s 点 + 终点行</td><td>合规；空单元 23031 个，<strong>经核查恰好全部落在 r&gt;R(t) 的单元上</strong>，无一处越界填值</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>4 发现的问题清单</h2>
+<p>严重度：<strong>A</strong> = 会影响得分/结论；<strong>B</strong> = 应在论文中说明；<strong>C</strong> = 表述与体例。</p>
+<h3>A0（最重要）非均匀收缩模型 M1 的容量项量纲不一致，47.62 h 不可用</h3>
+<p><strong>问题</strong>：M1 把材料坐标 s 与"干物质质量分数"绑定，但映射 r=R√(J) 中 J ≠ s， 于是"Δ s 单元内的干物质质量"与"用 J 映射算出的真实物理水量"不再成比例。 实测比值（同一状态 C 下，代码口径 Σ CᵢMΔ sᵢ 与物理口径 Σ Cᵢπ R²Δ Jᵢ/v₀）：</p>
+<table>
+<thead><tr><th>t / h</th><th>代码口径 Σ C· MΔ s</th><th>物理口径 Σ C·π R²Δ J/v₀</th><th>比值</th><th>v₀/I</th></tr></thead>
+<tbody>
+<tr><td>5</td><td>2.7278e-01</td><td>1.9011e-01</td><td><strong>1.4349</strong></td><td>1.5361</td></tr>
+<tr><td>10</td><td>1.3046e-01</td><td>6.8885e-02</td><td><strong>1.8939</strong></td><td>1.9640</td></tr>
+<tr><td>20</td><td>6.3496e-02</td><td>2.7908e-02</td><td><strong>2.2752</strong></td><td>2.3016</td></tr>
+<tr><td>30</td><td>4.7082e-02</td><td>1.9704e-02</td><td><strong>2.3894</strong></td><td>2.4042</td></tr>
+<tr><td>（对照）geometric 全程</td><td>—</td><td>—</td><td><strong>1.0000</strong></td><td>1.0000</td></tr>
+</tbody>
+</table>
+<p>比值与 v₀/I 逐一吻合 → <strong>容量项少乘了 v₀/I</strong>（v₀ 为纯干物质比容 1/ρ_d0，I=∫₀¹v dξ）。 在 geometric 模式下 v≡ v₀、I=v₀，因子恰为 1，<strong>故问题 1—4 的基线结果不受影响</strong>； 一旦 v 随 C 变化（M1 的全部意义所在），方程被时间上整体放慢 v₀/I=1.43~2.40 倍。</p>
+<p><strong>验证</strong>：把该因子补回容量项后重新复跑同一实现（仅改容量），得到</p>
+<table>
+<thead><tr><th>路线</th><th>t_dry</th></tr></thead>
+<tbody>
+<tr><td>A 仿射（geometric，已有基线）</td><td><strong>50.8119 h</strong></td></tr>
+<tr><td>B local（现有实现，公布值）</td><td><strong>47.6208 h</strong></td></tr>
+<tr><td>C local＋补回 v₀/I</td><td><strong>101.68 h</strong></td></tr>
+</tbody>
+</table>
+<p><strong>结论</strong>：</p>
+<ul><li>现有实现的"非均匀收缩使烘干<strong>加快</strong> 6.3 %"这一结论<strong>由该缺陷造成，方向都不可信</strong>；</li><li>正确实现需要同时修正容量项的 v₀/I 因子<strong>并把映射自洽化</strong>（让 s 真正成为干物质坐标，</li></ul>
+<p>或直接改用物理坐标的 ALE/移动网格求解）。仅补因子会得到 101.7 h 与"变慢"的另一极端， 说明该路线的实现还需要重新推导，<strong>不能只改一个系数</strong>；</p>
+<ul><li><strong>建议</strong>：论文中只保留严格按附件 2 的<strong>仿射收缩基线 50.81 h（2.12 天）</strong>作为问题 4 的答案，</li></ul>
+<p>把"局部收缩"作为<strong>改进方向</strong>讨论（并诚实说明"局部收缩在物理上应使干燥略快，但其实现需要 自洽的材料坐标与正确的容量因子"），不要给出未经自洽性检验的 47.62 h。</p>
+<h3>A1　"保留四位小数"与"严格 &lt; 0.15"冲突，表末尾行恰好显示 0.1500</h3>
+<ul><li>事实：<code>result3.xlsx</code> / <code>result4.xlsx</code> / <code>result4_local.xlsx</code> 末行最大浓度按四位小数<strong>储存为 0.1500</strong>；</li></ul>
+<p>求解器内部真值为 0.1499999976～0.1499999977（裕量仅 2.4×10⁻⁹），舍入后即 0.1500。</p>
+<ul><li>风险：若评阅方按 <code>max(C) &lt; 0.15</code> 严格判读，<strong>末行不满足</strong>（0.1500 &lt; 0.15 为假）。</li><li>建议：把停止阈值改为 0.1499（或 0.14995）。实测代价：N=800 时 205800 s → 206100 s（+5 min），</li></ul>
+<p>末行即可显示 0.1499；同时正文明确写"<strong>严格达标的第一个整秒为 205730 s</strong>"。</p>
+<h3>A2　kₘ 的量级需要说明（此前"偏小 38 倍"的说法应予修正）</h3>
+<ul><li>表面上：全程需排出水分 ≈1.94 kg/kg（相对干物质），单位面积总通量 ≈1.98 kg/m²，</li></ul>
+<p>57 h 内平均通量 ≈9.7×10⁻⁶ kg/(m²·s)，而按题给系数与初始浓度差算的表面通量上限只有 kₘ(C₀-C∞)=2.0×10⁻⁶ kg/(m²·s)；</p>
+<ul><li><strong>但这不构成"参数错误"</strong>：模型自身的表面浓度会迅速降到 0.05 附近，驱动势随之塌缩，</li></ul>
+<p>kₘ 并不是限制环节。用独立求解器对模型做收支核对，<strong>表面通量与域内水量变化一致（比值 0.995）</strong>， 即<strong>模型自洽</strong>；</p>
+<ul><li>真正需要注意的是<strong>敏感性</strong>：kₘ 从 8×10⁻⁸ 到 8×10⁻⁵ m/s 变化时，</li></ul>
+<p>t_dry 由 144 h 降到 55.2 h 再升到 77.7 h（N=800）——<strong>非单调，且在 kₘ≈8×10⁻⁶ 附近最小</strong>。 原因是 D∝ e^(-0.45/C)：kₘ 过大时表面迅速变干、表层 D 塌缩成"结壳"，反而抑制内部水分逸出。</p>
+<ul><li>建议：论文给出该敏感性曲线；<strong>不要</strong>断言"题给 kₘ 偏小 38 倍"（该断言不成立）。</li></ul>
+<h3>A3　题给比热容与升温曲线不匹配（约 30 倍），药材等于"无限大热容块"</h3>
+<ul><li>体积热容 ρ cₚ=820×2600=2.13×10⁶ J/(m³·K)；</li><li>若表面热量全部用于升温：h(T∞-Tₛ)≈188 W/m² 早于 t≈5.6 h 就能把药材升到 50 °C，</li></ul>
+<p>但模型给出的 <strong>3 h 表面温度只有 35.4 °C</strong>（而附件 1 显示烘房 3 h 时已达 50 °C）；</p>
+<ul><li>反推"与升温曲线匹配"的体积热容约 6.6×10⁴ J/(m³·K)，与题给值相差约 30 倍。</li><li>后果：温度场几乎不渗透（3 h 时中心—表面仅差 0.1 °C，表面比烘房低 14.7 °C），</li></ul>
+<p>干燥速率被 Arrhenius 因子 e^(-3850/T) 长期压低，<strong>前 4—6 h 的干燥几乎停滞</strong>（由表 4 可直接看出）。</p>
+<ul><li>建议：论文中明确写出这一量级矛盾，并说明"本解严格遵循题给参数"；不要把它当成物理预测。</li></ul>
+<h3>A4　恒温段环境取常值（4 h 后不再变化）缺乏论证</h3>
+<ul><li>附件 1 只到 14400 s；已有实现将其后的 T∞,C∞ 冻结在末点 (50.165 °C, 0.04986 kg/kg)。</li><li>该假设直接决定答案：同一模型改用平台段均值 49.95 °C 时，t_dry 由 <strong>50.81 h 变为 51.16 h（+0.68 %）</strong>；</li></ul>
+<p>用 Savitzky–Golay 平滑替代逐点插值时变为 <strong>51.07 h（+0.51 %）</strong>。</p>
+<ul><li>建议：正文显式声明"4 h 后按恒温干燥阶段处理，环境取末点常值"，并给出上述敏感性数字。</li></ul>
+<h3>B1　h 与 kₘ 未能配对，能量口径需说明</h3>
+<p>h 远大于使药材在 30 min 内升温到 50 °C 所需（A3），kₘ 又远小于"按初始驱动势"所需的排水能力（A2）。 两者方向相反，说明题给的 h、kₘ 各自是"等效系数"，不宜做严格能量闭环校验。 已有实现已用能量审计与潜热反证说明了这一点，方向正确，建议在正文保留。</p>
+<h3>B2　"两阶段参数不同"的解释需要更小心</h3>
+<p>题目原文："预热平衡与恒温干燥阶段的参数有所不同（为简化问题，相关经验公式统一采用附录 3 中的公式）"。 合理读法是：<strong>本应分阶段变化的物性被统一为附录 3</strong>，两阶段差异主要来自<strong>环境条件</strong>（附件 1 的升温升湿段 vs 恒温段）。 已有实现采用此读法，正确；但应给出差异量级：同一时刻（1800 s）分别用附录 2 与附录 3 计算， 中心温度差 <strong>1.39 °C</strong>、表面浓度差 <strong>0.138 kg/kg（约 9 %）</strong> —— 差异不小， 因此<strong>必须明确问题 2/3 用附录 3、问题 1 用附录 2</strong>，不能互换。</p>
+<h3>B3　一维径向假设的边界（含端面）</h3>
+<ul><li>已有实现用二维轴对称（半长 12.5 cm、端面按对流边界）复核，中心点偏差 &lt;1 %，端面附近（z&gt;10 cm）明显更干。</li><li>但<strong>题目未说明圆柱两端是否暴露于热风</strong>（"长 25 cm"是否含端面干燥）。这是题目本身的模糊处，</li></ul>
+<p>论文应写明"取无限长圆柱/一维径向"的理由，并以二维结果作为佐证。</p>
+<h3>B4　"各处 &lt; 0.15"的判定对象</h3>
+<ul><li>必须用<strong>全场最大值</strong>（即中心点，因为 D 随 C 增大而增大，中心恒为最湿点）判定，不能用截面平均值。</li><li>已有实现已用平均值判据做反面对照（平均值口径会把时长低估约 21 h），这是正确且有价值的说明。</li></ul>
+<h3>B5　D(C) 在 C→0 时剧烈退化，表层近乎"不透水膜"</h3>
+<ul><li>D∝ e^(-0.45/C)：C=1.5→ 1.0×10⁻⁸；C=0.5→ 9.8×10⁻¹⁰；C=0.15→ 1.2×10⁻¹¹；</li></ul>
+<p>C=0.05→ 3.0×10⁻¹⁵ m²/s，<strong>跨 15 个数量级</strong>。</p>
+<ul><li>这制造出"干壳—湿芯"结构，也使数值方法必须用保守型格式（已有实现正确）。</li></ul>
+<p>另外，<strong>面系数用算术平均会高估表层扩散</strong>（建议改调和平均或做对照）；独立复算用调和平均得 57.17 h， 与算术平均的 57.15 h 相差 0.03 %，结论稳健。</p>
+<ul><li>由此还带来一个数值注意点：当 kₘ 较大（表面被强烈抽干）时，粗网格会严重误判</li></ul>
+<p>（kₘ=8×10⁻⁵ 时 N=400 给 131 h，N=800 给 78 h）。<strong>凡涉及强干燥工况必须做网格收敛</strong>。</p>
+<h3>C1　结果文件口径（已合规，但需注意）</h3>
+<ul><li><code>result4.xlsx</code> 采用"固定物理距离列 0—2.0 cm + 材料外留空 + 药材表面列 + 表面位置工作表"，与模板表头一致，且经核查无越界填值；</li><li><code>result3.xlsx</code>/<code>result4.xlsx</code> 末行为烘干结束时刻（非 60 s 整数倍），符合表 5/表 6 的"烘干结束时间"行要求；</li><li>建议在论文中一句话交代该口径，避免评阅方误以为末行时间戳是笔误。</li></ul>
+<h3>C2　"烘干时长"的三种等价表述要统一</h3>
+<ul><li>连续判据穿越时刻：问题 3 = <strong>57.1471 h（205729.45 s）</strong>；</li><li>第一个严格达标的<strong>整秒</strong>：<strong>205730 s = 57.1472 h</strong>；</li><li>按四位小数报告：<strong>57.15 h</strong>（≈2.38 天）。</li><li>三者必须在论文中区分清楚（已有实现已给出前两者，建议同时在表格中体现第三者的口径）。</li></ul>
+<hr>
+<h2>5 答案汇总（独立复算确认）</h2>
+<table>
+<thead><tr><th>问题</th><th>答案</th><th>独立复算</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>1800 s：中心 33.58 °C → 表面 36.79 °C；含水率 2.5500 → 1.5102 kg/kg</td><td>一致（≤0.03 °C）</td></tr>
+<tr><td>2</td><td>3 h：温度 49.85—49.97 °C；含水率 1.7662（中心）→ 1.0081（表面）</td><td>一致（≤0.04 °C）</td></tr>
+<tr><td>3</td><td><strong>57.15 h ≈ 2.38 天</strong>（205730 s 严格达标）</td><td>57.17 h（差 0.03 %）</td></tr>
+<tr><td>4</td><td><strong>仿射收缩 50.81 h ≈ 2.12 天</strong>（推荐采用）</td><td>50.78 h（差 0.06 %）</td></tr>
+<tr><td>4（备选）</td><td>非均匀收缩 47.62 h —— <strong>因 M1 实现缺陷暂不可用</strong>（见 A0）</td><td>修正因子后 101.7 h，方向反转</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>6 建议的论文写法要点</h2>
+<ol><li><strong>先摆假设、再摆方程</strong>：明确写出"无限长圆柱/一维径向""h、kₘ 取题给值""4 h 后环境取常值""忽略显式汽化潜热"四条，并各自给一句依据或量级说明；</li><li><strong>把 A0 处理干净</strong>：问题 4 只用仿射基线 50.81 h；若要坚持局部收缩路线，必须先做"离散水量守恒"</li></ol>
+<p>自检（Σᵢ CᵢΔ mᵢ 与 ∫ρ_w dV 必须同比例），否则任何结论都会被推翻；</p>
+<ol><li><strong>把 A2/A3 的量级问题写成"模型适用性讨论"</strong>：解释为什么升温很慢、为什么答案对 kₘ 敏感，也把"参数级不自洽"的责任交回题目；</li><li><strong>表格与结果文件口径对齐</strong>：末行给"烘干结束时间"，并把停止阈值放宽到 0.1499，以避开 0.1500 的严格不等号问题；</li><li><strong>数值证据链</strong>：解析解 + 两套独立内核互校 + 网格/时间步收敛 + 守恒审计（含离散水量守恒自检）+ 二维复核 + 参数敏感性，缺一不可。</li></ol></body></html>

@@ -1,0 +1,1764 @@
+% =====================================================================
+%  第二部分  数值方法原理
+% =====================================================================
+\part{数值方法原理}
+
+第一部分得到了两个偏微分方程和四个条件。这一部分回答一个问题：
+这些方程为什么算不出来，以及我们用什么办法算出来。
+
+% =====================================================================
+\section{为什么必须用数值方法}
+
+在动手之前，先说明为什么不能像解一元二次方程那样写一个公式就完事。
+有四个障碍，一个比一个麻烦。
+
+\subsection{障碍一：扩散系数随含水率变化}
+
+问题一的扩散系数是
+
+\begin{equation}
+D = 7\times10^{-9}e^{-0.89/C}.
+\end{equation}
+
+这个式子里的 $C$ 是未知的含水率。也就是说，
+要求解方程必须先知道 $D$，而 $D$ 又依赖于要求解的 $C$。
+这种方程叫非线性方程，不能像线性方程那样把解写成级数叠加的形式。
+
+先感受一下这个公式的行为。当 $C$ 从 $2.55$ 降到 $0.15$，
+
+\begin{equation}
+D(2.55) = 7\times10^{-9}e^{-0.89/2.55}=4.94\times10^{-9},
+\end{equation}
+
+\begin{equation}
+D(0.15) = 7\times10^{-9}e^{-0.89/0.15}=7\times10^{-9}\times e^{-5.933}
+= 7\times10^{-9}\times2.65\times10^{-3}=1.86\times10^{-11}.
+\end{equation}
+
+两者相差 $266$ 倍。也就是说，越干的地方水分越难移动，
+这正好对应干燥后期速度越来越慢的现象。
+但这也意味着 $D$ 在空间上是处处不同的，不能提到积分号或导数号外面。
+
+\subsection{障碍二：物性同时依赖两个未知量}
+
+在问题二到问题四中，扩散系数写成
+
+\begin{equation}
+D = 2.4\times10^{-3}e^{-0.45/C}e^{-3850/T},
+\end{equation}
+
+它同时依赖含水率 $C$ 和温度 $T$。
+这里要交代一个单位口径：经验式里温度那一项 $e^{-3850/T}$ 的 $T$
+按附录规定用开尔文，
+而全文其他地方出现的温度都用摄氏度。
+所以程序里要先做一次换算 $T_{\mathrm{K}}=T+273.15$，
+再把 $T_{\mathrm{K}}$ 代入这个经验式。
+而温度本身也要通过传热方程求解，传热方程里的导热系数 $k$ 又依赖 $C$。
+两个方程互相纠缠，必须联立求解，不能分开各算各的。
+
+\subsection{障碍三：边界条件是耦合的}
+
+表面条件里出现了表面值 $T(R_0,t)$ 和 $C(R_0,t)$，
+它们本身是未知的，而且和边界的梯度联系在一起。
+这种边界条件不能直接代入，必须和内部的解一起确定。
+
+\subsection{障碍四：求解区域会变形}
+
+问题四里药材半径从 $2.000$ 厘米收缩到 $1.198$ 厘米。
+这意味着我们要求解的区域本身在缩小，边界在移动。
+这类问题叫移动边界问题，处理起来需要额外的技巧，第九章详细讲。
+
+\keypoint
+四个障碍导致这道题没有现成的公式解。
+唯一的办法是把连续的区域切成很多小格，
+在每个小格上用代数运算近似微分运算，
+把微分方程变成一大组代数方程，再交给计算机求解。
+这就是数值方法。
+
+% =====================================================================
+\section{坐标变换：把麻烦的 1/r 去掉}
+
+这一章讲本套方法最核心的一个技巧。它解决的问题是：
+第一章里那个 $1/r$ 在圆心附近会带来麻烦。
+
+\subsection{麻烦在哪里}
+
+回看式 \eqref{eq:lap-expand}，算子可以写成
+
+\begin{equation}
+\frac{1}{r}\frac{\partial}{\partial r}\left(r\,D\,\frac{\partial C}{\partial r}\right)
+= D\frac{\partial^2 C}{\partial r^2}
++ \frac{D}{r}\frac{\partial C}{\partial r}
++ \frac{\partial D}{\partial r}\frac{\partial C}{\partial r}.
+\label{eq:singular}
+\end{equation}
+
+中间那一项 $\dfrac{D}{r}\dfrac{\partial C}{\partial r}$ 里有 $1/r$。
+
+当 $r$ 趋向于零时，$\dfrac{\partial C}{\partial r}$ 也趋向于零，
+两个无穷小相除，极限是有限的。数学上没有问题。
+但是对计算机来说有问题：
+计算机处理的是离散的点，在 $r=0$ 这个点上，
+它只会看到分母是零，无法直接算。
+
+常规的做法是对圆心附近做特殊处理。
+记常规 $r$ 坐标下的节点间距为 $h$，节点排在 $r=0,h,2h,\dots$ 上。
+那么最里面的那个控制体只覆盖 $r=0$ 到 $r=h/2$，
+也就是半径 $h/2$ 的小圆柱，只有半格宽。
+把它单独取出来，体积单独算，再单独写它对应的方程。
+这样做当然可以，但会让程序变得复杂，
+而且要额外推导公式，容易出错。
+
+\subsection{换元：用 u 代替 r}
+
+我们采取另一条路。定义一个新的自变量
+
+\begin{equation}
+u = \left(\frac{r}{R}\right)^2 = \xi^2,
+\label{eq:utrans}
+\end{equation}
+
+其中 $\xi=r/R$ 是归一化的半径，取值范围从 $0$ 到 $1$。
+新变量 $u$ 的取值范围也是从 $0$ 到 $1$。
+
+当 $r=0$ 时 $u=0$，当 $r=R$ 时 $u=1$。
+
+\why{为什么想到平方}
+因为圆柱的算子里的 $r$ 总是以 $r$ 乘以梯度的形式出现，
+也就是 $r\dfrac{\partial}{\partial r}$。
+如果令 $u$ 正比于 $r^2$，那么 $\mathrm{d}u$ 正比于 $r\,\mathrm{d}r$，
+这个 $r$ 恰好可以和算子里的 $r$ 配对消掉。
+这是一个基于结构的观察，不是碰巧试出来的。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{fig/fig_map.png}
+\caption{坐标变换 u 等于半径比值的平方。(a) 等距的半径映射成不等距的 u；(b) 同一批节点在两种坐标下的位置，上半行是 u 坐标，下半行是物理半径。}
+\label{fig:map}
+\end{figure}
+
+\subsection{第一步：求出两个导数之间的换算关系}
+
+从式 \eqref{eq:utrans} 出发，先反解出 $r$：
+
+\begin{equation}
+u = \frac{r^2}{R^2}
+\quad\Longrightarrow\quad
+r^2 = R^2 u
+\quad\Longrightarrow\quad
+r = R\sqrt{u}.
+\label{eq:rsqrtu}
+\end{equation}
+
+对式 \eqref{eq:rsqrtu} 求 $u$ 的导数。回忆 $\dfrac{\mathrm{d}}{\mathrm{d}u}\sqrt{u}
+= \dfrac{1}{2\sqrt{u}}$，所以
+
+\begin{equation}
+\frac{\partial r}{\partial u} = R\cdot\frac{1}{2\sqrt{u}} = \frac{R}{2\sqrt{u}}.
+\label{eq:drdu}
+\end{equation}
+
+链式法则告诉我们，如果 $f$ 是 $u$ 的函数，
+那么 $\dfrac{\partial f}{\partial u}=\dfrac{\partial f}{\partial r}\cdot\dfrac{\partial r}{\partial u}$，
+于是
+
+\begin{equation}
+\frac{\partial}{\partial u} = \frac{R}{2\sqrt{u}}\frac{\partial}{\partial r}.
+\end{equation}
+
+把上式两边同乘 $\dfrac{2\sqrt{u}}{R}$，得到我们真正要用的形式
+
+\begin{equation}
+\boxed{\;\frac{\partial}{\partial r} = \frac{2\sqrt{u}}{R}\frac{\partial}{\partial u}.\;}
+\label{eq:drdx}
+\end{equation}
+
+\subsection{第二步：逐项改造算子}
+
+现在把式 \eqref{eq:singular} 中的每一项拆开处理。
+为书写方便，记算子为
+
+\begin{equation}
+\mathcal{L}\phi = \frac{1}{r}\frac{\partial}{\partial r}\left(r\,D\,\frac{\partial\phi}{\partial r}\right),
+\end{equation}
+
+其中 $\phi$ 代表 $C$ 或 $T$。
+
+\textbf{第一个环节}，计算 $\dfrac{\partial\phi}{\partial r}$。直接用式 \eqref{eq:drdx}：
+
+\begin{equation}
+\frac{\partial\phi}{\partial r} = \frac{2\sqrt{u}}{R}\frac{\partial\phi}{\partial u}.
+\label{eq:step1}
+\end{equation}
+
+\textbf{第二个环节}，计算 $D\dfrac{\partial\phi}{\partial r}$。把式 \eqref{eq:step1} 乘上 $D$：
+
+\begin{equation}
+D\frac{\partial\phi}{\partial r} = D\cdot\frac{2\sqrt{u}}{R}\frac{\partial\phi}{\partial u}.
+\label{eq:step2}
+\end{equation}
+
+\textbf{第三个环节}，计算 $r\,D\dfrac{\partial\phi}{\partial r}$。
+把式 \eqref{eq:rsqrtu} 的 $r=R\sqrt{u}$ 和式 \eqref{eq:step2} 相乘：
+
+\begin{equation}
+r\,D\frac{\partial\phi}{\partial r}
+= R\sqrt{u}\cdot D\cdot\frac{2\sqrt{u}}{R}\frac{\partial\phi}{\partial u}.
+\end{equation}
+
+注意这里出现了 $\sqrt{u}\cdot\sqrt{u}=u$，而且 $R$ 和 $R$ 相消，
+于是
+
+\begin{equation}
+r\,D\frac{\partial\phi}{\partial r}
+= 2\,u\,D\frac{\partial\phi}{\partial u}.
+\label{eq:step3}
+\end{equation}
+
+这一步是整段推导的关键：原来的一堆根号全部合并成了一个干净的 $u$。
+
+\textbf{第四个环节}，计算 $\dfrac{\partial}{\partial r}\left(rD\dfrac{\partial\phi}{\partial r}\right)$。
+把式 \eqref{eq:drdx} 作用到式 \eqref{eq:step3} 上：
+
+\begin{equation}
+\frac{\partial}{\partial r}\left(rD\frac{\partial\phi}{\partial r}\right)
+= \frac{2\sqrt{u}}{R}\frac{\partial}{\partial u}\left(2uD\frac{\partial\phi}{\partial u}\right).
+\end{equation}
+
+\textbf{第五个环节}，除以 $r$。用 $r=R\sqrt{u}$：
+
+\begin{equation}
+\frac{1}{r}\frac{\partial}{\partial r}\left(rD\frac{\partial\phi}{\partial r}\right)
+= \frac{1}{R\sqrt{u}}\cdot\frac{2\sqrt{u}}{R}\cdot
+\frac{\partial}{\partial u}\left(2uD\frac{\partial\phi}{\partial u}\right).
+\end{equation}
+
+此时 $\dfrac{1}{\sqrt{u}}\cdot\sqrt{u}=1$，根号再次消掉，剩下
+
+\begin{equation}
+\frac{1}{r}\frac{\partial}{\partial r}\left(rD\frac{\partial\phi}{\partial r}\right)
+= \frac{2}{R^2}\frac{\partial}{\partial u}\left(2\,u\,D\frac{\partial\phi}{\partial u}\right).
+\end{equation}
+
+把括号外的 $2$ 和括号内的 $2$ 合起来，得到
+
+\begin{equation}
+\boxed{\;
+\frac{1}{r}\frac{\partial}{\partial r}\left(rD\frac{\partial\phi}{\partial r}\right)
+= \frac{4}{R^2}\frac{\partial}{\partial u}\left(u\,D\,\frac{\partial\phi}{\partial u}\right).
+\;}
+\label{eq:reg}
+\end{equation}
+
+\subsection{第三步：检查圆心处的表现}
+
+现在看式 \eqref{eq:reg} 的右边在 $u=0$ 处的表现。
+把括号里的导数用乘积法则展开：
+
+\begin{equation}
+\frac{\partial}{\partial u}\left(uD\frac{\partial\phi}{\partial u}\right)
+= D\frac{\partial\phi}{\partial u} + u\frac{\partial}{\partial u}\left(D\frac{\partial\phi}{\partial u}\right).
+\label{eq:expand-reg}
+\end{equation}
+
+第一项是 $D\dfrac{\partial\phi}{\partial u}$。要说明它在 $u=0$ 处有限，
+不能直接断言，要按下面的链条推出来。
+
+第一步，方程在 $u=0$ 处是正则的。式 \eqref{eq:reg} 的右边只出现 $u$ 的一次幂乘以导数，
+没有 $1/u$，也没有别的奇性，所以 $u=0$ 与区间内部的点没有区别。
+
+第二步，在这种方程下，解可以写成 $u$ 的收敛幂级数，也就是解在 $u$ 上是解析的。
+第六章讨论谱方法时会把这个幂级数写出来。
+
+第三步，幂级数可以逐项求导，所以解对 $u$ 的导数在 $u=0$ 处有界，
+也就是存在一个有限的数 $M$，使得 $\left|\dfrac{\partial\phi}{\partial u}\right|\le M$。
+
+第二项里有因子 $u$，在 $u=0$ 处直接等于零，
+不需要知道 $\dfrac{\partial\phi}{\partial u}$ 在这一点的大小。
+
+把这几条合起来：右边在 $u=0$ 处是一个有限的数，没有任何除以零的风险。
+麻烦被彻底消掉了。
+
+\why{这为什么比原来的写法好}
+原来在 $r$ 坐标下，圆心处的方程需要单独推导，需要知道该处控制体的特殊体积。
+现在在 $u$ 坐标下，圆心的方程就是同一个公式，直接把 $u=0$ 代进去就行。
+程序的写法因此统一，也不容易出错。
+
+\subsection{第四步：把方程改写成新坐标下的样子}
+
+传质方程原来是
+
+\begin{equation}
+\frac{\partial C}{\partial t}=\frac{1}{r}\frac{\partial}{\partial r}\left(rD\frac{\partial C}{\partial r}\right).
+\end{equation}
+
+把右边换成式 \eqref{eq:reg} 的形式，得到
+
+\begin{equation}
+\boxed{\;
+\frac{\partial C}{\partial t}=\frac{4}{R^2}\frac{\partial}{\partial u}\left(uD\frac{\partial C}{\partial u}\right).
+\;}
+\label{eq:mass-u}
+\end{equation}
+
+传热方程同理，
+
+\begin{equation}
+\boxed{\;
+\rho c_p\frac{\partial T}{\partial t}=\frac{4}{R^2}\frac{\partial}{\partial u}\left(uk\frac{\partial T}{\partial u}\right).
+\;}
+\label{eq:energy-u}
+\end{equation}
+
+\why{为什么右边的未知量还是写成 C 和 T 而不是改写}
+$C$ 和 $T$ 是物理量，换坐标不改变它们的值，
+只是把它们看成 $u$ 和 $t$ 的函数而不是 $r$ 和 $t$ 的函数。
+所以式子里仍然写 $C$，只是含义变成 $C(u,t)$。
+
+\subsection{第五步：边界条件也要改写}
+
+表面在 $r=R$ 处，对应 $u=1$。把 $u=1$ 代入式 \eqref{eq:drdx}，
+
+\begin{equation}
+\left.\frac{\partial}{\partial r}\right|_{u=1}
+= \frac{2\sqrt{1}}{R}\left.\frac{\partial}{\partial u}\right|_{u=1}
+= \frac{2}{R}\left.\frac{\partial}{\partial u}\right|_{u=1}.
+\end{equation}
+
+温度的表面条件原来是
+
+\begin{equation}
+-k\left.\frac{\partial T}{\partial r}\right|_{r=R}
+= h\left(T(R,t)-T_{\mathrm{air}}(t)\right).
+\end{equation}
+
+把左边换成 $u$ 的导数，
+
+\begin{equation}
+-k\cdot\frac{2}{R}\left.\frac{\partial T}{\partial u}\right|_{u=1}
+= h\left(T_1-T_{\mathrm{air}}(t)\right),
+\end{equation}
+
+其中 $T_1$ 表示 $u=1$ 处的温度，也就是表面温度。两边同乘 $-R/2$，
+
+\begin{equation}
+k\left.\frac{\partial T}{\partial u}\right|_{u=1}
+= -\frac{hR}{2}\left(T_1-T_{\mathrm{air}}(t)\right)
+= \frac{hR}{2}\left(T_{\mathrm{air}}(t)-T_1\right).
+\label{eq:bcu-T}
+\end{equation}
+
+水分条件同样处理，
+
+\begin{equation}
+D\left.\frac{\partial C}{\partial u}\right|_{u=1}
+= \frac{h_mR}{2}\left(C_{\mathrm{air}}(t)-C_1\right).
+\label{eq:bcu-C}
+\end{equation}
+
+写成这种形式以后，左右两边都不含根号和分数，
+程序里直接照抄这两个式子就行。
+
+\subsection{第六步：圆心处还需要加条件吗}
+
+不需要。理由要用下面这条链条说，不能只看通量。
+
+先说一个不能用的理由。当 $u=0$ 时，式 \eqref{eq:mass-u} 右边的通量
+$uD\dfrac{\partial C}{\partial u}$ 前面有因子 $u$，等于零，
+所以从圆心流出的总通量是零。
+但这只是因为那里的面积是零，面积为零推不出
+一阶导数 $\dfrac{\partial C}{\partial r}$ 为零。这两件事必须分开。
+
+正确的理由链条有四步。
+
+第一步，方程在 $u=0$ 处正则。式 \eqref{eq:reg} 的右边没有 $1/u$ 之类的奇性，
+$u=0$ 与区间内部的点没有区别。
+
+第二步，在这种方程下，解可以写成 $u$ 的收敛幂级数，也就是解在 $u$ 上解析。
+
+第三步，幂级数逐项可导，所以解对 $u$ 的导数在 $u=0$ 处有界，
+记这个界为 $M$，即 $\left|\dfrac{\partial C}{\partial u}\right|\le M$。
+
+第四步，用链式法则回到 $r$。由式 \eqref{eq:drdx}，
+
+\begin{equation}
+\frac{\partial C}{\partial r}
+= \frac{2\sqrt{u}}{R}\,\frac{\partial C}{\partial u}.
+\end{equation}
+
+当 $u$ 趋于零时，右边的因子 $\dfrac{2\sqrt{u}}{R}$ 趋于零，
+而 $\dfrac{\partial C}{\partial u}$ 有界，所以整个右边趋于零。
+
+于是 $r=0$ 处的一阶导数确实等于零，这正是对称条件。
+它由方程本身和解的正则性保证，不需要另外写进程序。
+
+\keypoint
+坐标变换做了三件事。
+第一，把 $1/r$ 消掉了，圆心不再是特殊点。
+第二，两个方程形式完全一样，只是系数不同，程序可以共用一套代码。
+第三，表面条件化成整洁的代数式。
+
+% =====================================================================
+\section{谱方法：用很少的点算得很准}
+
+有了新坐标，接下来要把区间 $0\le u\le1$ 切成有限个点，
+在点上求近似解。这一章讲怎么切、怎么把导数变成代数运算。
+
+\subsection{基本想法：用多项式代替未知函数}
+
+假设我们不知道 $C(u,t)$ 的具体形式，但知道它在若干个点上的值。
+能不能构造一个多项式，让它在这几个点上的值正好等于已知值，
+然后用这个多项式代表未知函数？
+
+可以。这个多项式叫插值多项式，这几个点叫插值节点。
+
+一旦有了多项式，求导数就变成对多项式求导，结果仍然是多项式，
+可以精确算出它在各点的值。这样微分运算就变成了有限的代数运算。
+
+\subsection{节点怎么选：一个反面教材}
+
+最自然的想法是把点均匀分布。比如在 $0$ 到 $1$ 之间取 $11$ 个等距点。
+这种做法在点数少的时候还行，点数一多就出问题。
+
+问题出在函数形状复杂的地方。均匀分布的点无法同时照顾区间两端和中间，
+当多项式次数升高时，两端会出现剧烈的上下摆动。
+这个现象叫龙格现象，是插值理论里的经典结论。
+
+\why{为什么会摆动}
+直觉的解释是：区间两端的点比较少的信息去约束多项式，
+而高次多项式在端点的变化率很大，
+稍微改变一点系数就会让端点附近剧烈起伏。
+均匀分布没有在两端加密，所以控制不住。
+
+\subsection{切比雪夫节点}
+
+解决办法是在区间两端加密。具体做法是取
+
+\begin{equation}
+x_j = \cos\frac{j\pi}{N}, \qquad j=0,1,2,\dots,N .
+\label{eq:chebnode}
+\end{equation}
+
+这些点分布在 $-1$ 到 $1$ 之间。当 $j=0$ 时 $x_0=\cos0=1$，
+当 $j=N$ 时 $x_N=\cos\pi=-1$。
+
+这些点有一个特点：靠近两端时，$\cos$ 的变化变慢，
+所以点会自然地在两端聚集。可以验证，最靠近端点的两个点之间的距离
+大约是 $\dfrac{\pi^2}{2N^2}$，而中间的间距大约是 $\dfrac{\pi}{N}$。
+把这两个间距相除，
+
+\begin{equation}
+\frac{\pi/N}{\pi^2/(2N^2)} = \frac{2N}{\pi} \approx 0.64N ,
+\end{equation}
+
+所以两端的点比中间密约 $\dfrac{2N}{\pi}$ 倍，也就是约 $0.64N$ 倍。
+
+再把它们映射到区间 $0$ 到 $1$：
+
+\begin{equation}
+u_j = \frac{1-x_j}{2}.
+\label{eq:map01}
+\end{equation}
+
+当 $x=1$ 时 $u=0$，当 $x=-1$ 时 $u=1$。这样 $u_0=0$，$u_N=1$，
+正好对应圆心和表面。
+
+\why{映射公式里的 1 和 2 是怎么来的}
+把区间 $-1$ 到 $1$ 线性映射到 $0$ 到 $1$，
+需要先加 $1$ 把区间移到 $0$ 到 $2$，再除以 $2$ 缩放到 $0$ 到 $1$。
+也就是 $u=\dfrac{x+1}{2}$。
+而我们的 $x_j=\cos$ 是从 $1$ 递减到 $-1$ 的，
+所以写成 $u=\dfrac{1-x}{2}$ 正好让 $u$ 从 $0$ 递增到 $1$。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{fig/fig_cheb.png}
+\caption{切比雪夫节点的来源。(a) 在单位圆上按等角距取点，再垂直投影到直径上；(b) 投影结果是两端密、中间疏的分布，两端间距约为 N 平方分之一量级。}
+\label{fig:cheb}
+\end{figure}
+
+\subsection{插值多项式的唯一性}
+
+有一个重要的事实：给定 $N+1$ 个互不相同的节点和对应的函数值，
+次数不超过 $N$ 的插值多项式是唯一的。
+
+理由是这样。设两个不同的多项式都满足条件，它们的差也是一个次数不超过 $N$
+的多项式，但在这个 $N+1$ 个节点上都等于零。
+一个次数不超过 $N$ 的非零多项式最多只有 $N$ 个根，
+现在有了 $N+1$ 个根，只能是恒等于零的多项式。所以两个多项式其实是同一个。
+
+这个事实保证了插值结果是确定的，不受计算方法影响。
+
+\subsection{拉格朗日插值公式}
+
+插值多项式可以写成
+
+\begin{equation}
+p(u) = \sum_{j=0}^{N} C_j\,\ell_j(u),
+\label{eq:lagrange}
+\end{equation}
+
+其中 $C_j$ 是函数在第 $j$ 个节点上的值，$\ell_j(u)$ 叫基函数，定义是
+
+\begin{equation}
+\ell_j(u) = \prod_{\substack{k=0\\k\ne j}}^{N}\frac{u-u_k}{u_j-u_k}.
+\label{eq:basis}
+\end{equation}
+
+这个式子的意思需要解释一下。
+
+分子是 $N$ 个因子的乘积，每个因子是 $u$ 减去一个别的节点的位置。
+当 $u$ 取第 $j$ 个节点时，分子里出现因子 $u_j-u_j=0$，整个分子等于零。
+
+分母是把分子里的 $u$ 换成 $u_j$ 得到的常数。
+
+所以当 $u=u_j$ 时，分子分母相同，$\ell_j(u_j)=1$。
+而当 $u=u_k$，也就是 $k$ 不等于 $j$ 时，分子里有一个因子 $u_k-u_k=0$，
+所以 $\ell_j(u_k)=0$。
+
+把这两条合起来，代入式 \eqref{eq:lagrange}，当 $u=u_j$ 时，
+
+\begin{equation}
+p(u_j) = C_j\cdot1 + \sum_{k\ne j}C_k\cdot0 = C_j .
+\end{equation}
+
+插值条件得到满足。
+
+\subsection{从插值多项式得到导数}
+
+对式 \eqref{eq:lagrange} 求导，
+
+\begin{equation}
+p'(u) = \sum_{j=0}^{N}C_j\,\ell_j'(u).
+\end{equation}
+
+在节点 $u_i$ 处取值，
+
+\begin{equation}
+p'(u_i) = \sum_{j=0}^{N}C_j\,\ell_j'(u_i).
+\end{equation}
+
+把 $\ell_j'(u_i)$ 记作 $D_{ij}$，就得到一个矩阵形式的关系：
+
+\begin{equation}
+\begin{pmatrix} p'(u_0)\\ p'(u_1)\\ \vdots\\ p'(u_N)\end{pmatrix}
+=
+\begin{pmatrix}
+D_{00} & D_{01} & \cdots & D_{0N}\\
+D_{10} & D_{11} & \cdots & D_{1N}\\
+\vdots & \vdots & \ddots & \vdots\\
+D_{N0} & D_{N1} & \cdots & D_{NN}
+\end{pmatrix}
+\begin{pmatrix} C_0\\ C_1\\ \vdots\\ C_N\end{pmatrix}.
+\label{eq:dmatrix}
+\end{equation}
+
+这个矩阵叫微分矩阵。它的作用是：输入一组函数值，输出一组导数值。
+求导这个微分运算，被彻底变成了矩阵乘法。
+
+\subsection{微分矩阵的元素公式}
+
+对切比雪夫节点，微分矩阵的元素有封闭形式的公式。记
+
+\begin{equation}
+c_0 = 2,\qquad c_N = 2,\qquad c_j = 1 \quad (1\le j\le N-1).
+\end{equation}
+
+当 $i$ 不等于 $j$ 时，
+
+\begin{equation}
+D_{ij} = \frac{c_i}{c_j}\cdot\frac{(-1)^{i+j}}{x_i-x_j}.
+\label{eq:dij}
+\end{equation}
+
+当 $i$ 等于 $j$ 时，不能直接用这个公式，因为分母为零。
+对角线元素用另一条性质确定：常数函数的导数处处为零。
+把常数函数 $f\equiv1$ 代入式 \eqref{eq:dmatrix}，
+左边全是零，右边是对每一行求和，于是
+
+\begin{equation}
+\sum_{j=0}^{N}D_{ij} = 0 \quad\text{对每个 }i,
+\end{equation}
+
+所以
+
+\begin{equation}
+D_{ii} = -\sum_{\substack{j=0\\j\ne i}}^{N}D_{ij}.
+\label{eq:dii}
+\end{equation}
+
+\why{为什么要用这个办法求对角元}
+因为直接计算对角元需要求极限，数值上不稳定。
+用行和为零这条性质，既精确又简单。
+这条性质来自一个简单事实：常数的导数为零，
+而插值多项式对常数函数是精确的。
+
+\subsection{记号的换算}
+
+式 \eqref{eq:dij} 里的 $x$ 是切比雪夫变量。我们的自变量是 $u$，
+两者关系是 $u=\dfrac{1-x}{2}$，反过来 $x=1-2u$。
+
+对 $u$ 求导和对 $x$ 求导的关系由链式法则给出：
+
+\begin{equation}
+\frac{\partial}{\partial u}
+= \frac{\partial x}{\partial u}\cdot\frac{\partial}{\partial x}
+= \frac{\partial(1-2u)}{\partial u}\cdot\frac{\partial}{\partial x}
+= -2\frac{\partial}{\partial x}.
+\end{equation}
+
+所以
+
+\begin{equation}
+D_u = -2D_x .
+\label{eq:du}
+\end{equation}
+
+程序里先算 $D_x$，再乘 $-2$ 得到 $D_u$，最后对 $u$ 求导就用 $D_u$。
+
+\subsection{一个三节点的手算例子}
+
+上面的公式看着抽象。这一段把节点数取成 $N=2$，
+也就是只用三个点，把整个过程从零算一遍。
+每一个数字都会写出来，你可以拿计算器逐个复核。
+
+\textbf{第一步，算节点位置。}
+
+按式 \eqref{eq:chebnode}，让 $j$ 依次取 $0$、$1$、$2$：
+
+\begin{equation}
+x_0=\cos\frac{0\cdot\pi}{2}=\cos0=1,
+\end{equation}
+
+\begin{equation}
+x_1=\cos\frac{1\cdot\pi}{2}=\cos\frac{\pi}{2}=0,
+\end{equation}
+
+\begin{equation}
+x_2=\cos\frac{2\cdot\pi}{2}=\cos\pi=-1 .
+\end{equation}
+
+再按式 \eqref{eq:map01} 换算到 $u$ 坐标：
+
+\begin{equation}
+u_0=\frac{1-1}{2}=0,\qquad
+u_1=\frac{1-0}{2}=0.5,\qquad
+u_2=\frac{1-(-1)}{2}=1 .
+\end{equation}
+
+三个节点分别落在圆心、径向中点、表面。
+
+\textbf{第二步，算系数 $c$。}
+
+按定义，首尾两个取 $2$，中间取 $1$，所以
+
+\begin{equation}
+c_0=2,\qquad c_1=1,\qquad c_2=2 .
+\end{equation}
+
+\textbf{第三步，算节点之间的差值 $x_i-x_j$。}
+
+把所有九个组合列成表。先写对角线为零，稍后修正。
+
+\begin{center}
+\begin{tabular}{@{}c|ccc@{}}
+\toprule
+$i$ 与 $j$ & $j=0$ & $j=1$ & $j=2$ \\
+\midrule
+$i=0$ & $0$ & $1-0=1$ & $1-(-1)=2$ \\
+$i=1$ & $0-1=-1$ & $0$ & $0-(-1)=1$ \\
+$i=2$ & $-1-1=-2$ & $-1-0=-1$ & $0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{第四步，算非对角线上的元素。}
+
+按式 \eqref{eq:dij}，公式是
+
+\begin{equation}
+D_{ij}=\frac{c_i}{c_j}\cdot\frac{(-1)^{i+j}}{x_i-x_j}.
+\end{equation}
+
+逐个算六个非对角线元素。
+
+$i=0$，$j=1$：
+
+\begin{equation}
+D_{01}=\frac{c_0}{c_1}\cdot\frac{(-1)^{1}}{x_0-x_1}
+=\frac{2}{1}\cdot\frac{-1}{1}=-2 .
+\end{equation}
+
+$i=0$，$j=2$：
+
+\begin{equation}
+D_{02}=\frac{2}{2}\cdot\frac{(-1)^{2}}{2}=1\times\frac{1}{2}=0.5 .
+\end{equation}
+
+$i=1$，$j=0$：
+
+\begin{equation}
+D_{10}=\frac{1}{2}\cdot\frac{(-1)^{1}}{-1}=0.5\times\frac{-1}{-1}=0.5 .
+\end{equation}
+
+$i=1$，$j=2$：
+
+\begin{equation}
+D_{12}=\frac{1}{2}\cdot\frac{(-1)^{3}}{1}=0.5\times(-1)=-0.5 .
+\end{equation}
+
+$i=2$，$j=0$：
+
+\begin{equation}
+D_{20}=\frac{2}{2}\cdot\frac{(-1)^{2}}{-2}=1\times\frac{1}{-2}=-0.5 .
+\end{equation}
+
+$i=2$，$j=1$：
+
+\begin{equation}
+D_{21}=\frac{2}{1}\cdot\frac{(-1)^{3}}{-1}=2\times\frac{-1}{-1}=2 .
+\end{equation}
+
+\why{程序里为什么不写这个公式}
+程序里写的是先把 $(-1)^j$ 乘进系数 $c$，
+于是 $c_i/c_j$ 这一个因子就同时包含了 $\dfrac{c_i}{c_j}$ 和 $(-1)^{i+j}$，
+公式变成一次除法。这样写更短，结果完全一样。
+如果用上面这个公式逐个手算，得到的是同一组数字。
+
+\textbf{第五步，用行和为零求对角线元素。}
+
+对角线上不能直接用上面的公式，因为分母为零。
+改用另一条性质：常数函数的导数处处为零。
+把常数函数 $f\equiv1$ 代入，左边每行都是零，
+右边是矩阵每一行的和，于是每一行的和必须等于零：
+
+\begin{equation}
+D_{ii}=-\sum_{j\ne i}D_{ij}.
+\end{equation}
+
+第一行：
+
+\begin{equation}
+D_{00}=-(D_{01}+D_{02})=-(-2+0.5)=-(-1.5)=1.5 .
+\end{equation}
+
+第二行：
+
+\begin{equation}
+D_{11}=-(D_{10}+D_{12})=-(0.5-0.5)=-0=0 .
+\end{equation}
+
+第三行：
+
+\begin{equation}
+D_{22}=-(D_{20}+D_{21})=-(-0.5+2)=-(1.5)=-1.5 .
+\end{equation}
+
+把全部元素拼起来，得到
+
+\begin{equation}
+D_x=
+\begin{pmatrix}
+1.5 & -2 & 0.5\\
+0.5 & 0 & -0.5\\
+-0.5 & 2 & -1.5
+\end{pmatrix}.
+\end{equation}
+
+\textbf{第六步，验证这个矩阵对不对。}
+
+用两个已知导数的函数来检验。
+
+第一个用常数函数 $f(x)=1$，它的导数是零。
+把 $f$ 在三个节点上的值写成列向量 $(1,1,1)$，用矩阵去乘：
+
+\begin{equation}
+\begin{pmatrix}1.5 & -2 & 0.5\\ 0.5 & 0 & -0.5\\ -0.5 & 2 & -1.5\end{pmatrix}
+\begin{pmatrix}1\\1\\1\end{pmatrix}
+=
+\begin{pmatrix}1.5-2+0.5\\ 0.5+0-0.5\\ -0.5+2-1.5\end{pmatrix}
+=
+\begin{pmatrix}0\\0\\0\end{pmatrix}.
+\end{equation}
+
+三个分量都是零，正确。
+
+第二个用一次函数 $f(x)=x$，它的导数是常数 $1$。
+$f$ 在三个节点上的值是 $(1,0,-1)$，
+
+\begin{equation}
+\begin{pmatrix}1.5 & -2 & 0.5\\ 0.5 & 0 & -0.5\\ -0.5 & 2 & -1.5\end{pmatrix}
+\begin{pmatrix}1\\0\\-1\end{pmatrix}
+=
+\begin{pmatrix}1.5+0-0.5\\ 0.5+0+0.5\\ -0.5+0+1.5\end{pmatrix}
+=
+\begin{pmatrix}1\\1\\1\end{pmatrix}.
+\end{equation}
+
+三个分量都是 $1$，也正确。
+
+\textbf{第七步，换成对 $u$ 求导的矩阵。}
+
+按式 \eqref{eq:du}，把上面每个元素乘 $-2$：
+
+\begin{equation}
+D_u=-2D_x=
+\begin{pmatrix}
+-3 & 4 & -1\\
+-1 & 0 & 1\\
+1 & -4 & 3
+\end{pmatrix}.
+\end{equation}
+
+再用一次函数检验。在 $u$ 坐标下取 $f(u)=u$，
+它在三个节点上的值是 $(0,\ 0.5,\ 1)$，而 $\dfrac{\mathrm{d}u}{\mathrm{d}u}=1$，
+
+\begin{equation}
+\begin{pmatrix}-3 & 4 & -1\\ -1 & 0 & 1\\ 1 & -4 & 3\end{pmatrix}
+\begin{pmatrix}0\\0.5\\1\end{pmatrix}
+=
+\begin{pmatrix}0+2-1\\ 0+0+1\\ 0-2+3\end{pmatrix}
+=
+\begin{pmatrix}1\\1\\1\end{pmatrix}.
+\end{equation}
+
+三个分量都是 $1$，说明程序里那行 $D_u=-2D_x$ 得到的结果是对的。
+
+\keypoint
+三个节点的手算结果给出两条检验标准。
+第一，微分矩阵每一行的和必须等于零，因为常数的导数为零。
+第二，把节点坐标本身当作函数代进去，结果必须全是 $1$，因为一次函数的导数是常数。
+这两条只要有一条不满足，矩阵就一定写错了。
+
+\subsection{为什么谱方法精度高}
+
+常规的差分方法，比如用相邻两点做差商近似导数，
+误差是步长的平方量级。步长减半，误差降到四分之一。
+要想精度提高一千倍，得把点数增加三十多倍。
+
+谱方法不一样。如果函数足够光滑，
+插值多项式的误差随节点数增加而指数下降。
+也就是说，点数稍微增加一点，误差就急剧变小。
+
+原因可以这样理解。差分方法只用了相邻几个点的信息，
+而谱方法的插值多项式用了所有点的信息，
+等价于用整个区间上的信息去估计每一点的导数，
+所以效率高得多。
+
+\why{本题能用谱方法吗}
+可以，而且效果很好。原因在第五章已经埋下伏笔。
+在 $u$ 坐标下，解是关于 $u$ 的解析函数，
+具体说，第一类贝塞尔函数 $J_0$ 的展开式
+
+\begin{equation}
+J_0\!\left(\frac{\beta r}{R}\right)
+= \sum_{k\ge0}\frac{(-1)^k}{k!\,k!}\left(\frac{\beta^2}{4}\right)^{k}u^{k}
+\end{equation}
+
+只含 $u$ 的整数次幂，是一个处处收敛的幂级数。
+这类函数正是多项式插值最擅长逼近的对象。
+
+实际计算中，节点参数 $N$ 由 $4$ 加到 $6$，
+与精确解的偏差就从 $7.59\times10^{-6}$ 掉到 $2.88\times10^{-10}$，
+只多用了两个节点。误差不是慢慢下降，而是跳台阶，
+这才是谱收敛的准确表现。
+
+再往上加节点，偏差就停在 $10^{-10}$ 附近不再继续下降，
+节点参数从 $8$ 加到 $64$ 都是这个水平。
+这个平台不是空间离散的极限，而是时间积分的相对容差造成的地板：
+节点数不变、只把时间相对容差收紧，偏差就跟着变小。
+作收敛性检验时时间相对容差取 $10^{-12}$。
+
+\keypoint
+谱方法的三步是：选切比雪夫节点，构造微分矩阵，用矩阵乘法代替求导。
+本题里节点参数 $N$ 从 $4$ 加到 $6$，
+偏差就从 $7.59\times10^{-6}$ 掉到 $2.88\times10^{-10}$，
+说明空间精度随节点数急剧提高。
+偏差停在 $10^{-10}$ 是时间积分容差造成的地板，不是空间离散的极限。
+
+% =====================================================================
+\section{时间推进：从当前时刻推到下一时刻}
+
+到上一章为止，我们把空间方向的导数处理完了。
+剩下时间方向的导数 $\dfrac{\partial C}{\partial t}$ 还没处理。
+这一章讲怎么处理。
+
+\subsection{半离散化}
+
+先只对空间做离散。在 $N+1$ 个节点上，方程
+
+\begin{equation}
+\frac{\partial C}{\partial t}=\frac{4}{R^2}\frac{\partial}{\partial u}\left(uD\frac{\partial C}{\partial u}\right)
+\end{equation}
+
+变成 $N+1$ 个常微分方程。比如第 $j$ 个节点上的方程是
+
+\begin{equation}
+\frac{\mathrm{d}C_j}{\mathrm{d}t}
+= \frac{4}{R^2}\left[\text{第 }j\text{ 个节点上的空间算子离散值}\right].
+\label{eq:semi}
+\end{equation}
+
+这个过程叫半离散化，意思是空间已经离散，时间还是连续的。
+
+\why{为什么先做空间再做时间}
+因为空间离散化以后，问题的规模就定下来了，
+只剩下一组关于时间的常微分方程。
+这种方程有很多成熟的求解程序可以直接用，
+不需要自己从零开始写。这也是一种分工策略：
+难的部分自己做，成熟的部分用现成的。
+
+\subsection{最简单的方法：显式欧拉法}
+
+把时间也切成小段，步长记作 $\Delta t$。
+最简单的方法是用前向差商近似时间导数：
+
+\begin{equation}
+\frac{\mathrm{d}C_j}{\mathrm{d}t}\approx\frac{C_j^{n+1}-C_j^{n}}{\Delta t},
+\label{eq:forward}
+\end{equation}
+
+其中上标 $n$ 表示第 $n$ 个时刻，$n+1$ 表示下一个时刻。
+
+把式 \eqref{eq:forward} 代入式 \eqref{eq:semi}，得到
+
+\begin{equation}
+C_j^{n+1} = C_j^{n} + \Delta t\cdot
+\frac{4}{R^2}\left[\text{空间算子}(C^n)\right].
+\label{eq:euler}
+\end{equation}
+
+右边全部是已知的旧值，直接算出来就是新值，不需要解方程。
+这个方法叫显式欧拉法。
+
+\subsection{显式欧拉法的问题：稳定性}
+
+显式欧拉法有一个致命缺点。它可以写成
+
+\begin{equation}
+C^{n+1} = \left(I+\Delta t\,L\right)C^{n},
+\end{equation}
+
+其中 $L$ 是空间离散矩阵，$I$ 是单位矩阵。
+要让解不发散，要求 $\Delta t$ 足够小，
+具体来说要求 $\Delta t$ 小于某个与 $\Delta u^2$ 同量级的阈值。
+
+而谱方法的节点在两端非常密集。
+$u$ 坐标下最小的节点间距大约是 $\dfrac{\pi^2}{4N^2}$，
+换成 $x$ 坐标就是 $\dfrac{\pi^2}{2N^2}$。
+节点参数取 $64$ 时，实测的最小间距是 $6.023\times10^{-4}$，
+公式给出 $6.024\times10^{-4}$，两者可以对上。
+
+显式方法要求 $\Delta t$ 小于某个与最小节点间距的平方成正比的阈值。
+这句话的意思是：节点越密，允许的步长越小，而且是按间距的平方缩小。
+节点参数取 $64$ 时，实测的最小间距是 $6.023\times10^{-4}$，
+它已经是网格中最小的一个，所以它决定步长上界。
+
+现在算量级。先看物理过程本身的时间尺度。
+时间方向的量纲因子是 $\dfrac{R^2}{4D}$，
+取 $C=2.55$ 时的扩散系数，它约等于 $2.03\times10^4$ 秒。
+也就是说，单靠扩散把水分走完两厘米，需要两万秒的量级。
+
+再看显式方法允许的步长。
+把同一套空间离散接到显式欧拉上实测：
+步长取 $2\times10^{-4}$ 秒时稳定，取 $4\times10^{-4}$ 秒时发散，
+所以稳定上界约为 $4\times10^{-4}$ 秒。
+
+两个数一比就看出问题了：
+允许的步长比物理过程的时间尺度小了约 $5\times10^7$ 倍。
+也就是说每一秒要算约 $2500$ 步，
+而整个过程要算 $2\times10^5$ 秒，总步数在 $5\times10^8$ 量级。
+每步还要解一个含 $65$ 个未知量的方程组，
+这个计算量是无法接受的。
+
+这里只给出趋势与实测上界，不去套一个解析的步长公式。
+原因是本题的右端项同时含温度与含水率，扩散系数本身随含水率变化，
+最大特征值没有简单的解析表达式，老老实实测一次更可靠。
+
+这种要求时间步长远小于物理过程时间尺度的现象，叫做刚性。
+本题就是典型的刚性问题。
+
+\why{刚性的物理来源}
+表面处的干燥非常快，因为一开始表面含水率是 $2.55$，
+而空气中的含湿量只有 $0.0196$，落差很大，表面迅速失水。
+在很短的时间内，表面附近形成一层很薄的水分变化区。
+要准确刻画这一层，时间步长必须很小。
+但整个干燥过程长达五十多个小时。
+快慢两个尺度相差极大，这就是刚性的根源。
+
+\subsection{隐式方法}
+
+换一个思路。用后向差商近似时间导数：
+
+\begin{equation}
+\frac{\mathrm{d}C_j}{\mathrm{d}t}\approx\frac{C_j^{n+1}-C_j^{n}}{\Delta t}.
+\end{equation}
+
+式子的形式看起来和式 \eqref{eq:forward} 一样，区别在于右端空间算子取的是哪个时刻的值。
+显式方法取旧时刻 $n$，隐式方法取新时刻 $n+1$：
+
+\begin{equation}
+\frac{C_j^{n+1}-C_j^{n}}{\Delta t}
+= \frac{4}{R^2}\left[\text{空间算子}(C^{n+1})\right].
+\label{eq:implicit}
+\end{equation}
+
+现在右边含有未知的新值，两边都有未知量，
+需要解一个方程组才能得到新值。这就是隐式的含义。
+
+\why{隐式方法为什么能允许大得多的步长}
+可以这样理解。显式方法相当于说我用现在的趋势直接外推，
+如果趋势变化很快，外推就会跑偏。
+隐式方法相当于说我先猜一个新值，然后检查它是否满足方程，
+不满足就调整。这种自我修正的机制让方法对快速变化有更强的抵抗力。
+数学上可以证明，后向欧拉法是无条件稳定的，
+不管步长多大解都不会发散。
+
+代价是每一步都要解方程组。但本题的方程组规模很小，
+用现成的线性代数程序在毫秒级就能解完，完全可以接受。
+
+\subsection{更高阶的方法：BDF}
+
+后向欧拉法只有一阶精度，也就是说误差与步长成正比。
+步长减半，误差减半。要提高精度，可以用更高阶的公式。
+
+BDF 是向后差分公式的缩写。它的想法是利用前面若干个时刻的解，
+构造一个更高精度的差商近似。
+
+一阶 BDF 就是后向欧拉法，用到 $1$ 个历史时刻。
+二阶 BDF 用到 $2$ 个历史时刻，公式是
+
+\begin{equation}
+\frac{3C^{n+1}-4C^{n}+C^{n-1}}{2\Delta t}
+= \frac{4}{R^2}\left[\text{空间算子}(C^{n+1})\right].
+\end{equation}
+
+分子上的系数 $3$、$-4$、$1$ 来自对二次插值多项式求导，
+不是随便凑出来的。三阶、四阶、五阶的形式类似，
+分别用到 $3$、$4$、$5$ 个历史时刻。
+
+阶数越高，精度越高，但稳定性区域越小，对步长的限制越多。
+实践中的做法是在程序里同时实现多个阶数，
+根据当前的误差估计自动选择用几阶。
+
+\subsection{自适应步长}
+
+步长固定不变有一个弊端。干燥刚开始时变化剧烈，需要小步长；
+过了两个小时，温度和水分都变化很慢，大步长就够用了。
+如果全程都用小步长，会浪费大量时间。
+
+自适应步长的做法是：先按当前步长算一步，
+同时估算这一步的误差。如果误差超过容忍值，就把步长减小重算；
+如果误差远小于容忍值，就把步长增大。
+
+误差估计的常用办法是比较两个不同阶数方法的结果，
+两者的差可以作为误差的近似。这个技巧叫嵌入式方法。
+
+程序里的两个控制参数是
+
+\begin{equation}
+\mathrm{rtol}\ \text{（相对容差）}, \qquad \mathrm{atol}\ \text{（绝对容差）}.
+\end{equation}
+
+判据是每一步的误差要满足
+
+\begin{equation}
+\text{误差} \le \mathrm{atol} + \mathrm{rtol}\times\left|\text{解}\right|.
+\end{equation}
+
+本题取的数值是 $\mathrm{rtol}=10^{-11}$，
+温度分量的 $\mathrm{atol}$ 取 $10^{-11}$，
+水分分量的 $\mathrm{atol}$ 取 $10^{-13}$。
+
+\why{为什么水分和温度的容差取得不一样}
+因为两者的量级不一样。温度是几十摄氏度，
+水分浓度是零点几到两点几。如果都用同一个绝对容差，
+水分那边可能过于宽松，温度那边可能过于严格。
+按各自量级分别设置更合理。
+
+\subsection{一个必须注意的细节：系数用什么时刻的值}
+
+方程里的 $D$、$k$、$\rho c_p$ 都依赖 $C$ 和 $T$，
+而 $C$ 和 $T$ 本身是未知的。这就带来一个选择：
+
+可以在每个时间步开始时，用旧的 $C$ 和 $T$ 算出系数，
+然后在整个时间步内把系数当作常数使用。这种做法叫系数冻结。
+它的优点是每一步只需要解一次线性方程组。
+
+也可以在每一步内部迭代若干次，每次都用最新的 $C$ 和 $T$ 重新计算系数。
+这种做法更准，但每一步要解若干次方程组。
+
+本题的主求解器采用的是一种折中：右端项每次被调用时，
+都用当时传入的 $C$ 和 $T$ 重新计算系数。
+由于自适应积分器在每一步内部会多次调用右端项，
+实际上相当于做了隐式的迭代，精度更高。
+代价是每一步的计算量稍大，但程序更简洁，不容易出错。
+
+\keypoint
+时间推进的核心结论是：本题是刚性问题，
+必须用隐式方法；用自适应变阶的 BDF 方法可以在保证精度的同时节省计算量。
+
+% =====================================================================
+\section{烘干时间怎么确定}
+
+前几章解决的是怎么算出任意时刻的温度和水分场。
+问题三和问题四要回答的是另一个问题：
+什么时候算烘干完成。这一章讲这个判断怎么做。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{fig/fig_p3.png}
+\caption{问题 3 的干燥曲线。(a) 各半径处水分浓度随时间下降，横轴到 60 小时；(b) 终点附近放大，截面平均值先达标，中心最后达标，所以判据必须取全场最大值而不是平均值。}
+\label{fig:p3}
+\end{figure}
+
+\subsection{判据的数学表述}
+
+题目说药材各处的水分浓度应低于 $0.15$ 千克每千克。
+这句话要翻译成数学语言。
+
+关键字是各处。也就是整个径向范围内每一个位置都要满足，
+不能只看平均值，也不能只看表面。
+
+写成式子就是
+
+\begin{equation}
+\max_{0\le r\le R_0}C(r,t) < 0.15 .
+\end{equation}
+
+烘干时间是第一次满足这个条件的那一时刻，写成
+
+\begin{equation}
+t_{\mathrm{dry}}=\min\left\{t>0:\ \max_{0\le r\le R_0}C(r,t)<0.15\right\}.
+\label{eq:tdry}
+\end{equation}
+
+这个式子的读法是：在所有使最大值小于 $0.15$ 的时刻里，取最小的那一个。
+
+\why{为什么必须逐点判断而不能用平均值}
+因为干燥是从表面往内部推进的。
+在干燥的中后期，表面已经很干，而中心还比较湿。
+如果看平均值，平均值可能早就低于 $0.15$ 了，
+但中心还没达标，药材实际上还是湿的。
+
+本题的实际数据是：截面面积加权平均含水率在 $35.9$ 小时就降到了 $0.15$，
+而中心要到 $57.1$ 小时才达标，晚了将近 $21$ 小时。
+用平均值判断会把时间低估约 $37\%$。
+
+这里有一个必须交代的细节，否则上面这个数会被算错。
+截面平均的定义是
+
+\begin{equation}
+\bar C(t)=\frac{2}{R^2}\int_0^{R}C(r,t)\,r\,\mathrm{d}r ,
+\end{equation}
+
+其中权重 $r$ 来自环面积与半径成正比这一事实。
+计算这个积分时，如果直接用谱方法节点上的值做加权平均，
+结果会被拉低约 $0.2$，达标时刻提前十个多小时。
+原因是切比雪夫节点在表面附近极密，而表面正是含水率最低的地方，
+按节点直接平均等于给表层过高的权重。
+
+正确的做法是先把解插值到均匀的半径网格，再按面积加权积分。
+用交付的结果文件 result3.xlsx 复核时也要注意：
+该文件只给出 $21$ 个半径列，用它做梯形积分得到 $35.2$ 小时，
+把半径点数加到 $401$ 个得到 $35.8$ 小时，再加到 $2001$ 个仍是 $35.8$ 小时。
+两者相差 $0.6$ 小时，差别来自积分点数，不是物理差异。
+本文取收敛值 $35.9$ 小时。
+
+\subsection{哪一点最后干}
+
+从物理上可以预判：中心应该是最后干的地方。
+理由是水分要从内部扩散到表面才能被带走。
+中心到表面的距离最长，扩散路程最长，
+而且它周围都是含水率更高的地方，浓度梯度最小，驱动力最弱。
+
+但是本文没有把这个预判直接写进程序，
+而是在每一个时刻对全部节点取最大值，看最大值出现在哪里。
+这样做的原因是：如果预判错了，程序不会跟着错。
+实际运行的每一时刻结果都显示最大值出现在中心，
+预判得到了验证。
+
+\why{为什么要在全部节点上取最大而不是只在输出位置上取最大}
+因为输出的位置是每隔 $0.1$ 厘米一个点，共 $21$ 个点。
+而计算的节点有 $N+1$ 个，在两端更密集。
+如果只在 $21$ 个输出点上取最大，
+有可能真正的最大值出现在两个输出点之间而没有被发现。
+虽然本题中最大值总在中心，但把范围取全是一个更安全的做法。
+
+\subsection{怎么求这个时刻}
+
+式 \eqref{eq:tdry} 定义的是一个事件的时刻。
+程序里的处理办法是构造一个函数
+
+\begin{equation}
+e(t) = \max_{0\le j\le N}C_j(t) - 0.15 .
+\end{equation}
+
+当 $e(t)>0$ 时说明还没干，当 $e(t)<0$ 时说明已经干了。
+烘干时间就是 $e(t)$ 第一次从正变负的时刻，
+也就是 $e(t)=0$ 的第一个根。
+
+求根用二分法或者布伦特方法。这两种方法都是标准的数值方法，
+程序里由积分器自动调用。
+
+两个方法的基本原理很简单。二分法是：
+如果知道 $e$ 在 $t_1$ 处为正、在 $t_2$ 处为负，
+那么根一定在两者之间。取中点 $t_3$，
+看 $e(t_3)$ 的符号，就能把根所在的范围缩小一半。
+反复这样做，区间会越来越小，最后得到一个足够精确的近似值。
+
+\why{为什么不用在网格序列上做外推}
+有一种常见做法是：用几组不同的网格算若干次，
+得到若干个烘干时间，然后按某种规律外推到一个无限细的网格。
+这种做法需要假设收敛的阶数，如果假设错了结果就会偏。
+
+本文的做法更直接：直接用自适应积分器给出的高精度解来求根，
+不需要任何关于收敛阶的假设。
+后来在第四部分会看到，这两种做法的结果确实相差约 $15$ 秒，
+差异来自外推所用的序列本身没有收敛。
+
+\keypoint
+烘干时间的判定要注意三点。
+第一，判据是逐点的最大值，不是平均值。
+第二，程序在所有节点上取最大，不预设极值位置。
+第三，用求根而不是外推来确定时刻。
+
+\subsection{第二部分小结}
+
+第二部分解决了从方程到程序的全部原理问题：
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+问题 & 办法 & 在本文中的名称 \\
+\midrule
+圆心处 $1/r$ 的麻烦 & 换元 $u=(r/R)^2$ & 坐标正则化 \\
+空间导数怎么算 & 切比雪夫节点加微分矩阵 & 谱配置法 \\
+时间方向怎么推进 & 隐式变阶 BDF 加自适应步长 & 自适应时间积分 \\
+导数怎么取近似 & 先由谱微分矩阵算出节点通量，再对通量整体求导 & 通量形式配置 \\
+烘干时刻怎么确定 & 构造函数求零点 & 终端事件求交 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+表中的通量形式配置，做法是先用谱微分矩阵算出每个节点上的通量，
+再对整个通量向量求一次导，它不是有限体积那种相邻控制体之间的通量差格式。
+本文的对照格式才用有限体积。
+
+% =====================================================================
+\section{问题四的收缩怎么处理}
+
+问题一到问题三都假设药材半径不变。问题四不一样，
+题目给了附件二，里面记录了半径随时间的变化，
+从最初的 $2.000$ 厘米一直降到 $1.198$ 厘米，缩了四成。
+
+半径变化意味着求解区域的边界在移动。
+这一章专门讲怎么处理这种情况。
+
+\subsection{第一种想法为什么是错的}
+
+最自然的想法是：半径坐标下的方程不是已经写好了吗，
+直接让 $R$ 随时间变化不就行了。
+
+也就是说，直接使用式 \eqref{eq:mass}
+
+\begin{equation}
+\frac{\partial C}{\partial t}
+= \frac{1}{r}\frac{\partial}{\partial r}\left(r\,D\,\frac{\partial C}{\partial r}\right)
+\end{equation}
+
+再把表面条件里的 $R$ 换成 $R(t)$。
+
+这个做法是错的。原因要讲清楚，因为直觉上很难发现。
+
+式 \eqref{eq:mass} 里的时间导数是在固定空间位置求的。
+意思是：站在空间里某个固定的点，看那里的含水率怎么变。
+
+但药材在收缩，干物质在移动。
+水分是跟着干物质一起走的。
+站在固定的空间点上看，含水率的变化有两个来源：
+一个是水分的扩散，另一个是干物质带着水分从旁边走过。
+
+后一个来源在原方程里没有被描述，因为原方程推导时假设了干物质不动。
+
+\subsection{用一个极端例子把这个错误暴露出来}
+
+为了看清楚，考虑一个极端情况：假设扩散系数等于零。
+
+此时水分完全不能扩散，全部被困在干物质里面。
+那么每个材料点的含水率永远不会变，一直等于它自己的初始值。
+
+再假设初始含水率不均匀，取中心为 $2.55$、表面为 $1.5$。
+题目给的初值本来是处处相同的 $2.55$，
+这里换成不均匀的分布，是为了让两种写法的差别显出来。
+
+两个条件合起来得到什么结论？每个材料点的含水率都保持自己的初始值，
+但是材料点在向内移动。本来在半径 $1.5$ 厘米处的干物质，
+随着收缩慢慢移到半径 $1.0$ 厘米处，它带着自己的含水率一起走。
+
+所以在固定的空间点 $r=1.0$ 厘米处，
+一开始那里是内部的水，含水率高；后来移过来的是表层的水，含水率低。
+含水率随时间变化，也就是
+
+\begin{equation}
+\left.\frac{\partial C}{\partial t}\right|_r \ne 0 .
+\end{equation}
+
+现在看错误的方程给出什么。把 $D=0$ 代入式 \eqref{eq:mass}，右边变成零，
+所以方程给出 $\left.\dfrac{\partial C}{\partial t}\right|_r=0$。
+
+两个结果矛盾：物理推理给出变化，错误的方程给出不变。
+矛盾的原因是，式 \eqref{eq:mass} 的推导假设了干物质不动，
+它的时间导数是在固定空间位置求的。
+收缩时干物质在移动，带着水分一起走，
+所以固定空间点上的含水率会因为材料流过来而改变。
+错误方程漏掉的正是这一部分变化。
+
+\why{这个错误为什么不容易发现}
+因为当初始含水率处处相同时，两种写法给出的结果都是常数，
+看起来都合理。
+只有在含水率不均匀时错误才会暴露。
+而实际干燥过程中含水率恰恰是不均匀的，
+所以错误的模型会给出错误的干燥时间。
+
+本文没有给出偏差倍数的数值结论，误差的量级取决于收缩速率：
+收缩越快、半径变化越大，漏掉的对流项越重要。
+本文只用两条证据说明这一点。
+一条是后面给出的解析验证，也就是把物质坐标下的解代回固定半径坐标的方程，
+验证两种写法正好相差对流项。
+另一条就是本节这个扩散系数为零的检验，
+它说明固定半径坐标下的方程在含水率不均匀时给出的时间导数是错的。
+
+\subsection{正确的做法：跟着干物质走}
+
+既然干物质在动，那就把坐标系挂在干物质上。
+
+引入物质坐标
+
+\begin{equation}
+\xi = \frac{r}{R(t)} .
+\end{equation}
+
+这个坐标的含义是相对位置。当 $r=0$ 时 $\xi=0$，当 $r=R(t)$ 时 $\xi=1$。
+不管药材怎么缩，圆心永远是 $\xi=0$，表面永远是 $\xi=1$。
+
+关键性质是：对同一个材料点，$\xi$ 永远不变。
+
+验证一下。设某个材料点在 $t=0$ 时位于半径 $r_0$ 处，
+那么它的标签是 $\xi_0=r_0/R_0$。
+由于收缩是各向同性的，也就是所有位置按同样的比例缩小，
+这个点在时刻 $t$ 的位置是
+
+\begin{equation}
+r(t) = r_0\cdot\frac{R(t)}{R_0} .
+\end{equation}
+
+代入 $\xi$ 的定义，
+
+\begin{equation}
+\xi = \frac{r(t)}{R(t)} = \frac{r_0 R(t)/R_0}{R(t)} = \frac{r_0}{R_0} = \xi_0 .
+\end{equation}
+
+分子分母里的 $R(t)$ 约掉了，结果与时间无关。
+所以 $\xi$ 确实是一个不随时间变化的标签。
+
+\why{各向同性这个假设为什么必须写明}
+如果药材在长度方向不缩、只在半径方向缩，
+那么材料点的运动就不是简单的按比例缩小，
+$r(t)$ 和 $R(t)$ 的比值就不再是常数，
+上面的推导就不成立，方程会多出额外的项。
+题目只给了半径方向的收缩数据，
+按各向同性处理是同口径的做法，论文里明确写成了假设。
+
+\subsection{干物质守恒给出的一个重要关系}
+
+现在对一个材料壳层做干物质衡算。
+
+取标签在 $\xi$ 到 $\xi+\mathrm{d}\xi$ 之间的那一层材料。
+它在当前构形下的体积（单位长度）是多少？
+
+径向位置是 $r=\xi R$，厚度是 $\mathrm{d}r = R\,\mathrm{d}\xi$。
+体积（单位长度）等于周长乘以厚度，
+
+\begin{equation}
+\mathrm{d}V = 2\pi r\,\mathrm{d}r = 2\pi\,\xi R\cdot R\,\mathrm{d}\xi
+= 2\pi R^2\xi\,\mathrm{d}\xi .
+\end{equation}
+
+这个壳层里的干物质质量是
+
+\begin{equation}
+\mathrm{d}m_d = \rho_d\,\mathrm{d}V = \rho_d\,2\pi R^2\xi\,\mathrm{d}\xi .
+\end{equation}
+
+干物质不会迁移，也不会凭空产生或消失，
+所以这个质量不随时间变化：
+
+\begin{equation}
+\frac{\partial}{\partial t}\left(\rho_d\,2\pi R^2\xi\,\mathrm{d}\xi\right) = 0 .
+\end{equation}
+
+其中 $\xi$ 和 $\mathrm{d}\xi$ 都是常数，$2\pi$ 也是常数，约掉以后得到
+
+\begin{equation}
+\frac{\partial}{\partial t}\left(\rho_d R^2\right) = 0
+\quad\Longrightarrow\quad
+\rho_d(\xi,t)\,R(t)^2 = \rho_d(\xi,0)\,R_0^2 .
+\label{eq:rhodinv}
+\end{equation}
+
+这个关系的含义是：干物质被压缩了。
+半径缩小时体积变小，同样的干物质挤在更小的空间里，
+所以干物质密度变大。
+
+再进一步。初始含水率处处相同，
+所以初始时刻的干物质密度 $\rho_d(\xi,0)$ 与 $\xi$ 无关，
+是一个常数。代入式 \eqref{eq:rhodinv} 得到
+
+\begin{equation}
+\rho_d(\xi,t) = \rho_{d0}\frac{R_0^2}{R(t)^2} .
+\label{eq:rhodconst}
+\end{equation}
+
+右边只依赖时间，不依赖 $\xi$。
+这个结论非常重要：物质坐标下的干物质密度处处相同。
+
+\why{这一点为什么关键}
+因为它意味着在后面的推导中，
+$\rho_d$ 可以当作常数从导数符号里提出来约掉，
+方程的形式会变得非常简单。
+如果 $\rho_d$ 随位置变化，方程里会多出一阶导数项，处理起来麻烦得多。
+
+\subsection{水分守恒的完整推导}
+
+现在对材料区域 $[0,\xi]$，也就是从圆心到这个标签之间的全部材料，
+做水分衡算。
+
+这个区域里的水分总量是多少？含水率 $C$ 的定义是每千克干物质含多少水，
+所以水分总量等于
+
+\begin{equation}
+W = \int_0^\xi C\,\mathrm{d}m_d
+= \int_0^\xi C\,\rho_d\,2\pi R^2\xi'\,\mathrm{d}\xi' .
+\end{equation}
+
+水分总量的变化率是
+
+\begin{equation}
+\frac{\mathrm{d}W}{\mathrm{d}t}
+= \int_0^\xi \frac{\partial C}{\partial t}\,\rho_d\,2\pi R^2\xi'\,\mathrm{d}\xi' .
+\label{eq:dWdt}
+\end{equation}
+
+注意这里可以把偏导数拿进积分号里面，
+因为积分限 $\xi$ 是固定的材料标签，不随时间变化。
+这正是用物质坐标的好处。
+
+接下来算水分从哪里进来。
+
+水分只能通过边界 $\xi$ 处的那个材料面进出，因为 $\xi=0$ 那端是圆心，
+没有面积。
+
+在物质坐标下，水分扩散通量怎么表示？
+从半径坐标的菲克定律 $j_r = -D\dfrac{\partial C}{\partial r}$ 出发。
+用链式法则换算到 $\xi$，
+
+\begin{equation}
+\frac{\partial C}{\partial r}
+= \frac{\partial C}{\partial \xi}\cdot\frac{\partial \xi}{\partial r}
+= \frac{\partial C}{\partial \xi}\cdot\frac{1}{R},
+\end{equation}
+
+最后一个等号用了 $\xi=r/R$，所以 $\dfrac{\partial\xi}{\partial r}=\dfrac{1}{R}$。
+
+于是
+
+\begin{equation}
+j_r = -D\frac{\partial C}{\partial r} = -\frac{D}{R}\frac{\partial C}{\partial \xi}.
+\end{equation}
+
+注意 $j_r=-D\dfrac{\partial C}{\partial r}$ 的单位是米每秒。
+原因是干基含水率 $C$ 是一个比值，单位是千克水每千克干物质，
+它对 $r$ 求导以后的单位是每米，
+再乘上单位是平方米每秒的 $D$，得到的就是米每秒。
+这个量乘上干物质密度 $\rho_d$ 以后，单位才是千克每平方米每秒。
+
+在物质坐标下做衡算时，用带上干物质密度的通量更方便，也就是
+
+\begin{equation}
+j_\xi = -\frac{\rho_d D}{R}\frac{\partial C}{\partial \xi},
+\end{equation}
+
+它等于 $j_r$ 乘上 $\rho_d$，单位是千克每平方米每秒，
+含义是单位时间穿过单位面积的水的质量。
+
+这里要说明一个记号上的差别。第一部分的式 \eqref{eq:jC} 里，
+通量写成 $j_r=-\rho_d D\dfrac{\partial C}{\partial r}$，把 $\rho_d$ 含在里面，
+单位是千克每平方米每秒。
+本节为了做坐标换算方便，先把不带 $\rho_d$ 的那个通量记成 $j_r$，
+它的单位是米每秒，两者相差一个 $\rho_d$ 因子。
+
+材料面 $\xi$ 处的面积（单位长度）是多少？
+径向位置是 $r=\xi R$，周长是 $2\pi r = 2\pi\xi R$。
+
+所以单位时间内流出这个区域的水分是
+
+\begin{equation}
+\text{流出} = j_\xi\cdot 2\pi\xi R
+= -\frac{\rho_d D}{R}\frac{\partial C}{\partial \xi}\cdot 2\pi\xi R
+= -2\pi\xi\rho_d D\frac{\partial C}{\partial \xi}.
+\end{equation}
+
+流入等于流出的负值，
+
+\begin{equation}
+\text{流入} = 2\pi\xi\rho_d D\frac{\partial C}{\partial \xi}.
+\end{equation}
+
+把式 \eqref{eq:dWdt} 和上式相等，
+
+\begin{equation}
+\int_0^\xi \frac{\partial C}{\partial t}\,\rho_d\,2\pi R^2\xi'\,\mathrm{d}\xi'
+= 2\pi\xi\rho_d D\frac{\partial C}{\partial \xi}.
+\label{eq:materialbalance}
+\end{equation}
+
+这一步就是完整的水分守恒式。
+
+\subsection{从积分式得到微分方程}
+
+式 \eqref{eq:materialbalance} 还是一个积分式，要化成微分方程。
+
+做法是两边对 $\xi$ 求导。左边用微积分基本定理：
+积分上限是 $\xi$，对上限求导就是被积函数在上限处的值，所以
+
+\begin{equation}
+\frac{\partial}{\partial \xi}\left[\int_0^\xi \frac{\partial C}{\partial t}\,\rho_d\,2\pi R^2\xi'\,\mathrm{d}\xi'\right]
+= \frac{\partial C}{\partial t}\,\rho_d\,2\pi R^2\xi .
+\end{equation}
+
+右边求导得到
+
+\begin{equation}
+\frac{\partial}{\partial \xi}\left[2\pi\xi\rho_d D\frac{\partial C}{\partial \xi}\right]
+= 2\pi\frac{\partial}{\partial \xi}\left[\xi\rho_d D\frac{\partial C}{\partial \xi}\right] .
+\end{equation}
+
+两边相等，
+
+\begin{equation}
+\frac{\partial C}{\partial t}\,\rho_d\,2\pi R^2\xi
+= 2\pi\frac{\partial}{\partial \xi}\left[\xi\rho_d D\frac{\partial C}{\partial \xi}\right] .
+\end{equation}
+
+约掉两边的 $2\pi$，再把 $\rho_d$ 提出来。
+这里用到式 \eqref{eq:rhodconst} 的结论，
+也就是 $\rho_d$ 与 $\xi$ 无关，所以可以从导数符号里提出来，
+
+\begin{equation}
+\frac{\partial C}{\partial t}\,\rho_d\,R^2\xi
+= \rho_d\frac{\partial}{\partial \xi}\left[\xi D\frac{\partial C}{\partial \xi}\right] .
+\end{equation}
+
+两边约掉 $\rho_d$，再除以 $R^2\xi$，
+
+\begin{equation}
+\boxed{\;
+\left.\frac{\partial C}{\partial t}\right|_\xi
+= \frac{1}{\xi R(t)^2}\frac{\partial}{\partial \xi}\left(\xi D\frac{\partial C}{\partial \xi}\right).
+\;}
+\label{eq:material}
+\end{equation}
+
+这就是物质坐标下的水分方程。
+
+\subsection{换成 u 坐标}
+
+式 \eqref{eq:material} 里还有 $\xi$，用起来和第一部分不一样。
+把它换成 $u=\xi^2$，就能和前面统一。
+
+换算关系和第五章完全一样。由 $\xi=\sqrt{u}$ 得
+
+\begin{equation}
+\frac{\partial}{\partial \xi} = 2\sqrt{u}\,\frac{\partial}{\partial u}.
+\end{equation}
+
+逐项改造式 \eqref{eq:material} 的右边。
+
+先算括号里面，
+
+\begin{equation}
+\xi D\frac{\partial C}{\partial \xi}
+= \sqrt{u}\cdot D\cdot 2\sqrt{u}\frac{\partial C}{\partial u}
+= 2uD\frac{\partial C}{\partial u}.
+\end{equation}
+
+再求一次导，
+
+\begin{equation}
+\frac{\partial}{\partial \xi}\left(2uD\frac{\partial C}{\partial u}\right)
+= 2\sqrt{u}\frac{\partial}{\partial u}\left(2uD\frac{\partial C}{\partial u}\right).
+\end{equation}
+
+最后除以 $\xi R^2$，
+
+\begin{equation}
+\frac{1}{\sqrt{u}R^2}\cdot 2\sqrt{u}\frac{\partial}{\partial u}\left(2uD\frac{\partial C}{\partial u}\right)
+= \frac{2}{R^2}\frac{\partial}{\partial u}\left(2uD\frac{\partial C}{\partial u}\right)
+= \frac{4}{R^2}\frac{\partial}{\partial u}\left(uD\frac{\partial C}{\partial u}\right).
+\end{equation}
+
+所以
+
+\begin{equation}
+\boxed{\;
+\frac{\partial C}{\partial t} = \frac{4}{R(t)^2}\frac{\partial}{\partial u}\left(uD\frac{\partial C}{\partial u}\right).
+\;}
+\label{eq:material-u}
+\end{equation}
+
+和式 \eqref{eq:mass-u} 比较一下，两者的形式完全一样，
+差别只有一个：$R$ 变成了 $R(t)$，随时间变化。
+
+温度方程同理，
+
+\begin{equation}
+\rho c_p\frac{\partial T}{\partial t} = \frac{4}{R(t)^2}\frac{\partial}{\partial u}\left(uk\frac{\partial T}{\partial u}\right).
+\end{equation}
+
+\subsection{一个重要的结论：对流项为零}
+
+对比一下两种写法。
+
+在固定半径坐标下，正确的方程是要补一项的，
+
+\begin{equation}
+\left.\frac{\partial C}{\partial t}\right|_r
+= \frac{1}{r}\frac{\partial}{\partial r}\left(rD\frac{\partial C}{\partial r}\right)
+- \frac{\dot R}{R}\,r\,\frac{\partial C}{\partial r}.
+\label{eq:radv}
+\end{equation}
+
+最后那一项叫对流项，描述干物质带着水分移动的效应。
+其中 $\dot R$ 表示 $\mathrm{d}R/\mathrm{d}t$。
+收缩时半径不断减小，所以 $\dot R$ 是负的；
+收缩速率要取它的负值，也就是 $-\dot R$，这样才是正数。
+
+在物质坐标下，这一项消失了，如式 \eqref{eq:material-u} 所示。
+原因是控制体跟着材料一起走，
+材料本身不迁移，所以不需要额外描述它的运动。
+
+\why{哪一种写法更好}
+物质坐标的写法更好，理由有两条。
+第一，方程更短，少一个需要离散的项，
+程序里不容易出错。
+第二，也是更重要的，
+求解区域是固定的 $0\le u\le1$，
+不需要处理移动的网格。
+如果用式 \eqref{eq:radv}，
+每走一步网格都要重新分布，
+还要处理网格移动带来的额外误差。
+
+\why{怎么验证两种写法是等价的}
+可以做一个代换检验。
+设式 \eqref{eq:material-u} 成立，
+把 $\xi=r/R(t)$ 代进去，
+利用链式法则算出 $\left.\dfrac{\partial C}{\partial t}\right|_r$，
+应该正好得到式 \eqref{eq:radv}。
+
+具体计算如下。设 $C(r,t)=\tilde C(\xi,t)$，其中 $\xi=r/R(t)$。
+固定 $r$ 对 $t$ 求导，
+
+\begin{equation}
+\left.\frac{\partial C}{\partial t}\right|_r
+= \left.\frac{\partial \tilde C}{\partial t}\right|_\xi
++ \frac{\partial \tilde C}{\partial \xi}\left.\frac{\partial \xi}{\partial t}\right|_r .
+\end{equation}
+
+其中
+
+\begin{equation}
+\left.\frac{\partial \xi}{\partial t}\right|_r
+= \frac{\partial}{\partial t}\left(\frac{r}{R(t)}\right)
+= -\frac{r\dot R}{R^2} = -\frac{\xi\dot R}{R}.
+\end{equation}
+
+把式 \eqref{eq:material} 的右边代入第一项，
+再把上面的结果代入第二项，
+
+\begin{equation}
+\left.\frac{\partial C}{\partial t}\right|_r
+= \frac{1}{\xi R^2}\frac{\partial}{\partial \xi}\left(\xi D\frac{\partial \tilde C}{\partial \xi}\right)
+- \frac{\xi\dot R}{R}\frac{\partial \tilde C}{\partial \xi}.
+\end{equation}
+
+现在把 $\xi$ 的导数换回 $r$ 的导数。
+由 $\xi=r/R$ 得 $\dfrac{\partial}{\partial \xi}=R\dfrac{\partial}{\partial r}$。
+
+第一项变成
+
+\begin{equation}
+\frac{1}{(r/R)R^2}\cdot R\frac{\partial}{\partial r}
+\left(\frac{r}{R}D\cdot R\frac{\partial C}{\partial r}\right)
+= \frac{1}{r}\frac{\partial}{\partial r}\left(rD\frac{\partial C}{\partial r}\right).
+\end{equation}
+
+第二项变成
+
+\begin{equation}
+-\frac{(r/R)\dot R}{R}\cdot R\frac{\partial C}{\partial r}
+= -\frac{\dot R}{R}r\frac{\partial C}{\partial r}.
+\end{equation}
+
+两项合起来正好是式 \eqref{eq:radv}。
+两种写法确实等价。
+
+\subsection{输出表格时的坐标换算}
+
+求解器工作在 $u$ 坐标上，而题目要求的表格列名是当前物理距离 $r$。
+这两者不是一回事，必须换算。
+
+换算关系由 $r=\xi R(t)$ 和 $u=\xi^2$ 联立得到
+
+\begin{equation}
+u = \left(\frac{r}{R(t)}\right)^2 .
+\label{eq:outputmap}
+\end{equation}
+
+注意分母是当前的半径 $R(t)$，不是初始半径 $R_0$。
+
+还有一个情况要处理：如果某一列的距离大于当前半径，
+也就是 $r>R(t)$，那么这个位置已经不存在了。
+例如 $r=1.5$ 厘米这一列，
+当 $t>3.65$ 小时之后半径已经小于 $1.5$ 厘米，
+药材外面没有东西，表格里应该留空。
+
+\why{如果换算错了会有什么后果}
+后果很严重。举一个实际例子。
+
+在 $t=6$ 小时，半径是 $R=1.374$ 厘米。
+如果要查 $r=1.0$ 厘米处的含水率。
+
+正确的算法是
+
+\begin{equation}
+u = \left(\frac{1.0}{1.374}\right)^2 = 0.5297 .
+\end{equation}
+
+如果误用初始半径，算成
+
+\begin{equation}
+u = \left(\frac{1.0}{2.0}\right)^2 = 0.25 ,
+\end{equation}
+
+那就完全错了。$u=0.25$ 对应的是 $t=0$ 时刻位于半径 $1.0$ 厘米处的那个材料点，
+而现在它已经收缩到 $1.0\times\dfrac{1.374}{2.0}=0.687$ 厘米处了。
+
+两种算法给出的数值分别是 $1.0215$ 和 $1.3782$，
+相对误差百分之三十五。
+
+\keypoint
+问题四的关键有三点。
+第一，收缩时不能用固定半径坐标下的原方程，会漏掉对流项。
+第二，要用物质坐标 $\xi=r/R(t)$，方程里对流项自动为零。
+第三，输出表格时要用当前半径换算坐标，$r$ 超过当前半径的位置要留空。

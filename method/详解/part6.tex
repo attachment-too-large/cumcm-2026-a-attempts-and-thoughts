@@ -1,0 +1,1405 @@
+\part{问题一闭式解的完整推导}
+
+\section{这一部分要解决什么}
+
+问题一的温度场可以不离散、不用网格、不用时间步进，
+直接用一条公式算出来。这条公式叫贝塞尔--杜阿梅尔展开式。
+第三部分第十三章只用十几行提到它，说公式是从别处推来的，
+而那个别处并不存在。这一部分把推导从头写全，一步都不跳。
+
+三件事使得问题一可以用公式解：
+
+第一，问题一的密度、比热容、导热系数都是常数，
+不随水分浓度和温度变化。这一点由附录 2 给出。
+
+第二，水分扩散系数只依赖水分浓度，不依赖温度。
+于是温度方程里没有出现水分浓度，温度方程自成一体，
+可以先单独解出温度，再解水分。两个场是解耦的。
+
+第三，附件 1 的烘房温度可以写成一条指数曲线
+
+\begin{equation}
+T_{\mathrm{air}}(t)=T_{\mathrm{set}}-A e^{-t/\tau_T},
+\qquad A=T_{\mathrm{set}}-28 .
+\label{eq:p6-air}
+\end{equation}
+
+指数形式的驱动项对应的响应也是指数形式，
+这就给了解析求解的机会。
+
+\begin{keypoint}
+问题一的温度场有闭式解，原因是常物性、场解耦、环境是指数形式。
+推导分五步：齐次化、准静态分解、解常微分方程、解特征值问题、定展开系数。
+\end{keypoint}
+
+\section{第一步：把边界条件化成齐次}
+
+先把问题一的方程与条件抄全。方程是
+
+\begin{equation}
+\rho c_p\frac{\partial T}{\partial t}
+=\frac{1}{r}\frac{\partial}{\partial r}\left(r k\frac{\partial T}{\partial r}\right),
+\qquad 0<r<R_0 ,
+\label{eq:p6-pde}
+\end{equation}
+
+边界条件是
+
+\begin{equation}
+\left.\frac{\partial T}{\partial r}\right|_{r=0}=0,
+\qquad
+-k\left.\frac{\partial T}{\partial r}\right|_{r=R_0}
+=h\left(T(R_0,t)-T_{\mathrm{air}}(t)\right),
+\label{eq:p6-bc}
+\end{equation}
+
+初始条件是
+
+\begin{equation}
+T(r,0)=28 .
+\label{eq:p6-ic}
+\end{equation}
+
+所谓齐次边界条件，是指边界条件里不含已知的外界函数，
+右端只出现未知函数本身。式 \eqref{eq:p6-bc} 右边有 $T_{\mathrm{air}}(t)$，
+所以是非齐次的。非齐次边界条件不能直接做分离变量，
+必须先把外界函数挪走。
+
+\begin{stepbox}{1}{定义新的未知函数 $w$}
+
+令
+
+\begin{equation}
+w(r,t)=T(r,t)-T_{\mathrm{air}}(t).
+\label{eq:p6-w}
+\end{equation}
+
+它的物理含义是药材温度比烘房温度低多少。
+
+\end{stepbox}
+
+\begin{stepbox}{2}{把新函数代进方程}
+
+先算时间导数。因为 $T=w+T_{\mathrm{air}}$，
+而 $T_{\mathrm{air}}$ 只依赖 $t$，不依赖 $r$，所以
+
+\begin{equation}
+\frac{\partial T}{\partial t}
+=\frac{\partial w}{\partial t}+\frac{\mathrm{d}T_{\mathrm{air}}}{\mathrm{d}t}.
+\end{equation}
+
+由式 \eqref{eq:p6-air} 求导，第一步先写出指数函数的导数公式
+$\dfrac{\mathrm{d}}{\mathrm{d}t}e^{-t/\tau_T}=-\dfrac{1}{\tau_T}e^{-t/\tau_T}$，
+于是
+
+\begin{equation}
+\frac{\mathrm{d}T_{\mathrm{air}}}{\mathrm{d}t}
+=-\left(T_{\mathrm{set}}-28\right)\left(-\frac{1}{\tau_T}\right)e^{-t/\tau_T}
+=\frac{A}{\tau_T}e^{-t/\tau_T}.
+\end{equation}
+
+这里用了 $A=T_{\mathrm{set}}-28$。两个负号相乘得正号，
+所以烘房温度是上升的，变化率为正。
+
+再算空间导数。$T_{\mathrm{air}}$ 与 $r$ 无关，所以
+
+\begin{equation}
+\frac{\partial T}{\partial r}=\frac{\partial w}{\partial r},
+\qquad
+\frac{\partial^2 T}{\partial r^2}=\frac{\partial^2 w}{\partial r^2}.
+\end{equation}
+
+把这两条代入式 \eqref{eq:p6-pde}，左边变成
+$\rho c_p\left(\dfrac{\partial w}{\partial t}+\dfrac{A}{\tau_T}e^{-t/\tau_T}\right)$，
+右边变成 $\dfrac{1}{r}\dfrac{\partial}{\partial r}\left(r k\dfrac{\partial w}{\partial r}\right)$。
+两边同除以 $\rho c_p$，并利用 $\alpha=k/(\rho c_p)$，得到
+
+\begin{equation}
+\frac{\partial w}{\partial t}+\frac{A}{\tau_T}e^{-t/\tau_T}
+=\alpha\frac{1}{r}\frac{\partial}{\partial r}\left(r\frac{\partial w}{\partial r}\right).
+\end{equation}
+
+把驱动项移到右边：
+
+\begin{equation}
+\boxed{\ \frac{\partial w}{\partial t}
+=\alpha\nabla^2 w-\frac{A}{\tau_T}e^{-t/\tau_T}\ }
+\label{eq:p6-wpde}
+\end{equation}
+
+其中 $\nabla^2$ 是圆柱坐标下的径向拉普拉斯算子，
+它的展开式就是 $\dfrac{1}{r}\dfrac{\partial}{\partial r}\left(r\dfrac{\partial}{\partial r}\right)$。
+
+\end{stepbox}
+
+\begin{stepbox}{3}{把边界条件与初始条件也换掉}
+
+表面条件里 $T$ 换成 $w+T_{\mathrm{air}}$：
+
+\begin{equation}
+-k\left.\frac{\partial w}{\partial r}\right|_{r=R_0}
+=h\left(w(R_0,t)+T_{\mathrm{air}}(t)-T_{\mathrm{air}}(t)\right)
+=h\,w(R_0,t).
+\end{equation}
+
+$T_{\mathrm{air}}$ 一加一减消掉了，剩下的条件是
+
+\begin{equation}
+-k\left.\frac{\partial w}{\partial r}\right|_{r=R_0}=h\,w(R_0,t).
+\label{eq:p6-wbc}
+\end{equation}
+
+这是一个齐次条件，右端只有未知函数。这一步就是齐次化的全部内容。
+
+中心条件不变，因为 $T_{\mathrm{air}}$ 与 $r$ 无关：
+
+\begin{equation}
+\left.\frac{\partial w}{\partial r}\right|_{r=0}=0 .
+\label{eq:p6-wbc0}
+\end{equation}
+
+初始条件：
+
+\begin{equation}
+w(r,0)=T(r,0)-T_{\mathrm{air}}(0)=28-\left(T_{\mathrm{set}}-A\right).
+\end{equation}
+
+把 $A=T_{\mathrm{set}}-28$ 代进去：
+
+\begin{equation}
+w(r,0)=28-T_{\mathrm{set}}+T_{\mathrm{set}}-28=0 .
+\label{eq:p6-wic}
+\end{equation}
+
+也就是说，$w$ 的初始条件是零。这一点后面要用。
+
+\end{stepbox}
+
+\begin{keypoint}
+换成 $w=T-T_{\mathrm{air}}$ 以后，边界条件变成齐次的，
+初始条件变成零，代价是方程右边多了一个已知的驱动项。
+这个代价是划算的，因为齐次条件才能做分离变量。
+\end{keypoint}
+
+\section{第二步：把解拆成两部分}
+
+方程 \eqref{eq:p6-wpde} 右边的驱动项是
+$-\dfrac{A}{\tau_T}e^{-t/\tau_T}$，它随时间按指数衰减。
+被指数驱动的系统，其响应通常也是同一频率的指数。
+所以尝试把解写成
+
+\begin{equation}
+w(r,t)=W(r)e^{-t/\tau_T}+\hat w(r,t).
+\label{eq:p6-split}
+\end{equation}
+
+第一项表示跟着外界一起走的准静态部分，
+第二项表示从零初值出发的瞬态衰减部分。
+
+\begin{stepbox}{4}{把拆分代进方程，逐项对齐}
+
+先算左边的时间导数：
+
+\begin{equation}
+\frac{\partial w}{\partial t}
+=W(r)\left(-\frac{1}{\tau_T}\right)e^{-t/\tau_T}+\frac{\partial \hat w}{\partial t}
+=-\frac{W}{\tau_T}e^{-t/\tau_T}+\frac{\partial \hat w}{\partial t}.
+\end{equation}
+
+再算右边的拉普拉斯项。因为 $\nabla^2$ 只对 $r$ 求导，
+而 $e^{-t/\tau_T}$ 与 $r$ 无关，可以提出来：
+
+\begin{equation}
+\alpha\nabla^2 w=\alpha\nabla^2 W\,e^{-t/\tau_T}+\alpha\nabla^2\hat w .
+\end{equation}
+
+把两边的结果都代进式 \eqref{eq:p6-wpde}：
+
+\begin{equation}
+-\frac{W}{\tau_T}e^{-t/\tau_T}+\frac{\partial\hat w}{\partial t}
+=\alpha\nabla^2W\,e^{-t/\tau_T}+\alpha\nabla^2\hat w-\frac{A}{\tau_T}e^{-t/\tau_T}.
+\end{equation}
+
+把含 $\hat w$ 的项留在左边，其余的移到右边：
+
+\begin{equation}
+\frac{\partial\hat w}{\partial t}
+=\alpha\nabla^2\hat w
++e^{-t/\tau_T}\left[\alpha\nabla^2W+\frac{W}{\tau_T}-\frac{A}{\tau_T}\right].
+\label{eq:p6-split2}
+\end{equation}
+
+\end{stepbox}
+
+\begin{stepbox}{5}{令中括号为零}
+
+现在提出一个要求：让方括号里的表达式恒等于零。
+
+\begin{equation}
+\alpha\nabla^2W+\frac{W}{\tau_T}-\frac{A}{\tau_T}=0 .
+\label{eq:p6-Wode}
+\end{equation}
+
+这样一来，式 \eqref{eq:p6-split2} 就退化为
+
+\begin{equation}
+\frac{\partial\hat w}{\partial t}=\alpha\nabla^2\hat w .
+\label{eq:p6-What}
+\end{equation}
+
+这是一个齐次热传导方程，右边没有驱动项。
+
+为什么可以这样要求。因为 $e^{-t/\tau_T}$ 是 $t$ 的函数，
+如果方括号里的表达式不为零，那么随着 $t$ 变化，
+这个表达式会被一个指数因子反复缩放，
+无法与左边的时间导数在任意时刻都相等。
+唯一能让等式对所有 $t$ 成立的办法，就是让它恒等于零。
+这种把含时间的因子与含空间的因子分开、各自独立的论证，
+是分离变量法的标准做法。
+
+\end{stepbox}
+
+\begin{stepbox}{6}{边界条件怎样分配给两部分}
+
+表面条件 \eqref{eq:p6-wbc} 对式 \eqref{eq:p6-split} 也要成立：
+
+\begin{equation}
+-k\left.\frac{\partial}{\partial r}\left(W e^{-t/\tau_T}+\hat w\right)\right|_{r=R_0}
+=h\left(W(R_0)e^{-t/\tau_T}+\hat w(R_0,t)\right).
+\end{equation}
+
+把含 $W$ 的项与含 $\hat w$ 的项分开写：
+
+\begin{equation}
+e^{-t/\tau_T}\left[-kW'(R_0)-hW(R_0)\right]
++\left[-k\hat w'(R_0,t)-h\hat w(R_0,t)\right]=0 .
+\end{equation}
+
+第一项含因子 $e^{-t/\tau_T}$，第二项不含。
+两者对任意时刻都要抵消，只能各自为零。于是
+
+\begin{equation}
+-kW'(R_0)=hW(R_0),
+\qquad
+-k\left.\frac{\partial\hat w}{\partial r}\right|_{r=R_0}=h\hat w(R_0,t).
+\label{eq:p6-splitbc}
+\end{equation}
+
+两部分各自满足同一个齐次表面条件。
+中心条件同理，两部分都满足 $\partial_r(\cdot)|_{r=0}=0$。
+
+\end{stepbox}
+
+\begin{stepbox}{7}{初始条件怎样分配}
+
+式 \eqref{eq:p6-wic} 给出 $w(r,0)=0$，代入式 \eqref{eq:p6-split}：
+
+\begin{equation}
+W(r)e^{0}+\hat w(r,0)=0
+\quad\Longrightarrow\quad
+\hat w(r,0)=-W(r).
+\label{eq:p6-splitic}
+\end{equation}
+
+$W$ 还没有解出来，但它的形式已经确定，
+所以 $\hat w$ 的初始条件是一个已知函数。
+
+\end{stepbox}
+
+\section{第三步：解出准静态部分 $W$}
+
+\subsection{把方程化成标准形式}
+
+式 \eqref{eq:p6-Wode} 两边同除以 $\alpha$：
+
+\begin{equation}
+\nabla^2W+\frac{1}{\alpha\tau_T}W=\frac{A}{\alpha\tau_T}.
+\end{equation}
+
+记
+
+\begin{equation}
+\kappa^2=\frac{1}{\alpha\tau_T},
+\qquad \kappa=\frac{1}{\sqrt{\alpha\tau_T}} .
+\label{eq:p6-kappa}
+\end{equation}
+
+再乘上 $\kappa^2$，右边变成 $\kappa^2A$，于是
+
+\begin{equation}
+\nabla^2W+\kappa^2W=\kappa^2A .
+\label{eq:p6-Wbessel}
+\end{equation}
+
+\subsection{把拉普拉斯算子写开}
+
+圆柱径向拉普拉斯算子作用在 $W$ 上是
+
+\begin{equation}
+\nabla^2W=\frac{1}{r}\frac{\mathrm{d}}{\mathrm{d}r}\left(r\frac{\mathrm{d}W}{\mathrm{d}r}\right)
+=\frac{\mathrm{d}^2W}{\mathrm{d}r^2}+\frac{1}{r}\frac{\mathrm{d}W}{\mathrm{d}r}.
+\end{equation}
+
+第二步的等号是把乘积的导数展开得到的：
+$\dfrac{1}{r}\left(W'+rW''\right)=W''+\dfrac{W'}{r}$。
+
+所以式 \eqref{eq:p6-Wbessel} 写成
+
+\begin{equation}
+\frac{\mathrm{d}^2W}{\mathrm{d}r^2}+\frac{1}{r}\frac{\mathrm{d}W}{\mathrm{d}r}+\kappa^2W=\kappa^2A .
+\label{eq:p6-Wode2}
+\end{equation}
+
+\subsection{认识贝塞尔方程}
+
+式 \eqref{eq:p6-Wode2} 的左边去掉右端项以后，形状是
+
+\begin{equation}
+\frac{\mathrm{d}^2y}{\mathrm{d}x^2}+\frac{1}{x}\frac{\mathrm{d}y}{\mathrm{d}x}+y=0 .
+\label{eq:p6-bessel0}
+\end{equation}
+
+这条方程叫零阶贝塞尔方程，它的两个线性无关解叫第一类与第二类贝塞尔函数，
+记作 $J_0(x)$ 与 $Y_0(x)$。
+
+这里不需要知道贝塞尔函数的复杂定义，只要知道四件事，
+后面每一步都用得到：
+
+第一，$J_0(0)=1$，且 $J_0$ 在 $x>0$ 上振荡衰减，有无穷多个零点。
+
+第二，$Y_0(x)$ 在 $x\to0$ 时趋于负无穷，是发散的。
+
+第三，导数关系
+$\dfrac{\mathrm{d}}{\mathrm{d}x}J_0(x)=-J_1(x)$，
+其中 $J_1$ 是第一类一阶贝塞尔函数。这条关系在下面代边界条件时要用。
+
+第四，把自变量换成 $\kappa r$ 时要用链式法则。
+设 $x=\kappa r$，则 $\dfrac{\mathrm{d}}{\mathrm{d}r}=\kappa\dfrac{\mathrm{d}}{\mathrm{d}x}$，
+所以 $J_0(\kappa r)$ 对 $r$ 的导数是 $-\kappa J_1(\kappa r)$。
+
+\subsection{写出通解，去掉发散的那一项}
+
+方程 \eqref{eq:p6-Wode2} 是非齐次的，右端是常数 $\kappa^2A$。
+常数函数 $W=A$ 代入左边得 $\kappa^2A$，正好等于右端，
+所以 $W=A$ 是它的一个特解。
+
+非齐次方程的通解等于一个特解加上齐次方程的通解，于是
+
+\begin{equation}
+W(r)=A+B J_0(\kappa r)+D\,Y_0(\kappa r).
+\end{equation}
+
+现在用 $r=0$ 处的条件去掉 $Y_0$。
+当 $r\to0$ 时，$Y_0(\kappa r)\to-\infty$。
+但药材中心的温度是有限的，$W$ 在中心必须取有限值。
+要让它有限，只能取 $D=0$。于是
+
+\begin{equation}
+W(r)=A+B J_0(\kappa r).
+\label{eq:p6-Wform}
+\end{equation}
+
+\subsection{用表面条件定出 $B$}
+
+先求导。由上面第三条性质，以及自变量是 $\kappa r$：
+
+\begin{equation}
+W'(r)=B\cdot\left(-\kappa J_1(\kappa r)\right)=-B\kappa J_1(\kappa r).
+\end{equation}
+
+在 $r=R_0$ 处：
+
+\begin{equation}
+W'(R_0)=-B\kappa J_1(\kappa R_0),
+\qquad
+W(R_0)=A+B J_0(\kappa R_0).
+\end{equation}
+
+代入表面条件 $-kW'(R_0)=hW(R_0)$：
+
+\begin{equation}
+-k\left(-B\kappa J_1(\kappa R_0)\right)=h\left(A+B J_0(\kappa R_0)\right).
+\end{equation}
+
+左边两个负号相乘得正：
+
+\begin{equation}
+kB\kappa J_1(\kappa R_0)=hA+hB J_0(\kappa R_0).
+\end{equation}
+
+把含 $B$ 的项移到同一边：
+
+\begin{equation}
+B\left(k\kappa J_1(\kappa R_0)-h J_0(\kappa R_0)\right)=hA .
+\end{equation}
+
+两边同除以括号里的量，得到
+
+\begin{equation}
+\boxed{\ B=\frac{hA}{k\kappa J_1(\kappa R_0)-h J_0(\kappa R_0)}\ }
+\label{eq:p6-B}
+\end{equation}
+
+\subsection{代入数值}
+
+问题一的常数是 $\rho=820$、$c_p=2600$、$k=0.36$、$h=25$、$R_0=0.02$、
+$\tau_T=1877.5$、$T_{\mathrm{set}}=50.212$。逐个算：
+
+\begin{equation}
+\alpha=\frac{k}{\rho c_p}=\frac{0.36}{820\times2600}=1.688555\times10^{-7}\ \mathrm{m^2/s},
+\end{equation}
+
+\begin{equation}
+\mathrm{Bi}=\frac{hR_0}{k}=\frac{25\times0.02}{0.36}=1.388889,
+\end{equation}
+
+\begin{equation}
+\kappa=\frac{1}{\sqrt{\alpha\tau_T}}
+=\frac{1}{\sqrt{1.688555\times10^{-7}\times1877.5}}=56.163269\ \mathrm{m^{-1}},
+\end{equation}
+
+\begin{equation}
+\kappa R_0=56.163269\times0.02=1.123265,
+\qquad
+A=50.212-28=22.212000 .
+\end{equation}
+
+代进式 \eqref{eq:p6-B} 得
+
+\begin{equation}
+B=\frac{25\times22.212}{0.36\times56.163269\times J_1(1.123265)-25\times J_0(1.123265)}
+=-68.909425 .
+\end{equation}
+
+于是准静态部分在中心和表面的值是
+
+\begin{equation}
+W(0)=A+B J_0(0)=22.212-68.909=-46.697\ ^\circ\mathrm{C},
+\end{equation}
+
+\begin{equation}
+W(R_0)=22.212-68.909\times J_0(1.123265)=-26.616\ ^\circ\mathrm{C}.
+\end{equation}
+
+两个值都是负数，含义是药材比烘房冷。
+中心比表面更冷，这符合升温阶段的物理图像。
+
+\begin{keypoint}
+$W$ 的方程是一个常微分方程，解是 $A+B J_0(\kappa r)$。
+两个待定常数由两条条件定出：中心有界去掉 $Y_0$，
+表面 Robin 条件定出 $B$。
+\end{keypoint}
+
+\section{第四步：解瞬态部分 $\hat w$ 的特征值问题}
+
+\subsection{分离变量}
+
+$\hat w$ 满足三个条件：齐次方程 \eqref{eq:p6-What}、
+齐次表面条件、齐次中心条件。设解可以写成
+
+\begin{equation}
+\hat w(r,t)=\phi(r)G(t),
+\label{eq:p6-sep}
+\end{equation}
+其中 $\phi$ 只依赖 $r$，$G$ 只依赖 $t$。代入式 \eqref{eq:p6-What}：
+
+\begin{equation}
+\phi(r)G'(t)=\alpha G(t)\nabla^2\phi(r).
+\end{equation}
+
+两边同除以 $\alpha\phi(r)G(t)$：
+
+\begin{equation}
+\frac{G'(t)}{\alpha G(t)}=\frac{\nabla^2\phi(r)}{\phi(r)}.
+\label{eq:p6-sep2}
+\end{equation}
+
+左边只依赖 $t$，右边只依赖 $r$。
+一个只依赖 $t$ 的量恒等于一个只依赖 $r$ 的量，
+唯一的可能是两者都等于同一个常数。
+把这个常数记作 $-\gamma$，负号是为了后面方便：
+
+\begin{equation}
+\frac{G'}{\alpha G}=\frac{\nabla^2\phi}{\phi}=-\gamma .
+\end{equation}
+
+\subsection{解时间部分}
+
+由 $\dfrac{G'}{\alpha G}=-\gamma$ 得 $G'=-\alpha\gamma G$。
+这是最简单的常微分方程，解是
+
+\begin{equation}
+G(t)=e^{-\alpha\gamma t}.
+\label{eq:p6-G}
+\end{equation}
+
+只要 $\gamma>0$，$G$ 随时间衰减，这就是瞬态部分的衰减。
+后面会看到 $\gamma$ 确实是正的。
+
+\subsection{解空间部分}
+
+由 $\dfrac{\nabla^2\phi}{\phi}=-\gamma$ 得
+
+\begin{equation}
+\nabla^2\phi+\gamma\phi=0 .
+\end{equation}
+
+把拉普拉斯算子写开：
+
+\begin{equation}
+\frac{\mathrm{d}^2\phi}{\mathrm{d}r^2}+\frac{1}{r}\frac{\mathrm{d}\phi}{\mathrm{d}r}+\gamma\phi=0 .
+\end{equation}
+
+这个方程与前面式 \eqref{eq:p6-bessel0} 形状相同，
+只是常数从 $1$ 换成了 $\gamma$。
+为了让常数变成 $1$，令
+
+\begin{equation}
+\gamma=\frac{\alpha\beta^2}{R_0^2},
+\qquad\text{也就是}\qquad
+\beta=R_0\sqrt{\frac{\gamma}{\alpha}} .
+\label{eq:p6-gamma}
+\end{equation}
+
+再令 $x=\dfrac{\beta r}{R_0}$。可以验证，这样换元以后方程变成零阶贝塞尔方程，
+于是解是
+
+\begin{equation}
+\phi(r)=J_0\!\left(\frac{\beta r}{R_0}\right).
+\end{equation}
+
+第二类贝塞尔函数 $Y_0$ 又一次因为中心发散被去掉。
+
+为什么可以验证。把 $x=\dfrac{\beta r}{R_0}$ 代进去，
+先用链式法则求两种导数的换算：
+
+\begin{equation}
+\frac{\mathrm{d}}{\mathrm{d}r}=\frac{\beta}{R_0}\frac{\mathrm{d}}{\mathrm{d}x},
+\qquad
+\frac{\mathrm{d}^2}{\mathrm{d}r^2}=\frac{\beta^2}{R_0^2}\frac{\mathrm{d}^2}{\mathrm{d}x^2}.
+\end{equation}
+
+更直接的办法是把 $\phi(r)=J_0(\beta r/R_0)$ 代回方程左边逐项计算。
+已知 $y(x)=J_0(x)$ 满足 $y''+\dfrac{1}{x}y'+y=0$。
+对 $\phi$ 用上面的换算式得 $\phi'(r)=\dfrac{\beta}{R_0}y'(x)$，
+$\phi''(r)=\dfrac{\beta^2}{R_0^2}y''(x)$。于是
+
+\begin{equation}
+\phi''+\frac{1}{r}\phi'+\gamma\phi
+=\frac{\beta^2}{R_0^2}y''+\frac{1}{r}\frac{\beta}{R_0}y'+\gamma y .
+\end{equation}
+
+注意这里的 $\dfrac{1}{r}$ 也要用新变量表示。
+由 $x=\dfrac{\beta r}{R_0}$ 反解出 $r=\dfrac{R_0 x}{\beta}$，于是
+
+\begin{equation}
+\frac{1}{r}=\frac{\beta}{R_0 x}.
+\end{equation}
+
+代进去：
+
+\begin{equation}
+=\frac{\beta^2}{R_0^2}y''+\frac{\beta}{R_0 x}\cdot\frac{\beta}{R_0}y'+\gamma y
+=\frac{\beta^2}{R_0^2}\left(y''+\frac{1}{x}y'\right)+\gamma y .
+\end{equation}
+
+由贝塞尔方程 $y''+\dfrac{1}{x}y'=-y$，上式
+
+\begin{equation}
+=-\frac{\beta^2}{R_0^2}y+\gamma y
+=\left(\gamma-\frac{\beta^2}{R_0^2}\right)y .
+\end{equation}
+
+要让左边恒等于零，必须 $\gamma=\dfrac{\beta^2}{R_0^2}$。
+这里 $\beta$ 是一个纯数，没有量纲，
+所以 $\gamma$ 的量纲是长度的负二次方，
+这与拉普拉斯算子 $\nabla^2\phi$ 的量纲一致，两边量纲相符。
+
+\subsection{用表面条件定出 $\beta$}
+
+把 $\phi(r)=J_0(\beta r/R_0)$ 代入齐次表面条件
+$-k\phi'(R_0)=h\phi(R_0)$。
+
+先求导。用链式法则与 $\dfrac{\mathrm{d}}{\mathrm{d}x}J_0=-J_1$：
+
+\begin{equation}
+\phi'(r)=\frac{\beta}{R_0}\cdot\left(-J_1\!\left(\frac{\beta r}{R_0}\right)\right)
+=-\frac{\beta}{R_0}J_1\!\left(\frac{\beta r}{R_0}\right).
+\end{equation}
+
+在 $r=R_0$ 处 $\dfrac{\beta r}{R_0}=\beta$，所以
+
+\begin{equation}
+\phi'(R_0)=-\frac{\beta}{R_0}J_1(\beta),
+\qquad
+\phi(R_0)=J_0(\beta).
+\end{equation}
+
+代入条件：
+
+\begin{equation}
+-k\left(-\frac{\beta}{R_0}J_1(\beta)\right)=h J_0(\beta)
+\quad\Longrightarrow\quad
+\frac{k\beta}{R_0}J_1(\beta)=h J_0(\beta).
+\end{equation}
+
+两边同乘以 $\dfrac{R_0}{k}$：
+
+\begin{equation}
+\beta J_1(\beta)=\frac{hR_0}{k}J_0(\beta).
+\end{equation}
+
+记 $\mathrm{Bi}=\dfrac{hR_0}{k}$，最终得到
+
+\begin{equation}
+\boxed{\ \beta J_1(\beta)=\mathrm{Bi}\,J_0(\beta)\ }
+\label{eq:p6-eig}
+\end{equation}
+
+这个方程叫特征方程，它的正根 $\beta_1<\beta_2<\beta_3<\cdots$
+叫特征值。问题一的 $\mathrm{Bi}=1.388889$，前四个根是
+
+\begin{equation}
+\beta_1=1.4184725188,\quad
+\beta_2=4.166469601,\quad
+\beta_3=7.2084784644,\quad
+\beta_4=10.3082731535 .
+\label{eq:p6-betan}
+\end{equation}
+
+特征方程没有解析解，只能用数值方法求根。
+代码的做法在第八节讲。
+
+对应的衰减率由式 \eqref{eq:p6-gamma} 给出：
+
+\begin{equation}
+\gamma_n=\frac{\alpha\beta_n^2}{R_0^2}.
+\label{eq:p6-gamman}
+\end{equation}
+
+\begin{keypoint}
+瞬态部分由特征函数 $J_0(\beta_n r/R_0)$ 与衰减因子 $e^{-\gamma_n t}$ 组成。
+特征值 $\beta_n$ 由表面条件决定，衰减率 $\gamma_n$ 由特征值决定。
+\end{keypoint}
+
+\section{第五步：正交性与展开系数}
+
+\subsection{把 $\hat w$ 写成级数}
+
+瞬态部分的初始条件是 $\hat w(r,0)=-W(r)$，
+它是一个已知函数。把已知函数用特征函数展开：
+
+\begin{equation}
+\hat w(r,t)=\sum_{n\ge1}b_n J_0\!\left(\frac{\beta_n r}{R_0}\right)e^{-\gamma_n t}.
+\label{eq:p6-series}
+\end{equation}
+
+在 $t=0$ 时：
+
+\begin{equation}
+\sum_{n\ge1}b_n J_0\!\left(\frac{\beta_n r}{R_0}\right)=-W(r).
+\label{eq:p6-series0}
+\end{equation}
+
+要定出 $b_n$，需要知道特征函数之间的正交性。
+
+\subsection{内积与权}
+
+在圆柱问题里，两个函数的内积要带一个权 $r$：
+
+\begin{equation}
+\langle f,g\rangle=\int_0^{R_0} r f(r)g(r)\,\mathrm{d}r .
+\label{eq:p6-inner}
+\end{equation}
+
+之所以带权 $r$，是因为圆柱的每一圈面积与 $r$ 成正比。
+第一部分推导控制方程时出现的那个 $r$ 因子，现在又出现了，
+它决定了正交性成立的形式。
+
+\subsection{证明正交性}
+
+取两个不同的特征函数 $\phi_n$、$\phi_m$，对应特征值 $\beta_n$、$\beta_m$。
+两者都满足
+
+\begin{equation}
+\nabla^2\phi_n=-\frac{\beta_n^2}{R_0^2}\phi_n,
+\qquad
+\nabla^2\phi_m=-\frac{\beta_m^2}{R_0^2}\phi_m .
+\end{equation}
+
+用第一式乘 $\phi_m$，第二式乘 $\phi_n$，相减：
+
+\begin{equation}
+\phi_m\nabla^2\phi_n-\phi_n\nabla^2\phi_m
+=-\frac{\beta_n^2}{R_0^2}\phi_n\phi_m+\frac{\beta_m^2}{R_0^2}\phi_n\phi_m
+=\frac{\beta_m^2-\beta_n^2}{R_0^2}\phi_n\phi_m .
+\end{equation}
+
+两边乘以 $r$ 并从 $0$ 积到 $R_0$：
+
+\begin{equation}
+\int_0^{R_0} r\left(\phi_m\nabla^2\phi_n-\phi_n\nabla^2\phi_m\right)\mathrm{d}r
+=\frac{\beta_m^2-\beta_n^2}{R_0^2}\int_0^{R_0} r\phi_n\phi_m\,\mathrm{d}r .
+\label{eq:p6-orth1}
+\end{equation}
+
+现在算左边的积分。圆柱坐标下的格林第二恒等式给出
+
+\begin{equation}
+\int_0^{R_0} r\left(\phi_m\nabla^2\phi_n-\phi_n\nabla^2\phi_m\right)\mathrm{d}r
+=R_0\left[\phi_m(R_0)\phi_n'(R_0)-\phi_n(R_0)\phi_m'(R_0)\right].
+\label{eq:p6-green}
+\end{equation}
+
+这条恒等式就是把 $\dfrac{1}{r}(r f')'$ 形式的算子做两次分部积分得到的，
+边界项里出现的 $R_0$ 来自权 $r$ 在 $r=R_0$ 处的取值，
+$r=0$ 处的边界项因为前面有因子 $r$ 而自动消失。
+
+现在看式 \eqref{eq:p6-green} 的右端。两个特征函数都满足同一个齐次表面条件：
+
+\begin{equation}
+-k\phi_n'(R_0)=h\phi_n(R_0),
+\qquad
+-k\phi_m'(R_0)=h\phi_m(R_0).
+\end{equation}
+
+两式都除以 $-k$，得 $\phi_n'(R_0)=-\dfrac{h}{k}\phi_n(R_0)$，
+对 $m$ 同理。代入右端：
+
+\begin{equation}
+\phi_m(R_0)\left(-\frac{h}{k}\phi_n(R_0)\right)
+-\phi_n(R_0)\left(-\frac{h}{k}\phi_m(R_0)\right)=0 .
+\end{equation}
+
+两项完全一样，一正一负，抵消为零。所以式 \eqref{eq:p6-green} 的左端为零，
+代回式 \eqref{eq:p6-orth1} 得
+
+\begin{equation}
+\frac{\beta_m^2-\beta_n^2}{R_0^2}\langle\phi_n,\phi_m\rangle=0 .
+\end{equation}
+
+当 $m\ne n$ 时 $\beta_m\ne\beta_n$，所以 $\beta_m^2-\beta_n^2\ne0$，
+只能是
+
+\begin{equation}
+\boxed{\ \langle\phi_n,\phi_m\rangle=0,\qquad m\ne n\ }
+\label{eq:p6-orth}
+\end{equation}
+
+这就是带权 $r$ 的正交性。
+
+\subsection{模长}
+
+$n=m$ 时的内积叫模长的平方。由贝塞尔函数的积分公式可以算出
+
+\begin{equation}
+\langle\phi_n,\phi_n\rangle
+=\int_0^{R_0} r J_0^2\!\left(\frac{\beta_n r}{R_0}\right)\mathrm{d}r
+=\frac{R_0^2}{2}\left[J_0^2(\beta_n)+J_1^2(\beta_n)\right].
+\label{eq:p6-norm}
+\end{equation}
+
+\subsection{展开系数}
+
+对式 \eqref{eq:p6-series0} 两边同时与 $\phi_m$ 做内积：
+
+\begin{equation}
+\left\langle\sum_{n\ge1}b_n\phi_n,\phi_m\right\rangle=\langle -W,\phi_m\rangle .
+\end{equation}
+
+内积是线性的，求和与内积可以交换顺序：
+
+\begin{equation}
+\sum_{n\ge1}b_n\langle\phi_n,\phi_m\rangle=\langle -W,\phi_m\rangle .
+\end{equation}
+
+由正交性 \eqref{eq:p6-orth}，右边的求和里只有 $n=m$ 那一项不为零：
+
+\begin{equation}
+b_m\langle\phi_m,\phi_m\rangle=-\langle W,\phi_m\rangle
+\quad\Longrightarrow\quad
+b_m=-\frac{\langle W,\phi_m\rangle}{\langle\phi_m,\phi_m\rangle}.
+\label{eq:p6-bn}
+\end{equation}
+
+还差 $\langle W,\phi_m\rangle$。这个内积可以用格林恒等式绕过去，
+不必直接积分。
+
+用与前面相同的方法，取 $W$ 与 $\phi_n$。$W$ 不满足特征方程，
+它满足的是式 \eqref{eq:p6-Wbessel}，也就是
+
+\begin{equation}
+\nabla^2W=\kappa^2A-\kappa^2W=\kappa^2(A-W).
+\end{equation}
+
+再用一次格林第二恒等式：
+
+\begin{equation}
+\int_0^{R_0} r\left(\phi_n\nabla^2W-W\nabla^2\phi_n\right)\mathrm{d}r
+=R_0\left[\phi_n(R_0)W'(R_0)-W(R_0)\phi_n'(R_0)\right].
+\end{equation}
+
+右端的做法与前面完全一样：$W$ 与 $\phi_n$ 都满足同一个齐次表面条件
+$-kW'(R_0)=hW(R_0)$ 与 $-k\phi_n'(R_0)=h\phi_n(R_0)$，
+所以右端也是零。
+
+于是左端为零。把两个拉普拉斯项代进去：
+
+\begin{equation}
+\int_0^{R_0} r\left[\phi_n\kappa^2(A-W)-W\left(-\frac{\beta_n^2}{R_0^2}\phi_n\right)\right]\mathrm{d}r=0 .
+\end{equation}
+
+拆成三个内积：
+
+\begin{equation}
+\kappa^2A\langle1,\phi_n\rangle-\kappa^2\langle W,\phi_n\rangle
++\frac{\beta_n^2}{R_0^2}\langle W,\phi_n\rangle=0 .
+\end{equation}
+
+把后两项合并：
+
+\begin{equation}
+\left(\frac{\beta_n^2}{R_0^2}-\kappa^2\right)\langle W,\phi_n\rangle
+=-\kappa^2A\langle1,\phi_n\rangle .
+\end{equation}
+
+两边同除以括号里的量：
+
+\begin{equation}
+\langle W,\phi_n\rangle
+=-\frac{\kappa^2A}{\dfrac{\beta_n^2}{R_0^2}-\kappa^2}\langle1,\phi_n\rangle .
+\label{eq:p6-Wphi}
+\end{equation}
+
+再算 $\langle1,\phi_n\rangle$，它是一次可以直接做的积分：
+
+\begin{equation}
+\langle1,\phi_n\rangle=\int_0^{R_0} r J_0\!\left(\frac{\beta_n r}{R_0}\right)\mathrm{d}r
+=\frac{R_0^2}{\beta_n}J_1(\beta_n).
+\label{eq:p6-1phi}
+\end{equation}
+
+这一步用到了 $\displaystyle\int_0^{z} x J_0(x)\,\mathrm{d}x=z J_1(z)$。
+验证方法是对 $zJ_1(z)$ 求导：由乘积法则与
+$\dfrac{\mathrm{d}}{\mathrm{d}z}\left(zJ_1(z)\right)=zJ_0(z)$，确实得到被积函数。
+
+把式 \eqref{eq:p6-1phi} 与式 \eqref{eq:p6-norm} 一起代入式 \eqref{eq:p6-bn}：
+
+\begin{equation}
+b_n=-\frac{1}{\dfrac{R_0^2}{2}\left[J_0^2+J_1^2\right]}
+\cdot\left(-\frac{\kappa^2A}{\dfrac{\beta_n^2}{R_0^2}-\kappa^2}\right)\cdot\frac{R_0^2}{\beta_n}J_1(\beta_n),
+\end{equation}
+
+其中 $J_0$、$J_1$ 的自变量都是 $\beta_n$。两个负号相乘得正，
+$R_0^2$ 与分母里的 $R_0^2$ 抵消，$2$ 移到分子：
+
+\begin{equation}
+b_n=\frac{\dfrac{2\kappa^2A J_1(\beta_n)}{\beta_n\left[J_0^2(\beta_n)+J_1^2(\beta_n)\right]}}{\dfrac{\beta_n^2}{R_0^2}-\kappa^2}.
+\end{equation}
+
+记归一化系数
+
+\begin{equation}
+N_n=\frac{2J_1(\beta_n)}{\beta_n\left[J_0^2(\beta_n)+J_1^2(\beta_n)\right]},
+\label{eq:p6-Nn}
+\end{equation}
+
+则
+
+\begin{equation}
+\boxed{\ b_n=\frac{A\kappa^2N_n}{\dfrac{\beta_n^2}{R_0^2}-\kappa^2}\ }
+\label{eq:p6-bn-final}
+\end{equation}
+
+前四个系数是
+
+\begin{equation}
+b_1=47.2789118,\quad b_2=-0.6580347,\quad
+b_3=0.0967137,\quad b_4=-0.0276945 .
+\label{eq:p6-bnnum}
+\end{equation}
+
+\begin{keypoint}
+正交性来自两个特征函数共享同一个齐次边界条件，
+证明的关键是格林恒等式的边界项恰好为零。
+展开系数不需要直接做内积，用格林恒等式可以化成只含
+$\langle1,\phi_n\rangle$ 的表达式，而后者有一次现成的积分公式。
+\end{keypoint}
+
+\section{第六步：把三部分拼起来，并做三个自检}
+
+\subsection{最终的公式}
+
+把准静态部分、瞬态部分与烘房温度本身合起来：
+
+\begin{equation}
+\boxed{\
+T(r,t)=T_{\mathrm{air}}(t)+W(r)e^{-t/\tau_T}
++\sum_{n\ge1}b_n J_0\!\left(\frac{\beta_n r}{R_0}\right)e^{-\gamma_n t}
+\ }
+\label{eq:p6-final}
+\end{equation}
+
+其中
+
+\begin{equation}
+T_{\mathrm{air}}(t)=T_{\mathrm{set}}-Ae^{-t/\tau_T},
+\qquad W(r)=A+BJ_0(\kappa r),
+\end{equation}
+
+\begin{equation}
+\kappa=\frac{1}{\sqrt{\alpha\tau_T}},
+\qquad
+B=\frac{hA}{k\kappa J_1(\kappa R_0)-hJ_0(\kappa R_0)},
+\end{equation}
+
+\begin{equation}
+\beta_n\ \text{由}\ \beta J_1(\beta)=\mathrm{Bi}J_0(\beta)\ \text{给出},
+\qquad
+\gamma_n=\frac{\alpha\beta_n^2}{R_0^2},
+\qquad
+b_n=\frac{A\kappa^2N_n}{\dfrac{\beta_n^2}{R_0^2}-\kappa^2}.
+\end{equation}
+
+\subsection{自检一：初始时刻}
+
+在 $t=0$ 时，式 \eqref{eq:p6-final} 变成
+
+\begin{equation}
+T(r,0)=T_{\mathrm{air}}(0)+W(r)+\sum_{n\ge1}b_nJ_0\!\left(\frac{\beta_n r}{R_0}\right).
+\end{equation}
+
+由式 \eqref{eq:p6-air}，$T_{\mathrm{air}}(0)=T_{\mathrm{set}}-A=28$。
+而由式 \eqref{eq:p6-series0}，求和那一项恰好等于 $-W(r)$。
+两者相加为零，所以 $T(r,0)=28$，与初始条件 \eqref{eq:p6-ic} 一致。
+
+这个自检说明展开系数确实定对了。
+如果 $b_n$ 的正负号弄错，这一步就会得到 $28+2W(r)$，立刻暴露错误。
+
+\subsection{自检二：无穷时刻}
+
+当 $t\to\infty$ 时，$e^{-t/\tau_T}\to0$，$e^{-\gamma_n t}\to0$，
+所以 $T\to T_{\mathrm{set}}=50.212$，与烘房温度一致。
+物理上说得通：放得足够久，药材温度会趋近烘房温度。
+
+\subsection{自检三：表面热流}
+
+在 $r=R_0$ 处把式 \eqref{eq:p6-final} 对 $r$ 求导，再乘以 $-k$，
+得到的就是表面导热量。由 $W$ 与 $\phi_n$ 各自满足的齐次表面条件，
+加上 $T_{\mathrm{air}}$ 与 $r$ 无关，可以逐项验证
+
+\begin{equation}
+-k\left.\frac{\partial T}{\partial r}\right|_{r=R_0}
+=h\left(T(R_0,t)-T_{\mathrm{air}}(t)\right).
+\end{equation}
+
+即内部导出的热量等于表面对流带走的热量，边界条件满足。
+
+\subsection{数值结果}
+
+取 $t=1800$ 秒，代入式 \eqref{eq:p6-final} 得
+
+\begin{equation}
+T(0,1800\ \mathrm{s})=34.0424989153\ ^\circ\mathrm{C},
+\qquad
+T(R_0,1800\ \mathrm{s})=37.1989219992\ ^\circ\mathrm{C}.
+\end{equation}
+
+保留四位小数就是 $34.0425$ 与 $37.1989$，
+正是题目要求的问题一的两个关键答案。
+
+\section{第七步：级数收敛有多快}
+
+\subsection{衰减因子决定的收敛速度}
+
+级数第 $n$ 项含因子 $e^{-\gamma_n t}$。在 $t=1800$ 秒，
+四个衰减因子乘时间的值是
+
+\begin{equation}
+\gamma_1t=1.529,\quad
+\gamma_2t=13.191,\quad
+\gamma_3t=39.483,\quad
+\gamma_4t=80.742 .
+\label{eq:p6-gammat}
+\end{equation}
+
+把它们换成指数的值：
+
+\begin{equation}
+e^{-1.529}=0.217,\quad
+e^{-13.191}=1.9\times10^{-6},\quad
+e^{-39.483}=7.1\times10^{-18},\quad
+e^{-80.742}=1.2\times10^{-35}.
+\end{equation}
+
+再看系数的大小：$b_1=47.3$，$b_2=-0.66$，$b_3=0.097$。
+第二项的贡献量级是 $0.66\times1.9\times10^{-6}\approx1.2\times10^{-6}$，
+第三项是 $0.097\times7.1\times10^{-18}\approx7\times10^{-19}$，
+已经低于双精度浮点数的分辨率。
+
+\subsection{取几项就够}
+
+直接算一下取不同项数的结果：
+
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+项数 & $T(0,1800)$ & $T(R_0,1800)$ & 变化 \\
+\midrule
+$1$ & $34.0425001446$ & $37.1989215308$ & 基准 \\
+$2$ & $34.0424989153$ & $37.1989219992$ & 第 10 位小数变化 \\
+$3$ & $34.0424989153$ & $37.1989219992$ & 不变 \\
+$4$ & $34.0424989153$ & $37.1989219992$ & 不变 \\
+$8$ & $34.0424989153$ & $37.1989219992$ & 不变 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+从第二项开始，数值在双精度下完全不变。
+所以这个级数实际上只需要两项。
+代码里求了两百个特征值，那是为了做自检和画图，
+真正的计算量比它小得多。
+
+\begin{keypoint}
+闭式解只需两项就到机器精度，这是它相对任何数值格式的最大优势：
+数值格式需要几十到几千个网格点，而这里只要两行公式。
+\end{keypoint}
+
+\section{第八步：这些公式在代码里长什么样}
+
+代码文件是 \texttt{analytic\_p1.py}。它只做两件事：
+在导入时把与时间无关的量一次算好，然后在函数里按公式求和。
+
+\subsection{导入时算好的量}
+
+\begin{lstlisting}[language=Python]
+RHO, CP, K = 820.0, 2600.0, 0.36
+R = cm.R0
+ALPHA = K / (RHO * CP)
+BI = cm.h * R / K
+A = cm.Tset - cm.T0
+KAPPA = np.sqrt(1.0 / (ALPHA * cm.tauT))
+NROOT = 200
+BET = cm.bessel_roots(BI, NROOT)
+GAM = ALPHA * BET ** 2 / R ** 2
+_B = cm.h * A / (K * KAPPA * j1(KAPPA * R) - cm.h * j0(KAPPA * R))
+_NN = 2 * j1(BET) / (BET * (j0(BET) ** 2 + j1(BET) ** 2))
+BN = A * KAPPA ** 2 * _NN / (BET ** 2 / R ** 2 - KAPPA ** 2)
+\end{lstlisting}
+
+逐行对照前面的推导：
+
+第 1 行是问题一的三个常数物性，来自附录 2。
+
+第 2 行取半径。\texttt{cm.R0} 是 $0.02$ 米。
+
+第 3 行算热扩散率 $\alpha=k/(\rho c_p)$，
+对应式 \eqref{eq:p6-kappa} 上面那一段的数值。
+
+第 4 行算毕渥数 $\mathrm{Bi}=hR_0/k$，它出现在特征方程 \eqref{eq:p6-eig} 里。
+
+第 5 行算 $A=T_{\mathrm{set}}-28$，对应式 \eqref{eq:p6-air}。
+
+第 6 行算 $\kappa=1/\sqrt{\alpha\tau_T}$，对应式 \eqref{eq:p6-kappa}。
+
+第 7 行指定求 $200$ 个特征值。
+
+第 8 行调用 \texttt{cm.bessel\_roots} 求特征方程的正根，
+得到数组 \texttt{BET}，它的前四个元素就是式 \eqref{eq:p6-betan}。
+
+第 9 行算衰减率数组 $\gamma_n=\alpha\beta_n^2/R_0^2$，对应式 \eqref{eq:p6-gamman}。
+
+第 10 行算式 \eqref{eq:p6-B} 给出的 $B$。
+\texttt{j0} 与 \texttt{j1} 是 scipy 提供的第一类贝塞尔函数。
+
+第 11 行算归一化系数 $N_n$，对应式 \eqref{eq:p6-Nn}。
+注意代码里用的是数组运算，\texttt{BET} 是长度 $200$ 的数组，
+所以这一行同时算出全部 $N_n$。
+
+第 12 行算展开系数 $b_n$，对应式 \eqref{eq:p6-bn-final}。
+同样是一次算完全部。
+
+\subsection{函数里的求和}
+
+\begin{lstlisting}[language=Python]
+def T_exact(r, t, Tset=None, tauT=None, nterm=NROOT):
+    Ts = cm.Tset if Tset is None else Tset
+    tau = cm.tauT if tauT is None else tauT
+    a = Ts - cm.T0
+    kap = np.sqrt(1.0 / (ALPHA * tau))
+    B = cm.h * a / (K * kap * j1(kap * R) - cm.h * j0(kap * R))
+    bn = a * kap ** 2 * _NN / (BET ** 2 / R ** 2 - kap ** 2)
+    r = np.atleast_1d(np.asarray(r, dtype=float))
+    val = np.full(r.shape, Ts - (Ts - cm.T0) * np.exp(-t / tau))
+    val += (a + B * j0(kap * r)) * np.exp(-t / tau)
+    for n in range(nterm):
+        val += bn[n] * j0(BET[n] * r / R) * np.exp(-GAM[n] * t)
+    return val
+\end{lstlisting}
+
+第 2 行与第 3 行允许调用者临时换一组环境标定值。
+参数为 \texttt{None} 时用默认值，给定了就用给定值。
+这个设计让第十节的敏感性检验成为可能：
+只要换一个 \texttt{Tset} 就能重算整条公式。
+
+第 4 到第 7 行把依赖环境标定值的四个量在函数内部重算一遍，
+而不是直接使用模块级的那一份，否则换了 \texttt{Tset} 以后公式会自相矛盾。
+第 4 行算 $a=T_{\mathrm{set}}-28$，对应式 \eqref{eq:p6-air} 下面那句话；
+第 5 行算 $\kappa$，对应式 \eqref{eq:p6-kappa}；
+第 6 行算 $B$，对应式 \eqref{eq:p6-B}；
+第 7 行算 $b_n$，对应式 \eqref{eq:p6-bn-final}。
+
+第 8 行把输入的 $r$ 转成数组，即使传入一个标量也能继续做数组运算。
+
+第 9 行是整个公式的第一部分：烘房温度
+$T_{\mathrm{set}}-(T_{\mathrm{set}}-28)e^{-t/\tau}$，对应式 \eqref{eq:p6-air}。
+\texttt{np.full(r.shape, ...)} 表示生成一个与 $r$ 形状相同、
+每个元素都等于这个值的数组。
+
+第 10 行加上第二部分 $W(r)e^{-t/\tau}$，
+其中 $W(r)=a+BJ_0(\kappa r)$ 写在括号里。
+
+第 11 行与第 12 行是循环累加第三部分，
+每一项是 $b_nJ_0(\beta_nr/R_0)e^{-\gamma_nt}$。
+第 11 行的 \texttt{range(nterm)} 决定累加多少项。
+
+第 13 行返回结果。返回的是数组，即使输入是标量。
+
+\subsection{特征方程怎么求根}
+
+特征方程 \eqref{eq:p6-eig} 没有解析解，只能数值求根。
+代码在 \texttt{common.py} 里的 \texttt{bessel\_roots} 函数：
+
+\begin{lstlisting}[language=Python]
+def bessel_roots(Bi, n, beta_min=0.0):
+    from scipy.special import jnp_zeros
+    z = jnp_zeros(1, n + 2)
+    br = [0.0] + list(z)
+    roots = []
+    f = lambda b: b * j1(b) - Bi * j0(b)
+    lo = 1e-12
+    hi = z[0] - 1e-12
+    if f(lo) * f(hi) < 0:
+        roots.append(brentq(f, lo, hi, xtol=1e-15, rtol=8.9e-16))
+    for i in range(len(z) - 1):
+        lo, hi = z[i] + 1e-12, z[i + 1] - 1e-12
+        if f(lo) * f(hi) < 0:
+            roots.append(brentq(f, lo, hi, xtol=1e-15, rtol=8.9e-16))
+        if len(roots) >= n:
+            break
+    return np.array(roots[:n])
+\end{lstlisting}
+
+这个函数做的事是：先把实轴分成一段一段小区间，
+保证每个小区间里恰好有一个根，然后在每个区间里用
+布伦特法把根精确找出来。这种方法叫括号法。
+
+第 3 行取 $J_1$ 的前 $n+2$ 个正零点，记作数组 $z$。
+为什么用 $J_1$ 的零点来分段，理由是这样的：
+特征函数 $\phi(r)=J_0(\beta r/R_0)$ 在 $(0,R_0)$ 内变号 $k$ 次，
+对应于 $\beta$ 落在 $J_0$ 的第 $k$ 个零点之前。
+而由贝塞尔函数的交错性质，$J_0$ 的零点与 $J_1$ 的零点互相穿插。
+用 $J_1$ 的零点把区间切开，每个小区间里函数 $f(\beta)=\beta J_1(\beta)-\mathrm{Bi}J_0(\beta)$
+的符号改变一次，正好给出一个根。
+
+第 5 行定义待求根的函数 $f$，它就是把特征方程 \eqref{eq:p6-eig} 移到一边。
+
+第 6 到第 9 行处理第一个根。第一个根落在 $(0,z_1)$ 之内。
+区间左端点不取 $0$ 而取 $1\times10^{-12}$，
+是因为 $\beta=0$ 处 $J_1(0)=0$ 同时 $J_0(0)=1$，
+函数值恰好是 $-\mathrm{Bi}$，虽然不算奇异，
+但留出一点余量更稳妥。右端点也缩进 $10^{-12}$，
+避免正好落在 $J_1$ 的零点上，那里函数值虽然有限，
+但会让符号判断退化。
+
+第 10 到第 15 行对其余的区间逐个处理。
+每个区间的两个端点都向内缩进 $10^{-12}$，
+然后检查两端函数值是否异号。异号说明区间内有根，
+调用 \texttt{brentq} 求出来。
+
+第 14 行检查是否已经找够 $n$ 个根，找够就跳出循环。
+
+第 16 行取前 $n$ 个根返回。
+
+布伦特法是一种把二分法与割线法结合的求根方法，
+在函数连续且两端异号的前提下一定收敛，
+而且收敛速度接近二阶。它的容差参数 \texttt{xtol} 与 \texttt{rtol}
+分别控制自变量的绝对与相对精度，这里都取到了双精度极限附近。
+
+为什么不能直接用牛顿法，因为那需要推导 $f$ 的导数，
+而布伦特法不需要导数，写起来更短，也更不容易出错。
+
+\subsection{自检}
+
+\texttt{analytic\_p1.py} 的 \texttt{\_selftest} 函数在程序直接运行时打印一串自检量，
+它们全部出现在代码包的复跑报告里。下面列出其中四项：
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+自检量 & 数值 \\
+\midrule
+热扩散率 $\alpha$ & $1.688555\times10^{-7}$ m$^2$/s \\
+毕渥数 $\mathrm{Bi}$ & $1.388889$ \\
+$\kappa$ 与 $\kappa R_0$ & $56.163269$ m$^{-1}$ 与 $1.123265$ \\
+特征方程残差 $\max_n|\beta_nJ_1(\beta_n)-\mathrm{Bi}J_0(\beta_n)|$ & $1.8\times10^{-12}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+自检量 & 数值 \\
+\midrule
+前四个特征值 $\beta_1$ 到 $\beta_4$ & $1.4184725188$，$4.166469601$，$7.2084784644$，$10.3082731535$ \\
+前四个展开系数 $b_1$ 到 $b_4$ & $47.27891$，$-0.658035$，$0.096714$，$-0.027695$ \\
+$\gamma_nt$ 在 $t=1800$ 秒的值 & $1.529$，$13.191$，$39.483$，$80.742$ \\
+初始时刻全场极差 & $3.5\times10^{-8}$ 摄氏度 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+特征方程残差说明特征值求得很准：
+把求出的 $\beta_n$ 代回特征方程，两边的差不超过 $1.8\times10^{-12}$。
+
+初始时刻全场极差这一项需要解释。
+在 $t=0$ 时，式 \eqref{eq:p6-series0} 要求级数之和恰好等于负的 $W(r)$，
+所以这一项衡量的就是展开系数定得准不准。
+程序用全部 $200$ 项去算，得到的极差是 $3.5\times10^{-8}$ 摄氏度。
+它比特征方程残差大四个数量级，原因是 $b_n$ 衰减得慢，
+量级只有 $\beta_n^{-5/2}$，被截掉的尾巴在高阶上仍有微小贡献。
+在 $t=1800$ 秒处，这些高阶项还要再乘上 $e^{-\gamma_nt}$，
+被压得更低，所以对最终结果没有影响，这一点在第七节已经算过。
+
+这四项合起来说明三件事：特征值对、展开系数对、级数截断的误差可以忽略。
+
+\section{第九步：用这个闭式解检验数值解}
+
+闭式解最重要的用途是检验数值解。
+把谱配置法的结果与式 \eqref{eq:p6-final} 逐点比较，
+得到下表。比较的是全场 $201$ 个半径位置上的最大偏差。
+
+\begin{center}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+空间节点参数 $N$ & 全场最大偏差 / K & 与上一行的比值 \\
+\midrule
+$4$ & $7.586\times10^{-6}$ & --- \\
+$6$ & $2.876\times10^{-10}$ & $2.6\times10^{4}$ \\
+$8$ & $1.087\times10^{-10}$ & $2.6$ \\
+$12$ & $1.110\times10^{-10}$ & $1.0$ \\
+$16$ & $1.129\times10^{-10}$ & $1.0$ \\
+$24$ & $1.140\times10^{-10}$ & $1.0$ \\
+$32$ & $1.144\times10^{-10}$ & $1.0$ \\
+$64$ & $1.139\times10^{-10}$ & $1.0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+读这张表要注意三点。
+
+第一，$N$ 从 $4$ 加到 $6$，误差掉了四个数量级。
+这是谱收敛的典型特征：节点数稍微增加，精度就跳一个台阶，
+而不是像有限差分那样按固定的阶数慢慢下降。
+
+第二，从 $N=8$ 开始，误差停在 $1.1\times10^{-10}$ 不再下降。
+这不是方法失效，而是碰到了时间积分容差的平台。
+本次比较把时间容差固定为 $10^{-12}$，
+时间离散引入的误差就在 $10^{-10}$ 量级，
+空间误差再小也被它盖住。
+
+第三，误差的水平 $10^{-10}$ 开尔文意味着什么。
+药材温度是几十摄氏度，双精度浮点数大约有十六位有效数字，
+所以 $10^{-10}$ 已经接近这台计算机能表示的极限。
+换句话说，数值解与精确解在双精度意义上没有差别。
+
+\begin{keypoint}
+闭式解的价值在于它是可以信赖的参照物。
+数值解与它吻合到 $10^{-10}$ 开尔文，说明空间离散、边界处理、
+时间推进三个环节都没有写错。
+如果边界通量的符号写反，这个比较会立刻出现大偏差。
+\end{keypoint}
+
+\section{第十步：用这个闭式解做的敏感性检验}
+
+\subsection{一个必须回答的问题}
+
+环境标定给出 $T_{\mathrm{set}}=50.212101$、$\tau_T=1877.4941$。
+程序里取的是三位有效数字 $T_{\mathrm{set}}=50.212$、$\tau_T=1877.5$。
+问题一要求保留四位小数，那么四位小数会不会被这个取舍影响。
+
+用闭式解来回答，因为它算得快，换一组常数只要改两个输入。
+结果如下表，其中前两列是输入的标定值，
+后两列是 $t=1800$ 秒的温度。
+
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+标定口径 & $T(0,1800)$ / $^\circ$C & $T(R_0,1800)$ / $^\circ$C \\
+\midrule
+全精度拟合，$50.212101$ 与 $1877.4941$ & $34.0425404$ & $37.1989829$ \\
+三位有效，$50.212$ 与 $1877.5$ & $34.0424989$ & $37.1989220$ \\
+设定值减 $0.002$ 度，$50.2100$ & $34.0419548$ & $37.1980937$ \\
+设定值加 $0.002$ 度，$50.2140$ & $34.0430430$ & $37.1997503$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{怎么读这张表}
+
+第一，全精度与三位有效数字两行之差是
+$4.2\times10^{-5}$ 摄氏度与 $6.1\times10^{-5}$ 摄氏度，
+都在第 5 位小数上，四舍五入到四位小数以后两者相同。
+所以程序取三位有效数字是安全的。
+
+第二，把设定值改动 $0.002$ 摄氏度，
+中心温度就从 $34.04195$ 变到 $34.04304$，
+四舍五入以后是 $34.0420$ 与 $34.0430$，第 4 位小数被翻动了。
+这说明四位小数的最后一位，其可靠性完全取决于标定常数的位数。
+
+第三，标定自身的标准误是 $0.0303$ 摄氏度，
+比上面那个 $0.002$ 摄氏度大十五倍。
+也就是说，拟合本身带来的不确定度远大于取舍带来的差别。
+四位小数是题目要求的输出格式，
+它并不代表这四位数字都有同等的物理意义。
+
+\why{这对写论文有什么影响}
+答：不能声称四位小数是精确到四位小数的物理真值。
+正确的说法是：在本文采用的标定口径下，
+模型给出这四位数字；标定常数的标准误为 $0.0303$ 摄氏度，
+对应结果在第 4 位小数上具有敏感性。
+把这一点写清楚，比起含糊地说结果精确，更站得住脚。
+
+\section{这一部分的小结}
+
+问题一的温度场推导已经完整了。回顾一下这条链：
+
+第一步，用 $w=T-T_{\mathrm{air}}$ 把边界条件齐次化，
+代价是方程右边多一个指数驱动项，初始条件变成零。
+
+第二步，把解拆成准静态部分与瞬态部分，
+要求方括号恒为零，得到两个各自独立的问题。
+
+第三步，准静态部分是一个常微分方程，
+解是 $A+BJ_0(\kappa r)$，
+常数 $B$ 由表面条件定出。
+
+第四步，瞬态部分是齐次热方程，
+分离变量以后得到零阶贝塞尔函数，
+特征值由特征方程 $\beta J_1(\beta)=\mathrm{Bi}J_0(\beta)$ 决定。
+
+第五步，用带权 $r$ 的正交性把初始条件展开，
+系数 $b_n$ 通过格林恒等式化为一个现成的积分，
+最终得到式 \eqref{eq:p6-bn-final}。
+
+第六步到第十步是检验：初始条件自检、稳态自检、边界热流自检、
+级数只需两项、与数值解吻合到 $10^{-10}$ 开尔文、
+标定常数敏感性的量级。
+
+\begin{keypoint}
+问题一不需要任何数值离散。整条推导只用到了常微分方程、
+贝塞尔函数的两条性质、分部积分和正交展开。
+这就是把物理看透以后再动手算的价值：
+能算出闭式解的时候，不要急着上网格。
+\end{keypoint}

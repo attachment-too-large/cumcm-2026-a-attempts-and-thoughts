@@ -1,0 +1,48 @@
+==============================================================================
+problem 3 (Appendix 3)
+==============================================================================
+  grid   n      dt       t_dry / s        t_dry / h    wall / s  
+  node   200    1-10     205358.04        57.0439      14.0      
+  node   400    1-10     205488.27        57.0801      14.6      
+  node   800    1-10     205537.29        57.0937      15.3      
+  node   1600   1-10     205553.80        57.0983      16.9      
+  node   800    1        205550.88        57.0975      48.2      
+  node   1600   1        205567.39        57.1021      58.1      
+  cell   800    1-10     205471.81        57.0755      20.2      
+  cell   1600   1-10     205528.46        57.0912      21.9      
+
+  node-grid convergence (dt = 1 s -> 10 s):
+    n=  200  t_dry =  205358.04 s
+    n=  400  t_dry =  205488.27 s   diff =  130.23 s   order = -
+    n=  800  t_dry =  205537.29 s   diff =   49.02 s   order = 1.41
+    n= 1600  t_dry =  205553.80 s   diff =   16.51 s   order = 1.57
+  Richardson limit (nominal order 2)    : 205559.30 s = 57.0998 h
+  Richardson limit (observed order 1.57): 205562.18 s = 57.1006 h
+  the two differ by                     : 2.88 s (0.0014 %)
+  spread over the finest configurations : 2.92 s (0.0014 %)
+  => t_dry = 205559 +/- 6 s = 57.10 +/- 0.00 h
+
+==============================================================================
+problem 4 (Appendix 4, shrinking)
+==============================================================================
+  grid   n      dt       t_dry / s        t_dry / h    wall / s  
+  node   200    1-10     182726.77        50.7574      15.1      
+  node   400    1-10     182753.94        50.7650      15.7      
+  node   800    1-10     182761.89        50.7672      16.5      
+  node   1600   1-10     182764.01        50.7678      17.7      
+  node   800    1        182774.10        50.7706      48.1      
+  node   1600   1        182776.23        50.7712      57.3      
+  cell   800    1-10     182735.63        50.7599      20.3      
+  cell   1600   1-10     182756.02        50.7656      21.2      
+
+  node-grid convergence (dt = 1 s -> 10 s):
+    n=  200  t_dry =  182726.77 s
+    n=  400  t_dry =  182753.94 s   diff =   27.16 s   order = -
+    n=  800  t_dry =  182761.89 s   diff =    7.96 s   order = 1.77
+    n= 1600  t_dry =  182764.01 s   diff =    2.12 s   order = 1.91
+  Richardson limit (nominal order 2)    : 182764.72 s = 50.7680 h
+  Richardson limit (observed order 1.91): 182764.79 s = 50.7680 h
+  the two differ by                     : 0.06 s (0.0000 %)
+  spread over the finest configurations : 10.09 s (0.0055 %)
+  => t_dry = 182765 +/- 1 s = 50.77 +/- 0.00 h
+

@@ -1,0 +1,26 @@
+== (a) 谱解：时间积分器/容差敏感性（N=64）==
+BDF    rtol=1e-09  tdry =  205574.525 s  nfev=2222
+BDF    rtol=1e-10  tdry =  205574.519 s  nfev=3200
+BDF    rtol=1e-11  tdry =  205574.519 s  nfev=3905
+BDF    rtol=1e-12  tdry =  205574.518 s  nfev=5011
+Radau  rtol=1e-09  tdry =  205574.518 s  nfev=6209
+Radau  rtol=1e-11  tdry =  205574.518 s  nfev=16363
+LSODA  rtol=1e-10  tdry =  205574.519 s  nfev=36084
+
+== (b) 事件求交 vs 1 s 采样线性求交（N=64, BDF rtol=1e-11）==
+事件求交   tdry = 205574.519 s
+1s采样求交 tdry = 205574.519 s   差 -0.000 s
+该处 dC/dt = -2.9354e-07 /s  (1 s 对应 2.94e-07 kg/kg)
+
+== (c) paper 格式 FV N=1600：时间步外推 ==
+dt=5.00  tdry =   205561.46 s
+dt=2.00  tdry =   205565.98 s
+dt=1.00  tdry =   205567.49 s
+dt=0.50  tdry =   205568.15 s
+dt=0.25  tdry =   205568.48 s
+
+== (d) paper 格式 FV：空间加密（dt=1s 全程）==
+N=800   dt=1s tdry =   205550.98 s
+N=1600  dt=1s tdry =   205567.49 s
+N=3200  dt=1s tdry =   205572.43 s
+N=6400  dt=1s tdry =   205573.77 s

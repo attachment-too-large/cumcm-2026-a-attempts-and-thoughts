@@ -1,0 +1,112 @@
+====================================================================================
+SENSITIVITY OF THE DRYING TIME  (n=400, dt = 1 s -> 10 s, t_end = 260000 s)
+====================================================================================
+  baseline P3 : t_dry = 205488.3 s = 57.0801 h   (3.8 s wall)
+  baseline P4 : t_dry = 182753.9 s = 50.7650 h   (4.6 s wall)
+
+  case   perturbed quantity           change     t_dry / h      delta / h   
+  P3     D0 pre-exponential           -2%        58.1079             +1.0279
+  P3     D0 pre-exponential           -1%        57.5887             +0.5086
+  P3     D0 pre-exponential           +1%        56.5818             -0.4983
+  P3     D0 pre-exponential           +2%        56.0935             -0.9866
+  P3     activation T (3850 K)        -2%        46.4718            -10.6082
+  P3     activation T (3850 K)        -1%        51.4440             -5.6361
+  P3     activation T (3850 K)        +1%        63.4648             +6.3847
+  P3     activation T (3850 K)        +2%        70.6932            +13.6132
+  P3     concentration exponent       -2%        54.4403             -2.6398
+  P3     concentration exponent       -1%        55.7409             -1.3392
+  P3     concentration exponent       +1%        58.4589             +1.3788
+  P3     concentration exponent       +2%        59.8784             +2.7983
+  P3     rho correlation              -2%        57.0782             -0.0019
+  P3     cp correlation               -2%        57.0782             -0.0019
+  P3     k correlation                -2%        57.0804             +0.0003
+  P3     rho correlation              +2%        57.0819             +0.0019
+  P3     cp correlation               +2%        57.0819             +0.0019
+  P3     k correlation                +2%        57.0798             -0.0003
+  P3     h_m (mass transfer)          -10%       57.8226             +0.7426
+  P3     h_m (mass transfer)          -5%        57.4279             +0.3479
+  P3     h_m (mass transfer)          +5%        56.7718             -0.3083
+  P3     h_m (mass transfer)          +10%       56.4972             -0.5829
+  P3     h (heat transfer)            -10%       57.0889             +0.0088
+  P3     h (heat transfer)            +10%       57.0729             -0.0072
+  P4     D0 pre-exponential           -2%        51.6749             +0.9099
+  P4     D0 pre-exponential           -1%        51.2153             +0.4503
+  P4     D0 pre-exponential           +1%        50.3237             -0.4412
+  P4     D0 pre-exponential           +2%        49.8913             -0.8737
+  P4     activation T (3850 K)        -2%        41.3500             -9.4150
+  P4     activation T (3850 K)        -1%        45.7688             -4.9962
+  P4     activation T (3850 K)        +1%        56.4110             +5.6460
+  P4     activation T (3850 K)        +2%        62.7799            +12.0150
+  P4     concentration exponent       -2%        49.2985             -1.4665
+  P4     concentration exponent       -1%        50.0248             -0.7402
+  P4     concentration exponent       +1%        51.5193             +0.7543
+  P4     concentration exponent       +2%        52.2879             +1.5229
+  P4     rho correlation              -2%        50.7632             -0.0018
+  P4     cp correlation               -2%        50.7632             -0.0018
+  P4     k correlation                -2%        50.7653             +0.0004
+  P4     rho correlation              +2%        50.7668             +0.0018
+  P4     cp correlation               +2%        50.7668             +0.0018
+  P4     k correlation                +2%        50.7646             -0.0003
+  P4     h_m (mass transfer)          -10%       51.0598             +0.2948
+  P4     h_m (mass transfer)          -5%        50.9018             +0.1368
+  P4     h_m (mass transfer)          +5%        50.6457             -0.1192
+  P4     h_m (mass transfer)          +10%       50.5412             -0.2238
+  P4     h (heat transfer)            -10%       50.7731             +0.0081
+  P4     h (heat transfer)            +10%       50.7584             -0.0065
+
+  P3     set-point temperature        -0.5 K     58.0137             +0.9336
+  P3     set-point temperature        -0.2 K     57.4510             +0.3709
+  P3     set-point temperature        +0.2 K     56.7124             -0.3676
+  P3     set-point temperature        +0.5 K     56.1671             -0.9129
+  P3     set-point moisture           -2%        57.0553             -0.0248
+  P3     set-point moisture           -1%        57.0676             -0.0125
+  P3     set-point moisture           +1%        57.0927             +0.0127
+  P3     set-point moisture           +2%        57.1056             +0.0255
+  P3     preheat->constant switch     2 h        57.0784             -0.0017
+  P3     preheat->constant switch     6 h        57.0800             -0.0000
+  P3     preheat->constant switch     8 h        57.0800             -0.0001
+  P3     preheat time constant        x0.8       57.0582             -0.0219
+  P3     preheat time constant        x1.2       57.1025             +0.0225
+  P3     no preheat ramp (T_air=28)   alt        56.9815             -0.0986
+  P3     raw measured chamber data    noise      57.1429             +0.0628
+  P4     set-point temperature        -0.5 K     51.5916             +0.8267
+  P4     set-point temperature        -0.2 K     51.0935             +0.3285
+  P4     set-point temperature        +0.2 K     50.4394             -0.3256
+  P4     set-point temperature        +0.5 K     49.9563             -0.8087
+  P4     set-point moisture           -2%        50.7405             -0.0244
+  P4     set-point moisture           -1%        50.7526             -0.0124
+  P4     set-point moisture           +1%        50.7776             +0.0127
+  P4     set-point moisture           +2%        50.7906             +0.0256
+  P4     preheat->constant switch     2 h        50.7617             -0.0032
+  P4     preheat->constant switch     6 h        50.7650             +0.0000
+  P4     preheat->constant switch     8 h        50.7650             +0.0000
+  P4     preheat time constant        x0.8       50.7423             -0.0227
+  P4     preheat time constant        x1.2       50.7888             +0.0239
+  P4     no preheat ramp (T_air=28)   alt        50.6693             -0.0956
+  P4     raw measured chamber data    noise      50.8170             +0.0520
+
+  P3     evaporative cooling ON       latent     62.4199             +5.3398
+  P4     evaporative cooling ON       latent     56.0201             +5.2551
+  P4     shrinkage OFF (R = 2 cm)     alt        nan                    +nan
+  P4     volume term in energy eq.    alt        50.5182             -0.2467
+  P4     smoothed R(t) instead of table alt        50.6711             -0.0939
+
+  baseline t_dry : P3 = 57.0801 h, P4 = 50.7650 h
+
+====================================================================================
+RANKING OF THE DOMINANT UNCERTAINTIES (|delta t_dry| for a 2% change)
+====================================================================================
+  P3   activation T (3850 K)         +13.6132 h  (+23.85 %)
+  P3   concentration exponent         +2.7983 h  ( +4.90 %)
+  P3   D0 pre-exponential             -0.9866 h  ( -1.73 %)
+  P3   set-point moisture             +0.0255 h  ( +0.04 %)
+  P3   cp correlation                 +0.0019 h  ( +0.00 %)
+  P3   rho correlation                +0.0019 h  ( +0.00 %)
+  P3   k correlation                  -0.0003 h  ( -0.00 %)
+  P4   activation T (3850 K)         +12.0150 h  (+23.67 %)
+  P4   concentration exponent         +1.5229 h  ( +3.00 %)
+  P4   D0 pre-exponential             -0.8737 h  ( -1.72 %)
+  P4   set-point moisture             +0.0256 h  ( +0.05 %)
+  P4   rho correlation                +0.0018 h  ( +0.00 %)
+  P4   cp correlation                 +0.0018 h  ( +0.00 %)
+  P4   k correlation                  -0.0003 h  ( -0.00 %)

@@ -1,0 +1,251 @@
+\section\{代码更正补丁（含验证）\}
+
+
+本目录给出审阅中发现的\textbf{代码层错误}的最小修正补丁，以及修正后的验证结果。
+
+
+\vspace{1mm}\hrule\vspace{1mm}
+
+
+\subsection{补丁 1：\texttt{sem\_core.py} 的 \texttt{rho\_grad} 分支（干基守恒形式）}
+
+
+\subsubsection{问题}
+
+
+\texttt{rho\_grad=True} 分支的代码注释写的是
+
+
+\begin{quote}
+\texttt{严格守恒形式: d(rho\_d C)/dt = (1/R\textasciicircum{}2 sigma) d\_sigma( sigma rho\_d D C\_sigma )}
+\end{quote}
+
+
+但代码实际装的质量矩阵只有 $\rho_d$：
+
+
+\begin{lstlisting}
+rhod = [self.pr['rho'](c) / (1.0 + c) for c in Cq]
+Md = S.assemble(rhod, 'L')            # ← M_ij = ∫σ ρ_d l_i l_j
+\end{lstlisting}
+
+
+而式 (13) 展开后的\textbf{严格}形式是
+
+
+\begin{equation*}
+\Big(\rho_d+C\frac{\mathrm d\rho_d}{\mathrm dC}\Big)\frac{\partial C}{\partial t}
+=\frac{D}{R^2}\frac1\sigma\frac{\partial}{\partial\sigma}\Big(\sigma\rho_d\frac{\partial C}{\partial\sigma}\Big)
+\end{equation*}
+
+
+即**有效容量应为 $\rho_d+C\rho_d'$，而不是 $\rho_d$**。原代码把 $\rho_d$ 从时间导数里提了出来，漏掉 $-C\,\partial_t\rho_d$ 项。
+
+
+\subsubsection{修正}
+
+
+\begin{lstlisting}
+# ---- 修正前 ----
+rhod = [self.pr['rho'](c) / (1.0 + c) for c in Cq]
+Md = S.assemble(rhod, 'L')
+
+# ---- 修正后 ----
+rhod = [self.pr['rho'](c) / (1.0 + c) for c in Cq]
+# d(rho_d)/dC 的解析式：rho_d = rho(C)/(1+C)
+#   d/dC [rho(C)/(1+C)] = [rho'(C)(1+C) - rho(C)] / (1+C)^2
+drhod = [-(self.pr['rho'](np.asarray(c) + 1.0) - self.pr['rho'](c)) / (1.0 + c) ** 2
+         for c in Cq]
+cap = [r + c * dr for r, c, dr in zip(rhod, Cq, drhod)]      # 有效容量
+Md = S.assemble(cap, 'L')                                    # ← 由 rhod 改为 cap
+\end{lstlisting}
+
+
+其余（\texttt{ACd}、\texttt{rhod\_s}、\texttt{mbd}）不变。
+
+
+\begin{quote}
+说明：这里用 \texttt{rho(c+1) - rho(c)} 作为 $\rho'(C)$ 的数值近似，是因为 \texttt{pr['rho']} 只以可调用对象的形式给出、没有配套的导数函数。对附录 3、4 的线性式 $\rho=a+bC$，该差分\textbf{精确等于} $b$，无近似误差。
+\end{quote}
+
+
+\subsubsection{验证}
+
+
+用同一网格（\texttt{MESH\_LONG}：$\sigma\in[0,0.6]\cup[0.6,0.9]\cup[0.9,1]$、每单元 18 节点、ndof=55）、同一求解器、同一事件定位，跑三个模型：
+
+
+\begin{center}
+\small
+\begin{tabular}{lll}
+\toprule
+模型 & $t_{dry}$ & 相对基准 \\
+\midrule
+基准：$\rho_d$ 均匀（式 1） & 205 809.78 s = \textbf{57.1694 h} & — \\
+原代码 \texttt{rho\_grad} & 198 956.60 s = \textbf{55.2657 h} & $-3.33\%$ \\
+\textbf{修正后（有效容量）} & \textbf{191 190.25 s = 53.1084 h} & $\mathbf{-7.10\%}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+验证脚本：\texttt{../脚本/s01\_noise\_vs\_bias.py} 同目录的 \texttt{c08\_eq13\_model\_check.py}（在 \texttt{D\_核查脚本与原始输出/脚本/}）。
+
+修正后的实现用一个独立子类 \texttt{ModelStrict} 给出，与补丁逻辑一致。
+
+
+\subsubsection{连带更正}
+
+
+论文 §7.2(1) 与表 D 把 $-3.33\%$（55.2657 h）归给了式 (13)。**该数对应的是"略去 $C\partial_t\rho_d$"的近似模型**，不是式 (13)。
+
+式 (13) 的真实结果是 **53.1084 h（$-7.10\%$）\textbf{，故摘要与 §7.4 结论 2 的模型形式不确定度区间应由 }55.3—57.2 h\textbf{ 改为 }53.1—57.2 h**。
+
+
+\vspace{1mm}\hrule\vspace{1mm}
+
+
+\subsection{补丁 2：\texttt{m1\_run.py} 的 W1 单元测试}
+
+
+\subsubsection{问题}
+
+
+第 51–52 行：
+
+
+\begin{lstlisting}
+P('  %-10.0f %-14.6f %-14.6f %+.3e  (sigma=0.5 处)'
+  % (te, ref, st[te][0] * 0 + ref, 0.0))
+\end{lstlisting}
+
+
+"M1(常比容)"那一列打印的是 \texttt{st[te][0]*0 + ref}，\textbf{就是参考值本身}；"偏差"列是\textbf{硬编码的 0.0}。
+
+这张表不含任何比较。而 \texttt{P()} 每次调用都整体覆盖 \texttt{\_m1fv.txt}，最后一次跑的是 \texttt{w2}，故 \textbf{W1 的实测结果从未落盘}。
+
+
+\subsubsection{修正}
+
+
+\begin{lstlisting}
+for k, te in enumerate(TE):
+    r0 = float(S.interp(sa.y[S.ndof:, k], np.array([0.0]))[0])
+    r1 = float(S.interp(sa.y[S.ndof:, k], np.array([1.0]))[0])
+    d0, d1 = st[te][0] - r0, st[te][2] - r1
+    P('  %-10.0f %-12.6f %-12.6f %+.3e | %-12.6f %-12.6f %+.3e'
+      % (te, r0, st[te][0], d0, r1, st[te][2], d1))
+    assert max(abs(d0), abs(d1)) < 5e-3, ('W1 退化检验失败', te, d0, d1)
+\end{lstlisting}
+
+
+同时把 \texttt{P()} 改为\textbf{追加写}（\texttt{'a'} 模式）并按实验分节，避免日志被后续实验覆盖。
+
+
+\subsubsection{验证（我独立重跑）}
+
+
+$v\equiv v_0=4.329268\times10^{-3}$，$I=v_0$、$J=s$、$r=R_0\sqrt s$：
+
+
+\begin{center}
+\small
+\begin{tabular}{lllllll}
+\toprule
+$t$/s & $C_{中心}$ 仿射 & $C_{中心}$ M1 & 差 & $C_{表面}$ 仿射 & $C_{表面}$ M1 & 差 \\
+\midrule
+3 600 & 2.521987 & 2.521961 & $-2.7\text{e-}5$ & 1.483387 & 1.485275 & $+1.9\text{e-}3$ \\
+21 600 & 1.012133 & 1.011568 & $-5.7\text{e-}4$ & 0.531293 & 0.531746 & $+4.5\text{e-}4$ \\
+86 400 & 0.236964 & 0.236788 & $-1.8\text{e-}4$ & 0.066237 & 0.066217 & $-2.0\text{e-}5$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+全场最大偏差 $4.3\times10^{-4}\sim3.5\times10^{-3}$。
+
+
+**结论：论文 §7.2(2) 声称的"吻合到 $10^{-4}\sim10^{-3}$"是对的（略超到 $3.5\times10^{-3}$），但原代码提供的证据是无效的。** 修正后该结论才有据可依。
+
+
+\vspace{1mm}\hrule\vspace{1mm}
+
+
+\subsection{补丁 3：\texttt{m1\_fv.py} / \texttt{fv2d\_run.py} / \texttt{sens\_extra.py} 的日志写入}
+
+
+三处都用
+
+
+\begin{lstlisting}
+io.open(path, 'w', encoding='utf-8').write('\n'.join(OUT) + '\n')
+\end{lstlisting}
+
+
+\textbf{整体覆盖}，导致 W1、V1、V2 的输出被后续实验冲掉（补丁 2 的直接后果）。
+
+
+\subsubsection{修正}
+
+
+\begin{lstlisting}
+with io.open(path, 'a', encoding='utf-8') as f:          # 'a' 追加
+    f.write('【%s】%s\n' % (time.strftime('%H:%M:%S'), s))
+\end{lstlisting}
+
+
+并在文件头写入运行参数与时间戳，便于事后区分。
+
+
+\vspace{1mm}\hrule\vspace{1mm}
+
+
+\subsection{补丁 4（建议新增）：\texttt{e4\_latent.py}}
+
+
+论文 §7.2(3) 的潜热反证（"若显式加入潜热项，1800 s 时表面 24.6 ℃、中心 22.3 ℃"）\textbf{没有对应脚本}。
+
+建议新增一个脚本：在温度方程右端加源项
+
+
+\begin{equation*}
+-\frac{h_m}{R}\big(C_s-C_\infty\big)\cdot\frac{L_v}{c_p}\cdot\varphi(1)
+\end{equation*}
+
+
+跑 1800 s 并输出表面/中心温度。\textbf{注意}：若把潜热汇全部加在最外层控制体上，会因该控制体体积
+
+$\mathrm{vol}_N=h/2-h^2/8$ 随网格加密趋于零而\textbf{数值失稳}（见对比报告第 4.3 节），
+
+应改为按表面通量隐式耦合，或对表面层单独加密。
+
+
+\vspace{1mm}\hrule\vspace{1mm}
+
+
+\subsection{补丁 5（可选）：式 (10) 温度守恒式的表述}
+
+
+论文摘要、§6.5、§7.1(2)、§7.5 都引用
+
+
+\begin{equation*}
+\frac{\mathrm d}{\mathrm dt}\int_0^1\!\sigma\rho c_pT\,\mathrm d\sigma=-\frac hR(T_s-T_\infty)
+\end{equation*}
+
+
+**该式只在 $\rho c_p$ 不随时间变化时成立**（即问题 1）。问题 2/3/4 中正确形式是
+
+
+\begin{equation*}
+\int_0^1\!\sigma\rho c_p\,\frac{\partial T}{\partial t}\,\mathrm d\sigma=-\frac hR\big(T_s-T_\infty\big)
+\end{equation*}
+
+
+两者相差 $\int_0^1\!\sigma T\,\partial_t(\rho c_p)\,\mathrm d\sigma$，实测相对差 $58\%\sim3263\%$。
+
+论文自己的 \texttt{test\_sem.py} 第 69/72 行检验的\textbf{正是正确形式}，只是它只跑问题 1 参数，所以没有暴露。
+
+
+\textbf{修正：把公式改成正确形式，或补充限定条件。}
+

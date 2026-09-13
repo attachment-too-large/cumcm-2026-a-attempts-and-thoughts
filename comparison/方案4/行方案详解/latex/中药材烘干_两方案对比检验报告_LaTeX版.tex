@@ -1,0 +1,25 @@
+% !TeX program = xelatex
+\documentclass[12pt,a4paper]{ctexart}
+\usepackage[a4paper,top=2.4cm,bottom=2.4cm,left=2.3cm,right=2.3cm]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs,array,longtable,makecell}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{enumitem}
+\definecolor{lstbg}{RGB}{248,248,248}
+\lstset{language=Python, backgroundcolor=\color{lstbg},
+  basicstyle=\ttfamily\fontsize{7}{8.4}\selectfont,
+  numbers=left, numberstyle=\tiny\color{gray}, numbersep=5pt, frame=single,
+  breaklines=true, columns=flexible, keepspaces=true,
+  showstringspaces=false, extendedchars=true, tabsize=4}
+\captionsetup{font={small,bf},labelsep=quad}
+\title{\bfseries 中药材烘干问题：两套独立方案的对比检验报告\\[4pt]
+\large 方案 X（节点中心有限体积 $+$ 一阶惯性环境）\ \ vs\ \ 方案 B（分级谱元弱形式 $+$ 分段线性环境）}
+\author{}\date{2026 年 9 月}
+\begin{document}
+\maketitle
+\input{body_compare.tex}
+\end{document}

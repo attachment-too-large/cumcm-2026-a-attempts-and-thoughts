@@ -1,0 +1,3 @@
+﻿phase,t_start_s,t_end_s,T_air_start,T_air_end,C_air_start,C_air_end
+preheat,0.0,3420.0,28.0,47.089,0.01963,0.04229
+constant_drying,3420.0,14400.0,47.089,50.165,0.04229,0.04986

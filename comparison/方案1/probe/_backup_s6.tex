@@ -1,0 +1,244 @@
+% =============================================================================
+% 文件: sections/s6_results.tex   第六章 模型求解与结果
+% =============================================================================
+\section{模型求解与结果}
+
+全部计算配置、收敛证据与守恒检验的原始输出见支撑材料 \texttt{data/*.txt} 与
+\texttt{data/*.csv}。本章按题目要求的表格格式给出四问结果。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig07_property_curves.png}
+\caption{三组物性经验关系：(a) 密度 $\rho(C)$；(b) 比热容 $c_p(C)$；
+(c) 导热系数 $k(C)$；(d) 扩散系数 $D(C,T)$（纵轴对数）。
+附录 3/4 的物性均随含水率下降而减小，且 $D$ 在含水率降低时下降约一个数量级}
+\label{fig:props}
+\end{figure}
+
+\subsection{问题 1：预热平衡阶段（0$\sim$1800 s）}
+
+\paragraph{计算配置}。$N=1600$ 个径向控制体、$\Delta t=0.02\ \mathrm{s}$、
+隐式 Euler、环境边界为附件 1 原始数据分段线性插值、表面用式 \eqref{eq:csurf}
+的半单元重构。选择 $\Delta t=0.02\ \mathrm{s}$ 而不是 $\Delta t=1\ \mathrm{s}$
+的理由见 7.2 节：隐式 Euler 是一阶格式，在本题强瞬态的表层区域，
+$\Delta t=1\ \mathrm{s}$ 会让四位小数的最后一位产生约 $1.2\times10^{-3}$ 的偏差，
+而 $\Delta t=0.02\ \mathrm{s}$ 把该偏差压到 $5.4\times10^{-5}$。
+
+\input{tables/tab_p1_T}
+
+\input{tables/tab_p1_C}
+
+\paragraph{结果说明}。
+温度方面，$1800\ \mathrm{s}$ 时中心为 33.5754 $^\circ$C、表面为 36.7856 $^\circ$C，
+环境温度此时约为 $50.2\ ^\circ$C：中心与表面相差 $3.2\ ^\circ$C，
+说明 30 min 内热量尚未完全穿透半径 2 cm 的药材，传热处于瞬态阶段
+（传热特征时间 $R^2/\alpha\approx0.61\ \mathrm{h}$，与 30 min 同量级）。
+含水率方面，中心仍为 2.5500 kg/kg（几乎没有变化），而表面已降至 1.5102 kg/kg，
+降幅 40.8\%：这是典型的“表面先干”分布，说明本阶段结束时水分迁移的驱动力
+完全集中在表层，内部尚未感受到干燥前沿。
+
+\paragraph{四位小数的位置定义}。表中 $r=2\ \mathrm{cm}$ 列为表面重构值
+$C_s$（式 \eqref{eq:csurf}）；若误取最后一个控制体的中心值，
+$1800\ \mathrm{s}$ 时会得到约 $1.5204$，与真值相差 $\approx10^{-2}$，
+而 $r=0,0.5,1,1.5\ \mathrm{cm}$ 各列为三点二次插值值。
+$r=0$ 的取值由最内三个控制体二次外推得到；由于中心附近被插值函数为偶函数，
+外推误差与内部插值同阶（$O(\Delta\xi^2)$）。
+
+\paragraph{完整结果文件}。\texttt{result1.xlsx} 含 \texttt{温度}、
+\texttt{水分浓度} 两个工作表，每表 1800 行（$t=1,2,\dots,1800\ \mathrm{s}$）
+$\times$ 21 列（$r=0,0.1,\dots,2.0\ \mathrm{cm}$），全部保留四位小数。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig09_p1_profiles.png}
+\caption{问题 1 的径向剖面：(a) 温度；(b) 含水率。温度整体抬升且表面领先，
+含水率则呈现"表面先干、中心几乎不变"的分布}
+\label{fig:p1prof}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig10_p1_heatmap.png}
+\caption{问题 1 的时空场：(a) 温度 $T(r,t)$；(b) 含水率 $C(r,t)$。
+等值线在靠近表面的位置明显密集，说明表层的梯度远大于内部}
+\label{fig:p1map}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig12_p1_center_surface.png}
+\caption{问题 1 中心与表面的时间曲线：(a) 温度；(b) 含水率。
+虚线为附件 1 给出的环境值}
+\label{fig:p1cs}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig11_p1_surface_reconstruction.png}
+\caption{表面值重构的作用：(a) 最后一个控制体中心值（橙）与半单元重构表面值（蓝）；
+(b) 二者之差随时间的变化。(a) 中两条曲线在四位小数上的差别，
+正是"最后一个单元中心不是表面"的直接体现}
+\label{fig:surf}
+\end{figure}
+
+\subsection{问题 2：整个烘干过程（前 3 h 结果）}
+
+\paragraph{计算配置}。物性改用附录 3；$N=1600$、$\Delta t=0.1\ \mathrm{s}$；
+环境在 $t\le14400\ \mathrm{s}$ 用附件 1 插值，$t>14400\ \mathrm{s}$ 用平台假设
+($\Tair=49.9957\ ^\circ\mathrm{C}$、$\Cair=0.049991$)。
+
+\input{tables/tab_p2_T}
+
+\input{tables/tab_p2_C}
+
+\paragraph{结果说明}。与问题 1 相比，温度演化明显不同：
+$0.5\ \mathrm{h}$ 时中心已达 $32.1894\ ^\circ\mathrm{C}$（问题 1 用常数物性时
+$1800\ \mathrm{s}$ 才 $33.5754\ ^\circ\mathrm{C}$），$3\ \mathrm{h}$ 时中心与表面
+分别为 49.8495 与 49.9664 $^\circ$C，几乎与环境温度（约 $50\ ^\circ$C）持平，
+说明 $3\ \mathrm{h}$ 内温度场已基本达到准稳态。原因是附录 3 的
+$c_p=1450+2736C/(C+1)$ 随含水率下降而减小，
+等效热容低于附录 2 的常数 $c_p=2600$，因此升温更快。
+含水率方面，$3\ \mathrm{h}$ 时中心降至 1.7662（降幅 30.7\%）、
+表面降至 1.0081（降幅 60.5\%），干燥已明显向内部推进。
+
+\paragraph{与新模型文档的逐位对照}。在 $\Delta t=1\ \mathrm{s}$（该文档所用配置）
+下本文得到中心 $49.8494\ ^\circ\mathrm{C}$、表面 $49.9664\ ^\circ\mathrm{C}$、
+含水率 $1.7662$ 与 $1.0081$，与该文档给出的四个数字\textbf{完全相同}；
+本文基准 $\Delta t=0.1\ \mathrm{s}$ 给出的中心温度为 49.8495 $^\circ$C，
+差异 $1\times10^{-4}$ 即时间离散误差本身（见 7.2 节的收敛序列）。
+由于 $3\ \mathrm{h}$ 窗口完全落在附件 1 的覆盖区间内，
+该对照不受平台假设影响，是"环境插值 $+$ 负号物性 $+$ 边界重构"三项
+同时正确的有力交叉证据。
+
+\paragraph{完整结果文件}。\texttt{result2.xlsx} 含两个工作表，
+每表 10800 行（每 $1\ \mathrm{s}$）$\times$ 21 列（每 $0.1\ \mathrm{cm}$）。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig13_p2_profiles.png}
+\caption{问题 2 的径向剖面：(a) 温度；(b) 含水率。与问题 1 相比，
+温度在 3 h 内已接近环境温度，含水率剖面则整体下移并保持表层陡降的形态}
+\label{fig:p2prof}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig14_p2_heatmap.png}
+\caption{问题 2 的时空场（3 h）：(a) 温度；(b) 含水率}
+\label{fig:p2map}
+\end{figure}
+
+\subsection{问题 3：烘干所需时间}
+
+\paragraph{计算配置}。模型与问题 2 相同，$N=1600$、$\Delta t=1\ \mathrm{s}$，
+推进到 $\max_r C(r,t)<0.15\ \mathrm{kg/kg}$。
+
+\input{tables/tab_p3_C}
+
+\paragraph{结果}。由 $\max_r C$ 曲线与 $0.15$ 判据的交点插值得到
+
+\begin{equation}
+\boxed{\ t_3 = \text{206935.5}\ \mathrm{s} = \text{57.48}\ \mathrm{h}\ }
+\end{equation}
+
+即约 \text{@@T3D@@}\ 天。该数值与题面"干燥一般持续 2$\sim$3 天"的工艺常识一致。
+需要强调：终点必须用\textbf{局部最大}含水率而不是截面平均值 ——
+干燥后期含水率剖面呈"外干内湿"形态，中心值与平均值相差很大，
+若按平均值判定，烘干时间会被显著低估。
+
+\paragraph{完整结果文件}。\texttt{result3.xlsx} 为单表，
+行间隔 $60\ \mathrm{s}$、列间隔 $0.1\ \mathrm{cm}$（21 列，最后一列即 $r=2\ \mathrm{cm}$
+的表面值），共 \text{3448}\ 行。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{fig15_p3_curves_full.png}
+\caption{问题 3 全过程含水率演化：中心曲线最后跌破 0.15 kg/kg，
+对应的时刻即烘干时长 $t_3$；截面平均值的下降明显快于中心值，
+说明用平均值判定终点会低估烘干时间}
+\label{fig:p3curve}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig16_p3_heatmap.png}
+\caption{问题 3 的全场演化：(a) 温度 $T(r,t)$；(b) 含水率 $C(r,t)$。
+含水率场在绝大部分时间里呈"外表已干、中心仍湿"的形态，
+说明过程由内部扩散控制}
+\label{fig:p3map}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig18_p3_temperature.png}
+\caption{问题 3 全过程温度与传质推动力：(a) 中心、表面与环境温度；
+(b) 传质推动力 $C_s-C_{\mathrm{air}}$（对数坐标）在后期迅速衰减，
+这是干燥后期"越干越慢"的直接原因}
+\label{fig:p3temp}
+\end{figure}
+
+\subsection{问题 4：考虑尺寸变化}
+
+\paragraph{计算配置}。物性取附录 4；几何用物质坐标 $\xi=r/R(t)$；
+半径 $R(t)$ 由附件 2 分段线性插值；$N=1600$、$\Delta t=1\ \mathrm{s}$；
+仍以 $\max_\xi C<0.15$ 为终点判据。
+由于药材半径由 $2.000\ \mathrm{cm}$ 收缩至 $1.198\ \mathrm{cm}$，
+"到药材中心的距离"在物理上不可能取到 $1.5$、$2.0\ \mathrm{cm}$，
+因此输出列取 $0\sim1.1\ \mathrm{cm}$（全程位于药材内部）并增加一列
+"药材表面"（$r=R(t)$ 处的重构值），表 6 取 $0,0.5,1.0\ \mathrm{cm}$ 加表面列。
+
+\input{tables/tab_p4_C}
+
+\paragraph{结果}。
+
+\begin{equation}
+\boxed{\ t_4 = \text{183953.2}\ \mathrm{s} = \text{51.10}\ \mathrm{h}\ }
+\end{equation}
+
+\paragraph{收缩对干燥时间的影响}。
+$t_4$ 比 $t_3$ 短约 \text{6.38}\ h。原因有两方面：
+（i）几何效应 —— 半径缩小使扩散路径 $R^2$ 减小（$R$ 从 2.00 cm 降到约 1.20 cm，
+$R^2$ 减小约 64\%），特征扩散时间 $R^2/D$ 随之大幅缩短；
+（ii）物性效应 —— 附录 4 的 $k$、$c_p$ 与附录 3 不同，
+且 $D_4$ 的含水率指数为 $-0.30/C$（附录 3 为 $-0.45/C$），
+即含水率下降时扩散系数的衰减更慢。
+两者叠加使问题 4 的干燥比问题 3 更快。
+
+\paragraph{完整结果文件}。\texttt{result4.xlsx} 为单表，
+行间隔 $60\ \mathrm{s}$、列间隔 $0.1\ \mathrm{cm}$（$0\sim1.1\ \mathrm{cm}$，
+末列为药材表面），共 \text{3065}\ 行。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig19_p4_curves.png}
+\caption{问题 4：(a) 中心与表面含水率的全过程演化及烘干时长 $t_4$；
+(b) 药材半径 $R(t)$ 与相对体积 $V/V_0$}
+\label{fig:p4curve}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{fig20_p4_heatmap.png}
+\caption{问题 4 在物质坐标下的含水率场：横轴为归一化半径 $\xi=r/R(t)$。
+采用物质坐标后全部材料点走相同轨迹，等值线形状与不收缩情形定性一致，
+说明坐标变换没有引入虚假的对流效应}
+\label{fig:p4map}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.99\textwidth]{fig21_p3_vs_p4.png}
+\caption{问题 3 与问题 4 的对比：(a) 中心含水率曲线（同一时间轴上比较）；
+(b) 干燥时长。收缩使扩散路径变短、且附录 4 的扩散系数衰减更慢，
+两者共同使 $t_4<t_3$}
+\label{fig:p3vsp4}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{fig30_latent_heat.png}
+\caption{扩展模型（计入汽化潜热 $L_v=2.38\ \mathrm{MJ/kg}$）与基准模型的对比：
+(a) 中心含水率；(b) 中心温度。潜热项使升温略有滞后、干燥略慢，
+该结果作为扩展讨论给出，不并入基准结论}
+\label{fig:latent}
+\end{figure}

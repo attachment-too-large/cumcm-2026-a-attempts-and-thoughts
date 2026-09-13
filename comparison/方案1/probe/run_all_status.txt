@@ -1,0 +1,2 @@
+﻿s03_solve_p23.py exit=0 elapsed=2755s
+s04_solve_p4.py exit=0 elapsed=2455s

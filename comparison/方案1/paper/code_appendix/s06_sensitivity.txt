@@ -1,0 +1,384 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# 文件名: s06_sensitivity.py
+# 作用  : 第 5 步的灵敏度与不确定度分析(全部真实运行, 不口头推断)。
+#         覆盖:
+#           A. 关键参数单因素扰动 h, h_m, D 乘性尺度 (±1%, ±2%);
+#           B. 平台边界假设的多口径比较(末段均值 / 末点 / 不同窗长 / 指数拟合渐近值);
+#           C. 空气含湿量口径变化(C_air 整体缩放, 检验单位口径假设的影响);
+#           D. 附件 1 边界数据噪声注入(多次实现);
+#           E. 半径插值方式(线性 vs PCHIP);
+#           F. 扩展模型: 计入汽化潜热后的干燥时间变化;
+#           G. Monte Carlo 不确定度传播: 五个输入同时扰动, 给出 t3/t4 分布,
+#              并用标准化回归系数分解各输入的方差贡献(找出主导不确定性的参数)。
+#         产出: data/sensitivity_*.csv, data/sensitivity_summary.txt
+# 运行  : python s06_sensitivity.py
+# =============================================================================
+"""Sensitivity and uncertainty analysis for the drying-time predictions."""
+
+from __future__ import annotations
+
+import os
+import sys
+
+import numpy as np
+import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import drying_core as dc      # noqa: E402
+import scenarios as sc        # noqa: E402
+
+N_SENS = 800
+DT_SENS = 20.0                # 灵敏度算例统一时间步(比较的是差值, dt 偏差共模)
+DT_MC = 60.0                  # Monte Carlo 用较粗步长以控制总机时
+T_END = 400000.0
+
+
+def scaled_props(base_props, d_scale=1.0, rho_scale=1.0, cp_scale=1.0, k_scale=1.0):
+    """构造带乘性扰动的物性函数。"""
+    def props(C, T_C):
+        rho, cp, k, D = base_props(C, T_C)
+        return rho * rho_scale, cp * cp_scale, k * k_scale, D * d_scale
+    return props
+
+
+def run_drying(problem, props=None, env=None, radius=None, dt=DT_SENS,
+               n=N_SENS, h_conv=None, h_mass=None, latent=0.0, radius_mode="linear"):
+    """求解 P3 或 P4 的干燥时间 [h]。"""
+    env = env if env is not None else sc.load_env()
+    if problem == "P3":
+        props = props if props is not None else dc.props_appendix3
+        rad = sc.fixed_radius()
+    else:
+        props = props if props is not None else dc.props_appendix4
+        rad = radius if radius is not None else sc.load_radius(radius_mode)
+    r = dc.simulate(n, T_END, dt, props, env, rad, theta=1.0, c_stop=dc.C_DRY,
+                    h_conv=h_conv, h_mass=h_mass, latent_heat=latent)
+    td = sc.drying_time(r)
+    return td / 3600.0, r
+
+
+def fit_plateau_exponential(df):
+    """对附件 1 做一阶惯性拟合 x(t) = x_inf - (x_inf - x0) exp(-t/tau)。
+
+    返回 (T_inf, tau_T, C_inf, tau_C)。该渐近值是"拟合口径"的平台估计,
+    与"末段实测均值"口径互为对照。
+    """
+    from scipy.optimize import curve_fit
+    t = df["t"].to_numpy(float)
+
+    def f(t, xinf, x0, tau):
+        return xinf - (xinf - x0) * np.exp(-t / tau)
+
+    pT, _ = curve_fit(f, t, df["T"].to_numpy(float), p0=[50.2, 28.0, 1800.0], maxfev=20000)
+    pC, _ = curve_fit(f, t, df["C"].to_numpy(float), p0=[0.0509, 0.0196, 2700.0], maxfev=20000)
+    return pT, pC
+
+
+def part_a_oat(push, lines):
+    """A. 关键参数单因素扰动。"""
+    push("=" * 78)
+    push("A. 关键参数单因素扰动(±1%, ±2%)")
+    push("=" * 78)
+    rows = []
+    for problem in ("P3", "P4"):
+        base_t, _ = run_drying(problem)
+        rows.append({"problem": problem, "param": "base", "level": "0",
+                     "t_dry_h": base_t, "delta_h": 0.0, "rel_pct": 0.0})
+        for name, kw in (("h", "h_conv"), ("h_m", "h_mass")):
+            base_val = dc.H_CONV if name == "h" else dc.HM_CONV
+            for pct in (1.0, 2.0):
+                for sign in (+1, -1):
+                    val = base_val * (1.0 + sign * pct / 100.0)
+                    t, _ = run_drying(problem, **{kw: val})
+                    rows.append({"problem": problem, "param": f"{name}{'+' if sign>0 else '-'}{pct:g}%",
+                                 "level": f"{sign*pct:+.0f}%", "t_dry_h": t,
+                                 "delta_h": t - base_t,
+                                 "rel_pct": 100.0 * (t - base_t) / base_t})
+        for pct in (1.0, 2.0):
+            for sign in (+1, -1):
+                sc_d = 1.0 + sign * pct / 100.0
+                props = (scaled_props(dc.props_appendix3, d_scale=sc_d) if problem == "P3"
+                         else scaled_props(dc.props_appendix4, d_scale=sc_d))
+                t, _ = run_drying(problem, props=props)
+                rows.append({"problem": problem, "param": f"D{'+' if sign>0 else '-'}{pct:g}%",
+                             "level": f"{sign*pct:+.0f}%", "t_dry_h": t,
+                             "delta_h": t - base_t, "rel_pct": 100.0 * (t - base_t) / base_t})
+    tab = pd.DataFrame(rows)
+    tab.to_csv(os.path.join(sc.DIR_DATA, "sensitivity_oat.csv"),
+               index=False, encoding="utf-8-sig")
+    push(tab.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+    push("")
+    push("弹性系数(1% 参数变化引起的干燥时间相对变化):")
+    for problem in ("P3", "P4"):
+        sub = tab[(tab["problem"] == problem) & (tab["param"] != "base")]
+        for _, r in sub.iterrows():
+            push(f"  {problem} {r['param']:>8s}: d t_dry/t_dry = {r['rel_pct']:+.3f}%")
+    return tab
+
+
+def part_b_plateau(push, lines):
+    """B. 平台边界假设的多口径影响。"""
+    push("")
+    push("=" * 78)
+    push("B. 恒温干燥阶段平台边界取值的口径影响")
+    push("=" * 78)
+    df = sc.load_env_table()
+    pT, pC = fit_plateau_exponential(df)
+    push(f"一阶惯性拟合渐近值: T_inf = {pT[0]:.4f} degC (tau = {pT[2]:.1f} s); "
+         f"C_inf = {pC[0]:.6f} kg/kg (tau = {pC[2]:.1f} s)")
+    push("该拟合渐近值由当前数据重新拟合得到，属于外推口径而非实测口径；"
+         "旧文档中的 50.212 / 0.050908 不是本次拟合输出。")
+    rows = []
+    variants = [("tail_mean", 1.0, 0.0), ("last_point", 1.0, 0.0),
+                ("tail_mean_1800", 1.0, 0.0), ("tail_mean_7200", 1.0, 0.0)]
+    for rule, cs, ts in variants:
+        env = sc.load_env(plateau_rule=rule, plateau_scale_C=cs, plateau_scale_T=ts)
+        for problem in ("P3", "P4"):
+            t, _ = run_drying(problem, env=env)
+            rows.append({"variant": rule, "problem": problem,
+                         "T_plateau": env.T_plateau, "C_plateau": env.C_plateau,
+                         "t_dry_h": t})
+    # 拟合渐近口径: 直接构造常数平台环境
+    for problem in ("P3", "P4"):
+        env_fit = sc.load_env()
+        env_fit.T_plateau = float(pT[0])
+        env_fit.C_plateau = float(pC[0])
+        t, _ = run_drying(problem, env=env_fit)
+        rows.append({"variant": "exp_fit_asymptote", "problem": problem,
+                     "T_plateau": float(pT[0]), "C_plateau": float(pC[0]),
+                     "t_dry_h": t})
+    tab = pd.DataFrame(rows)
+    tab.to_csv(os.path.join(sc.DIR_DATA, "sensitivity_plateau.csv"),
+               index=False, encoding="utf-8-sig")
+    push(tab.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+    for problem in ("P3", "P4"):
+        sub = tab[tab["problem"] == problem]
+        push(f"  {problem}: 平台口径引起的 t_dry 极差 = "
+             f"{sub['t_dry_h'].max()-sub['t_dry_h'].min():.4f} h "
+             f"({sub['t_dry_h'].min():.4f} ~ {sub['t_dry_h'].max():.4f} h)")
+    return tab
+
+
+def part_c_cair(push, lines):
+    """C. 空气含湿量口径缩放。
+
+    注意: 当 C_air 被放大到超过终点判据 0.15 kg/kg 时, 药材表面无论如何
+    都不可能低于 0.15, 判据在有限时间内不可达 —— 这是本题一个重要的工艺
+    约束(环境含湿量存在上限), 结果中以 NaN 表示"未在时限内达到判据"。
+    """
+    push("")
+    push("=" * 78)
+    push("C. 空气含湿量口径假设的影响(C_air 整体缩放)")
+    push("=" * 78)
+    rows = []
+    for scale in (0.5, 0.8, 1.0, 1.2, 2.0):
+        env = sc.load_env(plateau_scale_C=scale)
+        # 全程缩放原始表, 而不只是平台段
+        env.C = env.C * scale
+        env.C_plateau = env.C_plateau * scale
+        for problem in ("P3", "P4"):
+            t, _ = run_drying(problem, env=env)
+            rows.append({"C_air_scale": scale, "problem": problem,
+                         "C_plateau": env.C_plateau, "t_dry_h": t,
+                         "criterion_reachable": bool(env.C_plateau < dc.C_DRY)})
+    tab = pd.DataFrame(rows)
+    tab.to_csv(os.path.join(sc.DIR_DATA, "sensitivity_cair.csv"),
+               index=False, encoding="utf-8-sig")
+    push(tab.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+    for problem in ("P3", "P4"):
+        sub = tab[(tab["problem"] == problem) & tab["criterion_reachable"]]
+        push(f"  {problem}: C_air 从 0.5x 到 1.2x, t_dry 由 "
+             f"{sub['t_dry_h'].iloc[0]:.4f} h 变到 {sub['t_dry_h'].iloc[-1]:.4f} h")
+    unreach = tab[~tab["criterion_reachable"]]
+    if len(unreach):
+        push(f"  注意: C_air 放大到 {unreach['C_air_scale'].iloc[0]:g}x "
+             f"(即 {unreach['C_plateau'].iloc[0]:.5f} kg/kg)时, 环境含湿量已高于"
+             f"终点判据 {dc.C_DRY} kg/kg, 药材表面无法降到判据以下, "
+             f"干燥要求在物理上不可达(结果记为 NaN)。这是本题重要的工艺约束:")
+        push("        烘房含湿量必须显著低于 0.15 kg/kg 才可能完成干燥。")
+    return tab
+
+
+def part_d_noise(push, lines, n_real=5, seed=7):
+    """D. 边界数据噪声注入。"""
+    push("")
+    push("=" * 78)
+    push("D. 附件 1 边界数据噪声注入")
+    push("=" * 78)
+    df = sc.load_env_table()
+    t = df["t"].to_numpy(float)
+    T = df["T"].to_numpy(float)
+    C = df["C"].to_numpy(float)
+    # 由二阶差分估计噪声标准差(独立同分布噪声下 sigma ~ std(d2)/sqrt(6))
+    sig_T = float(np.std(np.diff(T, 2)) / np.sqrt(6.0))
+    sig_C = float(np.std(np.diff(C, 2)) / np.sqrt(6.0))
+    push(f"由二阶差分估计的采样噪声: sigma(T_air) = {sig_T:.4f} degC, "
+         f"sigma(C_air) = {sig_C:.6f} kg/kg")
+    rng = np.random.default_rng(seed)
+    rows = []
+    base_env = sc.load_env()
+    for problem in ("P3", "P4"):
+        t0, _ = run_drying(problem, env=base_env)
+        for k in range(n_real):
+            env = sc.load_env()
+            env.T = T + rng.normal(0.0, sig_T, T.size)
+            env.C = C + rng.normal(0.0, sig_C, C.size)
+            env.T_plateau = float(np.mean(env.T[-60:]))
+            env.C_plateau = float(np.mean(env.C[-60:]))
+            tk, _ = run_drying(problem, env=env)
+            rows.append({"problem": problem, "realization": k, "t_dry_h": tk})
+        sub = [r["t_dry_h"] for r in rows if r["problem"] == problem]
+        push(f"  {problem}: 无噪 {t0:.4f} h; 加噪均值 {np.mean(sub):.4f} h, "
+             f"标准差 {np.std(sub, ddof=1):.4f} h, 极差 {np.ptp(sub):.4f} h")
+    tab = pd.DataFrame(rows)
+    tab.to_csv(os.path.join(sc.DIR_DATA, "sensitivity_noise.csv"),
+               index=False, encoding="utf-8-sig")
+    return tab
+
+
+def part_e_radius(push, lines):
+    """E. 问题 4 半径插值方式与网格。"""
+    push("")
+    push("=" * 78)
+    push("E. 问题 4 半径插值方式的影响")
+    push("=" * 78)
+    rows = []
+    for mode in ("linear", "pchip"):
+        for n in (400, 1600):
+            t, _ = run_drying("P4", radius=sc.load_radius(mode), n=n)
+            rows.append({"radius_interp": mode, "N": n, "t_dry_h": t})
+    tab = pd.DataFrame(rows)
+    tab.to_csv(os.path.join(sc.DIR_DATA, "sensitivity_radius.csv"),
+               index=False, encoding="utf-8-sig")
+    push(tab.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+    return tab
+
+
+def part_f_latent(push, lines):
+    """F. 扩展模型诊断: 若计入汽化潜热会怎样?
+
+    结论(由下面的定量核算与真实运行共同得到): 以"物理质量通量 = rho_d * h_m *
+    (C_s - C_air)"的口径把汽化耗热加入能量方程后, 初期表面所需热流密度
+    L*rho_d*h_m*dC 远超对流可供热 h*(T_air - T_s), 表面温度被驱动到 0 degC
+    以下, 与物理常识矛盾。这说明题给的 h_m=8e-7 m/s 与以 kg/kg 表示的驱动势
+    之间不能简单用 rho_d 换算 —— h_m 本身已经吸收了单位换算。因此基准模型
+    不计潜热是自洽的选择, 而"加潜热"必须先独立标定质量通量的单位口径。
+    """
+    push("")
+    push("=" * 78)
+    push("F. 扩展模型诊断: 计入汽化潜热(基准模型不含该项)")
+    push("=" * 78)
+    Lv = 2.38e6                     # 50 degC 附近水的汽化潜热 [J/kg]
+    rho_d0 = (760.0 + 90.0 * 2.55) / (1.0 + 2.55)
+    flux0 = rho_d0 * dc.HM_CONV * (2.55 - 0.0196)     # 初期表面质量通量 [kg/(m2 s)]
+    q_lat = Lv * flux0                                # 所需汽化热流 [W/m2]
+    q_conv_max = dc.H_CONV * (50.0 - 28.0)            # 对流可供热流上限 [W/m2]
+    push(f"  初期表面质量通量 = rho_d*h_m*(C_s-C_air) = {flux0:.4e} kg/(m2 s)")
+    push(f"  对应汽化热流需求 = L*flux = {q_lat:.1f} W/m2")
+    push(f"  对流可供热流上限 = h*(T_air-T_s) = {q_conv_max:.1f} W/m2")
+    push(f"  需求/供给 = {q_lat/q_conv_max:.2f} 倍 -> 表面能量收支无法闭合")
+    df = sc.load_env_table()
+    sig_T = float(np.std(np.diff(df["T"].to_numpy(float), 2)) / np.sqrt(6.0))
+    sig_C = float(np.std(np.diff(df["C"].to_numpy(float), 2)) / np.sqrt(6.0))
+    for problem in ("P3", "P4"):
+        t0, r0 = run_drying(problem, dt=5.0)
+        t1, r1 = run_drying(problem, latent=Lv, dt=5.0)
+        push(f"  {problem}: 基准 t_dry = {t0:.4f} h; 含潜热 t_dry = {t1:.4f} h; "
+             f"变化 {t1-t0:+.4f} h")
+        push(f"        含潜热算例的全场温度最低值 = {r1.step_minT.min():.2f} degC "
+             f"(基准为 {r0.step_minT.min():.2f} degC) -> "
+             f"{'出现非物理的深冷, 该扩展不可直接采用' if r1.step_minT.min() < 0 else '物理上可接受'}")
+    push("  说明: 本项作为扩展诊断报告, 不并入基准结论; 若需正式计入潜热, "
+         "必须先由实验标定质量通量的单位口径(见论文 7.7 节)。")
+    return None
+
+
+def part_g_mc(push, lines, n_mc=64, seed=2026):
+    """G. Monte Carlo 不确定度传播与方差贡献分解。"""
+    push("")
+    push("=" * 78)
+    push("G. Monte Carlo 不确定度传播(" f"{n_mc} 次抽样)")
+    push("=" * 78)
+    rng = np.random.default_rng(seed)
+    # 输入不确定性设定: h, h_m, D 尺度按 ±5% 均匀分布; 平台 T, C 按 ±1 个噪声标准差
+    df = sc.load_env_table()
+    sig_T = float(np.std(np.diff(df["T"].to_numpy(float), 2)) / np.sqrt(6.0))
+    sig_C = float(np.std(np.diff(df["C"].to_numpy(float), 2)) / np.sqrt(6.0))
+    U = rng.uniform(-1.0, 1.0, size=(n_mc, 5))
+    rows = []
+    for problem in ("P3", "P4"):
+        for k in range(n_mc):
+            hp = dc.H_CONV * (1 + 0.05 * U[k, 0])
+            hmp = dc.HM_CONV * (1 + 0.05 * U[k, 1])
+            dsp = 1.0 + 0.05 * U[k, 2]
+            env = sc.load_env()
+            env.T_plateau += sig_T * U[k, 3]
+            env.C_plateau += sig_C * U[k, 4]
+            base = dc.props_appendix3 if problem == "P3" else dc.props_appendix4
+            t, _ = run_drying(problem, props=scaled_props(base, d_scale=dsp), env=env,
+                              h_conv=hp, h_mass=hmp, dt=DT_MC)
+            rows.append({"problem": problem, "sample": k, "t_dry_h": t,
+                         "h": hp, "h_m": hmp, "D_scale": dsp,
+                         "T_plateau": env.T_plateau, "C_plateau": env.C_plateau})
+    tab = pd.DataFrame(rows)
+    tab.to_csv(os.path.join(sc.DIR_DATA, "sensitivity_montecarlo.csv"),
+               index=False, encoding="utf-8-sig")
+    contrib_rows = []
+    for problem in ("P3", "P4"):
+        sub = tab[tab["problem"] == problem]
+        y = sub["t_dry_h"].to_numpy(float)
+        X = sub[["h", "h_m", "D_scale", "T_plateau", "C_plateau"]].to_numpy(float)
+        Xs = (X - X.mean(axis=0)) / X.std(axis=0, ddof=1)
+        ys = (y - y.mean()) / y.std(ddof=1)
+        beta, *_ = np.linalg.lstsq(np.column_stack([np.ones(y.size), Xs]), ys, rcond=None)
+        yhat = np.column_stack([np.ones(y.size), Xs]) @ beta
+        r2 = 1.0 - np.sum((ys - yhat) ** 2) / np.sum((ys - ys.mean()) ** 2)
+        push(f"  {problem}: t_dry 均值 {y.mean():.4f} h, 标准差 {y.std(ddof=1):.4f} h, "
+             f"95% 区间 [{np.percentile(y, 2.5):.4f}, {np.percentile(y, 97.5):.4f}] h")
+        pnames = ["h", "h_m", "D_scale", "T_plateau", "C_plateau"]
+        for name, b in zip(pnames, beta[1:]):
+            contrib_rows.append({"problem": problem, "param": name,
+                                 "std_beta": b, "share_pct": 100.0 * b ** 2 / np.sum(beta[1:] ** 2)})
+        push(f"     线性代理模型 R^2 = {r2:.4f}; 主控参数 = "
+             f"{pnames[int(np.argmax(np.abs(beta[1:])))]}")
+        push("     各输入标准化回归系数(对 t_dry 的方差贡献占比):")
+        for name, b in zip(pnames, beta[1:]):
+            push(f"       {name:10s} beta = {b:+.4f}  贡献 {100.0*b**2/np.sum(beta[1:]**2):5.1f}%")
+    pd.DataFrame(contrib_rows).to_csv(
+        os.path.join(sc.DIR_DATA, "sensitivity_mc_contrib.csv"),
+        index=False, encoding="utf-8-sig")
+    return tab
+
+
+def main():
+    # 支持只运行指定部分(如 "python s06_sensitivity.py efg"), 便于在中断后补跑,
+    # 避免重复计算已经落盘的 A~D 部分。
+    want = sys.argv[1].lower() if len(sys.argv) > 1 else "abcdefg"
+    lines = []
+    push = lines.append
+    if "a" in want:
+        part_a_oat(push, lines)
+    if "b" in want:
+        part_b_plateau(push, lines)
+    if "c" in want:
+        part_c_cair(push, lines)
+    if "d" in want:
+        part_d_noise(push, lines)
+    if "e" in want:
+        part_e_radius(push, lines)
+    if "f" in want:
+        part_f_latent(push, lines)
+    if "g" in want:
+        part_g_mc(push, lines)
+    text = "\n".join(lines)
+    name = ("sensitivity_summary.txt" if want == "abcdefg"
+            else f"sensitivity_summary_{want}.txt")
+    with open(os.path.join(sc.DIR_DATA, name), "w", encoding="utf-8") as f:
+        f.write(text + "\n")
+    print(text)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

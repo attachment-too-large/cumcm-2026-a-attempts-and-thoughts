@@ -1,0 +1,24 @@
+PROBLEM 1 diagnostics
+alpha_heat = 1.688555e-07 m2/s, Bi_heat = 1.388889, tau_heat = 2368.9 s
+D(C0) = 4.937655e-09 m2/s, Bi_mass = 3.240405, tau_mass = 81010.1 s
+cells = 1600, dt = 1.000 s, wall time = 0.76 s
+
+        t/s   T_center  T_surf   C_center  C_surf   T_air    C_air
+       100   28.0001   28.2219    2.5500    2.2471   29.152  0.02074
+       300   28.0500   29.0261    2.5500    2.0510   31.280  0.02283
+       600   28.5456   30.5576    2.5500    1.8773   34.076  0.02571
+       900   29.5568   32.2359    2.5500    1.7552   36.459  0.02829
+      1200   30.9069   33.9433    2.5500    1.6592   38.490  0.03061
+      1500   32.4397   35.6117    2.5500    1.5794   40.221  0.03269
+      1800   34.0425   37.1989    2.5500    1.5109   41.696  0.03455
+
+surface temperature rise  : 28.2219 -> 37.1989 C
+centre  temperature rise  : 28.0001 -> 34.0425 C
+surface moisture drop     : 2.2471 -> 1.5109 kg/kg
+centre  moisture drop     : 2.5500 -> 2.5500 kg/kg
+cross-section mean moisture: 2.5486 -> 2.2907 kg/kg
+cross-section mean temp    : 28.0000 -> 35.6292 C
+water removed in 1800 s    : 18.710 g (per 25 cm stem)
+initial water content      : 185.044 g
+Fo_heat(1800 s) = 0.7598 ; Fo_mass(1800 s) with D(C0) = 0.0222
+number of time steps = 1800

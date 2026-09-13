@@ -1,0 +1,3 @@
+result1: 1800 行 x 22 列; result2: 10800 行 x 22 列
+result3: 3427 行, tdry=205574.519 s
+result4: 3047 行, tdry=182778.281 s

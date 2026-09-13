@@ -1,0 +1,51 @@
+% =====================================================================
+%  附录 C  完整源程序代码
+%  按《全国大学生数学建模竞赛论文格式规范》第五条，附录给出建模所用到的
+%  全部完整、可运行的源程序代码。各文件之间通过 import common 组织，
+%  按 C.1 -> C.2 -> ... 的顺序保存后即可直接运行。
+% =====================================================================
+% cumcmthesis.cls 把 \thesubsection 固定为 "阿拉伯数字.阿拉伯数字"，
+% 在附录中会显示成 "3.1" 这类编号，这里改为 "字母.阿拉伯数字"（C.1、C.2 ...）
+\renewcommand{\thesubsection}{\Alph{section}.\arabic{subsection}}
+
+\section{完整源程序代码}
+
+以下 11 个 Python 脚本构成本文全部计算。其中 C.1、C.2 为公共模块，
+C.3--C.5 为四个问题的求解与结果生成，C.6--C.10 为检验与灵敏度分析，
+C.11 为全部插图的生成脚本。所有文件与 \texttt{data/}、\texttt{figures/}
+同目录存放即可运行。支撑材料中还含 1 个不参与交付计算的辅助脚本
+（\texttt{probe\_p23.py}，粗网格试算探针），其用途已列于附录 A 的文件
+列表中，此处不再重复列出。
+
+\subsection{common.py —— 物性关系、环境与有限体积求解器（核心模块）}
+\lstinputlisting[language=Python]{../code/common.py}
+
+\subsection{compact\_xlsx.py —— 紧凑 xlsx 写出器}
+\lstinputlisting[language=Python]{../code/compact_xlsx.py}
+
+\subsection{p1\_preheat.py —— 问题一求解}
+\lstinputlisting[language=Python]{../code/p1_preheat.py}
+
+\subsection{p23\_process.py —— 问题二、问题三求解}
+\lstinputlisting[language=Python]{../code/p23_process.py}
+
+\subsection{p4\_shrinkage.py —— 问题四求解（含收缩）}
+\lstinputlisting[language=Python]{../code/p4_shrinkage.py}
+
+\subsection{verify\_solver.py —— 解析解验证与守恒性检验}
+\lstinputlisting[language=Python]{../code/verify_solver.py}
+
+\subsection{crosscheck.py —— 独立方法互证（直线法 BDF 与降维模型）}
+\lstinputlisting[language=Python]{../code/crosscheck.py}
+
+\subsection{resolution.py —— 网格、步长收敛性与独立格式对比}
+\lstinputlisting[language=Python]{../code/resolution.py}
+
+\subsection{accuracy.py —— 烘干时间的 Richardson 外推与不确定度}
+\lstinputlisting[language=Python]{../code/accuracy.py}
+
+\subsection{sensitivity.py —— 参数、环境与模型形式灵敏度分析}
+\lstinputlisting[language=Python]{../code/sensitivity.py}
+
+\subsection{make\_figures.py —— 论文全部插图生成}
+\lstinputlisting[language=Python]{../code/make_figures.py}

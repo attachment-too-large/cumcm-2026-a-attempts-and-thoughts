@@ -1,0 +1,4 @@
+﻿case,water_loss,cum_flux,rel_closure_err,maxC_monotone,minC_positive,T_within_air,T_above_init
+P1,0.12821347528224059,0.12821347528224736,5.282097248596712e-14,True,True,True,True
+P3,1.2242261606216482,1.224226160619131,2.0562537928096663e-12,True,True,True,True
+P4,1.232632465360271,1.2326324653602005,5.710391518907629e-14,True,True,True,True

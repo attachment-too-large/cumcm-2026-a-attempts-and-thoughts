@@ -1,0 +1,4 @@
+﻿s07_figures.py exit=1 elapsed=107s
+s08_make_tables.py exit=0 elapsed=1s
+s10_fill_numbers.py exit=0 elapsed=1s
+s13_build_paper.py exit=0 elapsed=18s

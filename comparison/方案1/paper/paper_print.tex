@@ -1,0 +1,93 @@
+% =============================================================================
+% 文件名: paper_print.tex
+% 作用  : 纸质版论文主文件(送全国评阅用)。与电子版共用同一套正文源文件,
+%         仅把 withoutpreface 去掉并调用 \maketitle, 从而在正文前生成
+%         第一页承诺书与第二页编号专用页, 摘要页成为第三页。
+%         承诺书中的身份信息一律留空, 由参赛队打印后手工填写并签名。
+% 编译  : xelatex paper_print.tex (连续编译两次)
+% =============================================================================
+\documentclass[UTF8,a4paper,12pt,bwprint]{cumcmthesis}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs,longtable,array,tabularx,multirow}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage{siunitx}
+
+\graphicspath{{figures/}}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\Cair}{C_{\mathrm{air}}}
+\newcommand{\Tair}{T_{\mathrm{air}}}
+\newcommand{\Cs}{C_{s}}
+\newcommand{\Ts}{T_{s}}
+\newcommand{\Rzero}{R_{0}}
+\newcommand{\dcell}{\Delta\xi}
+
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  frame=single,
+  framexleftmargin=4pt,
+  showstringspaces=false,
+  keywordstyle=\color{blue!70!black},
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{red!60!black},
+  language=Python,
+}
+
+\captionsetup{font=small}
+\setlength{\parindent}{2em}
+
+% 与电子版一致的排版设置(字号/行距在格式规范中不作统一要求)。
+\renewcommand*{\baselinestretch}{1.12}
+\AtBeginDocument{\fontsize{11}{13.2}\selectfont}
+
+% 承诺书与编号页字段: 按竞赛规范留空, 打印后手工填写
+\tihao{A}
+\baominghao{}
+\schoolname{}
+\membera{}
+\memberb{}
+\memberc{}
+\supervisor{}
+\yearinput{2026}
+\monthinput{9}
+\dayinput{}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+  {\zihao{3}\bfseries 基于有限体积法的一维轴对称耦合传热传质模型}\\[0.35em]
+  {\zihao{4}\bfseries ——中药材热风烘干规律与烘干时长预测}
+\end{center}
+
+\vspace{0.4em}
+\input{sections/abstract}
+
+\input{sections/s1_restate}
+\input{sections/s2_analysis}
+\input{sections/s3_assumptions}
+\input{sections/s4_notation}
+\input{sections/s5_model}
+\input{sections/s6_results}
+\input{sections/s7_verification}
+\input{sections/s8_evaluation}
+
+\input{sections/refs}
+
+\input{sections/s9_appendix}
+\input{sections/s10_supp_figures}
+
+\end{document}

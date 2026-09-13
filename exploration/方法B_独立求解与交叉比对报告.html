@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>方法B独立求解与交叉比对报告</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']],
+          packages: {'[+]': ['ams','boldsymbol','noerrors']} },
+  svg: { fontCache: 'local', scale: 0.98 },
+  options: { enableMenu: false },
+  startup: { typeset: true }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script"></script>
+<style>
+@page { size: A4; margin: 20mm 18mm 20mm 18mm; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 0; color: #111; -webkit-print-color-adjust: exact;
+       print-color-adjust: exact; font-family: "SimSun", "Noto Serif SC", serif; }
+h1 { font-family: "SimHei","Microsoft YaHei",sans-serif; font-size: 16pt; text-align: center;
+     margin: 0 0 3mm 0; line-height: 1.5; }
+h2 { font-family: "SimHei","Microsoft YaHei",sans-serif; font-size: 13pt; color: #000;
+     margin: 6.5mm 0 2.5mm 0; page-break-after: avoid; }
+h3 { font-family: "SimHei","Microsoft YaHei",sans-serif; font-size: 12pt; color: #000;
+     margin: 4.5mm 0 2mm 0; page-break-after: avoid; }
+h4 { font-family: "SimHei","Microsoft YaHei",sans-serif; font-size: 11pt; color: #222;
+     margin: 3.5mm 0 1.5mm 0; page-break-after: avoid; }
+p  { margin: 1.6mm 0; text-align: justify; line-height: 1.62; }
+ul, ol { margin: 1.4mm 0 1.4mm 0; padding-left: 8mm; }
+li { margin: .8mm 0; line-height: 1.55; }
+strong { font-family: "SimHei","Microsoft YaHei",sans-serif; font-weight: 600; }
+em { font-style: italic; }
+hr { border: none; border-top: 1px solid #999; margin: 5mm 0; }
+img { max-width: 100%; }
+mjx-container { overflow: visible !important; }
+
+body { font-size: 10pt; font-family: "Microsoft YaHei","SimSun",sans-serif; }
+h1 { border-bottom: 2.5px solid #1f4e79; color: #12395c; padding-bottom: 2.5mm; }
+h2 { color: #12395c; border-left: 4px solid #1f4e79; background: #eef4fa;
+     padding: 1.4mm 0 1.4mm 3mm; }
+h3 { color: #1f4e79; }
+table { border-collapse: collapse; width: 100%; margin: 2mm 0 3.5mm 0; font-size: 8.8pt; }
+th { background: #1f4e79; color: #fff; font-weight: 600; padding: 1.4mm 1.5mm;
+     border: 1px solid #7f9db9; text-align: left; }
+td { padding: 1.2mm 1.5mm; border: 1px solid #b9c9d9; vertical-align: top; }
+tbody tr:nth-child(even) td { background: #f6f9fc; }
+blockquote { margin: 2mm 0; padding: 1.6mm 3mm; background: #fffbf0;
+             border-left: 4px solid #e0a83c; color: #5a4a20; font-size: 9.5pt; }
+code { font-family: Consolas, monospace; font-size: 8.8pt; background: #f2f4f7; color: #b0004a;
+       padding: .2mm .8mm; border-radius: 2px; }
+pre { background: #f6f8fa; border: 1px solid #d6dde5; border-radius: 3px; padding: 2mm;
+      font-size: 8.2pt; white-space: pre-wrap; page-break-inside: avoid; }
+</style></head>
+<body>
+<h1>A 题「药材的烘干问题」— 独立解法（方法 B）与工作区成果（方法 A）交叉比对报告</h1>
+<blockquote>
+<p>方法 B 的全部代码、数据与结果文件在 <code>methodB_spectral/</code>。<strong>核心建模与求解代码（<code>hb_core.py</code> / <code>sem_core.py</code> / <code>selftest.py</code> / <code>run_all.py</code> 与 Q1–Q4 全部结果）是在阅读工作区任何代码或文档之前独立写成的</strong>，当时只读了题面 <code>A题.pdf</code> 与附件原始数据。
+交叉比对阶段之后才追加的两处改动已在文中显式标注：① §2.1 的 <code>D</code> 公式修正；② §3.2-B5 的 M1 非均匀收缩扩展。
+方法 A = 工作区 <code>cumcm2026-a-herb-drying-main/</code>（节点中心有限体积 + Crank–Nicolson + 干物质坐标）。</p>
+</blockquote>
+<hr />
+<h2>0 结论速览</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>方法 B（本文，谱元弱形式）</th>
+<th>方法 A（工作区，有限体积）</th>
+<th>差</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>问题 3 烘干时长</td>
+<td><strong>205 809.78 s = 57.1694 h</strong></td>
+<td>205 783.21 s = 57.1620 h（N=800）<br>205 729.6 s = 57.1470 h（N=400 生产值）</td>
+<td>26.6 s（0.013 %）</td>
+</tr>
+<tr>
+<td>问题 4 烘干时长（仿射 M0）</td>
+<td><strong>182 954.56 s = 50.8207 h</strong></td>
+<td>182 951.26 s = 50.8198 h（N=800）<br>182 922.74 s = 50.8119 h（N=400 生产值）</td>
+<td><strong>3.3 s（0.0018 %）</strong></td>
+</tr>
+<tr>
+<td>表 1/表 2（问题 1）</td>
+<td><code>methodB_spectral/_compare_AB.md</code></td>
+<td>同左</td>
+<td>T ≤ 0.0019 ℃，C ≤ 1.2e-4</td>
+</tr>
+<tr>
+<td>表 3/表 4（问题 2）</td>
+<td>同上</td>
+<td>同左</td>
+<td>T ≤ 0.0024 ℃，C ≤ 5.5e-5</td>
+</tr>
+<tr>
+<td>表 5（问题 3）</td>
+<td>同上</td>
+<td>同左</td>
+<td>C ≤ 7.9e-5</td>
+</tr>
+<tr>
+<td>表 6（问题 4）</td>
+<td>同上</td>
+<td>同左</td>
+<td>C ≤ 5.8e-5</td>
+</tr>
+</tbody>
+</table>
+<p><strong>两套完全不同的数值方法（分级谱元弱形式 + BDF/Radau ⇄ 节点中心有限体积 + θ 格式/Picard）在全部 4 个问题的全部输出网格上一致到 4 位小数</strong>，差异量级正是方法 A 二阶有限体积的离散误差。方法 A 的结果因此获得了<strong>跨方法</strong>的独立认证。</p>
+<p>同时，交叉比对查出 3 个<strong>只有靠互校才能发现</strong>的问题（详见 §2）：</p>
+<ol>
+<li><strong>【最关键】题面公式 <code>D</code> 的指数是分式</strong>：<code>e^{-0.89/C}</code> 而非 <code>e^{-0.89·C}</code>。误读会让问题 3 的烘干时长从 57.17 h 变成 16.44 h（<strong>差 3.5 倍</strong>）。方法 A 读对了，方法 B 起初读错。</li>
+<li>工作区能量审计存在<strong>量纲不一致</strong>：<code>Q_conv</code> 是 J/m，而 <code>m_evap</code> 是 kg/kg、<code>E_evap</code> 是 J/(kg 干物质)，两者直接相除。正确口径下供热/潜热是 <strong>1/15.7（问题 3）、1/13.7（问题 4）</strong>，不是文中的 1/70。定性结论（<code>h</code> 是等效换热系数、题面口径不含显式潜热）仍然成立。</li>
+<li><strong>附件 2 的收缩数据与附录 4 的传质模型互不自洽</strong>：在体积加和律下，附件 2 的 R(t) 反推出的平均含水率在 6 h 时约 0.45、24 h 时已近 0，而模型自身的水分历史是 1.06 / 0.20。这是题给数据之间的内在张力，需要显式声明。</li>
+</ol>
+<hr />
+<h2>1 方法 B：材料坐标 + 分级谱元弱形式 Galerkin</h2>
+<h3>1.1 与题面一致的物理模型（与工作区 M0 <strong>代数等价</strong>）</h3>
+<p>以 σ = r/R(t) 为材料坐标（均匀仿射收缩），均匀收缩下 Eulerian 方程里的对流项<strong>精确抵消</strong>：</p>
+<pre><code>ρ(C)c_p(C) ∂T/∂t = (k(C)/R²)·(1/σ)∂_σ(σ ∂_σ T)
+∂C/∂t           = (D(C,T)/R²)·(1/σ)∂_σ(σ ∂_σ C)
+σ=1:  -k(1/R)∂_σT = h(T-T_∞) ,  -D(1/R)∂_σC = h_m(C-C_∞)
+σ=0:  正则（弱形式自动消解 1/σ 奇异）
+</code></pre>
+<p>工作区 M0 用干物质坐标 s 与 J(s) 写成 <code>∂C/∂t=(4I²/R²)∂_s((JD/v²)∂_sC)</code>；在 v≡v₀ 时令 s=σ² 可<strong>代数化为上式</strong>（本文已逐项验证），所以两者是同一个数学模型，差异只在数值方法。</p>
+<h3>1.2 离散：为什么用「偶数 Legendre 谱」+「分级谱元」</h3>
+<ul>
+<li><strong>偶数 Legendre 模态基</strong> <code>φ_j(σ)=P_{2j}(2σ-1)</code>：质量矩阵<strong>解析对角</strong> <code>M_jj = 1/(2(4j+1))</code>（数值验证误差 2e-15，条件数 ≈ 4N），σ=0 的柱心奇异项被弱形式自动吸收，<code>φ_j(1)≡1</code> 使<strong>表面值就是系数和</strong>（两端点精度不受端点 Gibbs 影响）。</li>
+<li>全局多项式基在<strong>表面薄边界层</strong>上会产生振铃下冲 → <code>e^{-a/C}</code> 在 C&lt;0 时爆炸 → 非线性失稳。因此改用<strong>分级谱元</strong>：把最外层单元放在边界层上。</li>
+<li><strong>弱形式 + 自然 Robin 边界</strong>：取检验函数 φ₀≡1 时 <code>1ᵀA≡0</code> 精确成立，于是
+<code>d/dt ∫ρc_pTσdσ = -(h/R)(T_s-T_∞)</code>、<code>d/dt ∫Cσdσ = -(h_m/R)(C_s-C_∞)</code>
+在<strong>离散层面精确成立</strong>（实测差 2e-8，等于质量矩阵条件数与机器精度的乘积）。</li>
+</ul>
+<h3>1.3 自验证矩阵（全部通过）</h3>
+<table>
+<thead>
+<tr>
+<th>检验</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>谱基恒等式（质量矩阵 vs 解析对角）</td>
+<td>误差 ≤ 3e-15</td>
+</tr>
+<tr>
+<td>平凡解（T∞=T₀, C∞=C₀）</td>
+<td>RHS <strong>恒为 0</strong></td>
+</tr>
+<tr>
+<td>零通量守恒</td>
+<td>ΔE = ΔW = <strong>0</strong>（精确）</td>
+</tr>
+<tr>
+<td>守恒恒等式 dE/dt = -(h/R)(T_s-T∞)</td>
+<td>相对差 2e-8（=线性求解舍入）</td>
+</tr>
+<tr>
+<td>网格自收敛（Q1 早期边界层）</td>
+<td>4 套网格 6 位一致，上冲 &lt; 1e-6</td>
+</tr>
+<tr>
+<td>网格自收敛（Q3 的 t_f）</td>
+<td>ndof=43/55/57 → 205809.6/205809.8/205809.7 s</td>
+</tr>
+<tr>
+<td><strong>独立有限体积对拍</strong>（单元中心 + 隐式 Euler + Richardson，另一条代码路径）</td>
+<td>内点吻合 ~1e-5，剩余差已确认来自 FV 的常数外推</td>
+</tr>
+<tr>
+<td>时间积分器互校</td>
+<td>Radau / BDF / LSODA 结果 <strong>6 位相同</strong></td>
+</tr>
+<tr>
+<td>端到端对拍工作区结果</td>
+<td>全部表格 4 位一致（§0）</td>
+</tr>
+</tbody>
+</table>
+<h3>1.4 输出</h3>
+<p><code>methodB_spectral/results/</code>：<code>result1.xlsx</code>（温度/水分浓度 2 表，0–1800 s 每 1 s，0–2.0 cm 每 0.1 cm，1801 行）、<code>result2.xlsx</code>（同格式，0–10800 s，10801 行）、<code>result3.xlsx</code>（每 60 s + 精确结束时刻行）、<code>result4.xlsx</code>（物理坐标 0–2.0 cm 固定列 + 材料外留空 + 「药材表面」列 + 「表面位置」工作表）、<code>result4_material_frame.xlsx</code>（材料/Lagrangian 坐标对照版）。全部保留 4 位小数。</p>
+<hr />
+<h2>2 交叉比对查出的三个问题（定量）</h2>
+<h3>2.1 【最关键】三处 <code>D</code> 公式的指数是<strong>分式</strong>，不是乘积</h3>
+<p><code>A题.pdf</code> 的文本抽取把竖排分式压平成一行：</p>
+<pre><code>抽取文本:  𝐷= 7 × 10−9e−0.89  𝐶      ← 看起来像 e^{-0.89}·C 或 e^{-0.89·C}
+原版面    :  e^(−0.89/C)                       ← 实际是分式
+</code></pre>
+<p><strong>用 PyMuPDF 把公式区域渲染成图直接看</strong>（<code>methodB_spectral/_formula_p3_q1.png</code> 等）确认三条公式全部是分式：</p>
+<pre><code>问题1: D = 7×10⁻⁹ · e^(−0.89/C)
+问题2/3: D = 2.4×10⁻³ · e^(−0.45/C) · e^(−3850/T)
+问题4: D = 4.2×10⁻⁴ · e^(−0.30/C) · e^(−3850/T)
+</code></pre>
+<p>后果是量级级别的：</p>
+<table>
+<thead>
+<tr>
+<th>读法</th>
+<th>C=2.55 时 D</th>
+<th>C=0.15 时 D</th>
+<th>随干燥的变化</th>
+<th>问题 3 烘干时长</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>e^{−0.89·C}</code>（误）</td>
+<td>7.2e-10</td>
+<td>6.1e-9</td>
+<td>增大 8 倍</td>
+<td><strong>16.44 h</strong></td>
+</tr>
+<tr>
+<td><code>e^{−0.89/C}</code>（正）</td>
+<td>4.9e-9</td>
+<td>1.9e-11</td>
+<td><strong>衰减 260 倍</strong></td>
+<td><strong>57.17 h</strong></td>
+</tr>
+</tbody>
+</table>
+<p>正确形式描述了典型的<strong>表面结壳（case hardening）</strong>：越干扩散越慢，因此烘干要 2.4 天而不是 0.7 天。这是本题最大的<strong>建模风险点</strong>，且<strong>无法通过数值收敛性、守恒律、解析解检验发现</strong>——只有靠独立实现互校或回到原版面核对。</p>
+<blockquote>
+<p>建议：任何从 PDF 抽取的经验公式，都加一步&quot;渲染原版面截图核对&quot;，尤其是形如 <code>e^{-a/C}</code>、<code>C/(C+1)</code> 这类分式。</p>
+</blockquote>
+<h3>2.2 能量审计的量纲口径</h3>
+<p>工作区 <code>v2_energy_audit.py</code> 中 <code>dsm = s_hi - s_lo</code> 且 <code>Σdsm = 1</code>（<strong>干物质质量分数</strong>），因此
+<code>m_evap = Σdsm·ΔC</code> 的单位是 <strong>kg/kg</strong>，<code>E_evap = m_evap·L</code> 的单位是 <strong>J/(kg 干物质)</strong>；
+而 <code>Q_conv = 2πRh∫(T∞−Ts)dt</code> 的单位是 <strong>J/m</strong>。脚本把它们相除得到 <code>ratio</code>，量纲不一致。</p>
+<p>统一到「单位长度」基（干物质线密度 m_d' = πR²/v₀，v₀=(1+C₀)/ρ(C₀)）后独立重算：</p>
+<table>
+<thead>
+<tr>
+<th>情形</th>
+<th>干物质线密度</th>
+<th>Q_conv</th>
+<th>ΔE</th>
+<th>蒸发水量</th>
+<th>潜热需求</th>
+<th>(Q_conv−ΔE)/E_lat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>问题1（0–1800 s）</td>
+<td>0.2903 kg/m</td>
+<td>1.920e4 J/m</td>
+<td>+1.920e4 J/m</td>
+<td>0.2564 kg/kg</td>
+<td>1.786e5 J/m</td>
+<td><strong>≈0</strong>（供热刚好只够显热升温）</td>
+</tr>
+<tr>
+<td>问题3（0–60 h）</td>
+<td>0.3456 kg/m</td>
+<td>8.415e4 J/m</td>
+<td>−4.401e4 J/m</td>
+<td>2.4278 kg/kg</td>
+<td>2.014e6 J/m</td>
+<td><strong>1/15.7</strong></td>
+</tr>
+<tr>
+<td>问题4 基线（0–60 h）</td>
+<td>0.3503 kg/m</td>
+<td>7.201e4 J/m</td>
+<td>−7.803e4 J/m</td>
+<td>2.4413 kg/kg</td>
+<td>2.052e6 J/m</td>
+<td><strong>1/13.7</strong></td>
+</tr>
+</tbody>
+</table>
+<p>水分数值与方法 A 完全一致（0.2564 / 2.4278 / 2.4413 kg/kg，逐位吻合）。<strong>定性结论不变</strong>：题给的 h=25 W/(m²·K) 无法提供蒸发所需潜热，必须理解为&quot;含蒸发效应的等效换热系数&quot;，题目口径不含显式潜热——但<strong>倍数应从 70 倍改为约 14–16 倍</strong>，这一点在论文里写错量级会被评审抓住。</p>
+<h3>2.3 附件 2 的收缩数据 与 附录 4 传质模型的互不自洽</h3>
+<p>在体积加和律 <code>R² = R_dry² + b·C̄</code> 下，用附件 2 自身标定（t=0 时 R=2.0、C=2.55；末端 R_dry=1.198 cm）得 b = 1.006 cm²/(kg/kg)，于是附件 2 反推出的平均含水率：</p>
+<table>
+<thead>
+<tr>
+<th>t / h</th>
+<th>附件 2 的 R / cm</th>
+<th>由 R 反推的 C̄</th>
+<th>模型（方法 B/A）算出的 C̄</th>
+<th>倍差</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6</td>
+<td>1.374</td>
+<td><strong>0.450</strong></td>
+<td>1.062</td>
+<td>2.4×</td>
+</tr>
+<tr>
+<td>12</td>
+<td>1.248</td>
+<td>0.116</td>
+<td>0.473</td>
+<td>4.1×</td>
+</tr>
+<tr>
+<td>24</td>
+<td>1.204</td>
+<td>0.015</td>
+<td>0.203</td>
+<td>13×</td>
+</tr>
+<tr>
+<td>48</td>
+<td>1.199</td>
+<td>0.000</td>
+<td>0.122</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>也就是说：<strong>若&quot;收缩 ∝ 失水体积&quot;成立，附件 2 的半径曲线意味着药材在 24 h 内就基本干透，而模型（用同一份 R(t) 驱动）要到 50.8 h 中心才降到 0.15。</strong> 二者相差 2–13 倍。</p>
+<p>这不是任何一方的算错，而是<strong>题给两组数据（附件 2 的整体收缩 vs 附录 4 的传质系数）之间的内在张力</strong>。工作区 §8.3-3 用<strong>末态体积比</strong> 0.414 vs 0.359（约 85 % 一致）指出了同一件事；本报告把它换算到<strong>含水率域并沿整条轨迹</strong>量化成上表，可见失配在中段最大（12 h 处 4 倍、24 h 处 13 倍）。建议：</p>
+<ul>
+<li>把 M1（非均匀收缩）当作<strong>敏感性上界</strong>而不是&quot;更真实的答案&quot;：M1 只重分配了收缩的空间分布，并没有消除这 2–13 倍的失配；</li>
+<li>在论文中显式声明&quot;附件 2 的 R(t) 作为<strong>驱动数据</strong>直接使用，不与失水体积做闭环&quot;，并给出上表作为不确定度来源。</li>
+</ul>
+<hr />
+<h2>3 双向优化建议</h2>
+<h3>3.1 给方法 A（工作区有限体积 + CN + Picard）</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>问题</th>
+<th>建议</th>
+<th>预期收益</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>空间只有二阶，N=400 时误差 ~1e-4（<code>verify_02</code> 的 dC=1.2e-4）</td>
+<td>保留 FV 作<strong>快扫路径</strong>（三对角 O(N)/步，适合 §6 优化与 sens_map 的 25 次 PDE 复算），另用<strong>分级谱元/谱方法做一次认证跑</strong></td>
+<td>认证解误差 ~1e-9，可给 FV 的离散误差定界；本文 81 DOF 即达 4 位一致</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>θ=0.5 CN <strong>非 L-稳定</strong>，前沿/非线性陡峭时会振铃；本文用同样格式的 FV 在 Q1 早期边界层上确实炸掉（<code>exp(-a/C)</code> 在 C&lt;0 时爆炸）</td>
+<td>改 TR-BDF2（二阶 + L-稳定）或自适应 BDF/Radau 并输出局部误差估计；<code>np.maximum(C,1e-8)</code> 的保护必须保留</td>
+<td>消除&quot;需人工调 dt 才不炸&quot;的脆弱性，且给出误差可控性</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>t_f 用整秒扫描（205 730 s）报&quot;严格达标首秒&quot;，与精确穿越时刻（205 783 s）差 53 s</td>
+<td>用连续事件函数 + 根查找（<code>solve_ivp(events=..., dense_output=True)</code>，brentq 到 1e-9）直接给出穿越时刻，再附首秒</td>
+<td>去掉 ±1 s 口径歧义，且省掉事后扫描</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>附件 1 的处理方式是<strong>最大不确定度来源</strong>（PCHIP 50.81 / savgol 51.07 / 平台均值 51.16 h，散布 0.74 %），但只用 3 个离散变体</td>
+<td>做<strong>噪声系综</strong>：由附件 1 高频残差估计噪声水平，用平滑样条/GP 后验抽 M 组实现，传播得到 t_f 的均值与置信带</td>
+<td>把&quot;0.74 % 散布&quot;升级为可报告的 <code>t_f = 50.8 ± 0.2 h</code> 型结论，且能回答&quot;附件 1 噪声影响多少&quot;</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>能量审计量纲混用（§2.2）</td>
+<td>统一到单位长度基（乘 m_d' = πR²/v₀），倍数改为 1/15.7、1/13.7</td>
+<td>修掉一处会被评审直接扣分的量纲错误，定性结论更强</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>表 6 的空间列在 R(t)&lt;1.5 cm 后大片留空，且同一列表头在不同时刻指向不同材料点</td>
+<td>已采纳留空 + 实际半径列 + 表面位置表的做法；建议<strong>再加一列/一张表给出材料(Lagrangian)坐标</strong>，两套坐标同时给，读者可自行取用</td>
+<td>消除&quot;表 6 到底是欧拉还是拉格朗日坐标&quot;的歧义（本文两版都出了）</td>
+</tr>
+</tbody>
+</table>
+<h3>3.2 给方法 B（本文谱元）</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>问题</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B1</td>
+<td>起初把 <code>e^{-0.89/C}</code> 读成 <code>e^{-0.89·C}</code>，烘干时长错 3.5 倍</td>
+<td>在流程里固化&quot;PDF 公式原版面渲染核对&quot;这一步（本文已用 <code>_formula_p3_q1.png</code> 等留证）</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>稀疏线性代数：谱元矩阵是稠密的，每步 O(N³)，长时程（Q3/Q4）不得不降网格</td>
+<td>① 改用<strong>静力凝聚</strong>只保留单元界面自由度；② 或对 Q1 这类常物性问题直接用 <strong>Robin–Bessel 本征基</strong>——该基下算子<strong>精确对角</strong>、<code>λ_j = kμ_j²/(ρc_pR²)</code>、可写出 Duhamel 精确积分，做到零空间离散误差；③ 用 dense_output 代替大数组 t_eval</td>
+</tr>
+<tr>
+<td>B3</td>
+<td>只做了 1D 轴对称</td>
+<td>采用工作区的<strong>二维含端面复核</strong>思路（他们已验证中心点偏差 &lt;1 %、烘干时长由中心控制），或在论文中直接引用该结论</td>
+</tr>
+<tr>
+<td>B4</td>
+<td>输出框架</td>
+<td>已采纳方法 A 的 result4 物理坐标 + 留空 + 表面列 + 表面位置表（更贴合&quot;到药材中心的距离&quot;的本义）</td>
+</tr>
+<tr>
+<td>B5</td>
+<td>模型层面</td>
+<td>接入工作区的 <strong>M1 非均匀收缩</strong>（本文已在 <code>sem_core.py</code> 的 <code>mapping='local'</code> 中实现，见 §3.4 状态说明）；另外把 §2.3 的失配做成不确定度项</td>
+</tr>
+</tbody>
+</table>
+<h3>3.4 M1（非均匀收缩）独立复算的状态说明（如实记录）</h3>
+<p><strong>已完成（解析层面）</strong>：本文用控制体守恒独立推导了干物质坐标 s 下的 M1 方程</p>
+<pre><code>∂C/∂t = (4I²/R²) ∂_s( (J D / v²) ∂_s C ),   (1+C)c_p ∂T/∂t = (4I²/R²) ∂_s( (J k / v) ∂_s T )
+v(C) = (1+C)/ρ(C),  I = ∫₀¹v dξ,  J(s) = ∫₀^s v dξ / I,  r = R√J
+表面: ∂_sC|₁ = -R h_m v₁(C₁-C∞)/(2ID₁),  ∂_sT|₁ = -R h v₁(T₁-T∞)/(2Ik₁)
+</code></pre>
+<p>推导结果与工作区文档式 (3-1)/(3-2) 以及其代码里的离散系数 <code>G^C=4I²J_fD_f/(R²v_f²Δs_f)</code>、<code>G^T=4I²J_fk_f/(R²v_fΔs_f)</code>、<code>G^C_out=2Ik_m/(Rv_N)</code>、<code>G^T_out=2Ih/R</code> <strong>逐项完全一致</strong>。也就是说 <strong>M1 的建模与离散形式已被第二条独立推导确认</strong>。</p>
+<p><strong>未完成（数值层面）</strong>：本文的谱元实现在 <code>mapping='local'</code> 下时间积分代价远高于 affine 路径（到 600 s 需 7.7 s/nfev=3946，到 3600 s 需 121 s/nfev=54165，nfev 随时间加速增长），未能在本次会话预算内跑完 182 000 s 的全时程；表面节点时间导数在两套节点分布下相差 2 倍（属节点导数不收敛的离散量，非物理量），因此不能用它做单元测试。<strong>结论：工作区的 47.6208 h 目前仍只由工作区自身的网格收敛（N=200/400/800 → 47.6131/47.6208/47.6230 h）支撑，未获跨方法数值认证</strong>——这与仿射基线 M0（已获本文 3.3 s 以内的跨方法认证）不同。若要把这条结论写进论文，建议补一个独立数值实现或用本文的 affine 路径做等价变形后再报。</p>
+<h3>3.3 两法共同、也是本题真正的风险点（数值之外）</h3>
+<ol>
+<li><strong>无吸湿平衡等温线</strong>：传质推动势直接取 <code>C − C∞</code>，等于假设&quot;平衡含水率 = 空气水分浓度&quot;。工作区 §8.3-1 已声明。建议做一次<strong>饱和上限分析</strong>：由 sens_map 可见 C∞=0.12 → 66.7 h、C∞=0.15 → 判据不可达，说明 0.15 的达标注定对 C∞ 极敏感。</li>
+<li><strong>恒温干燥段的边界</strong>：附件 1 只到 14400 s，其后必须取设定值。两法都取末端值（50.165 ℃ / 0.04986），但&quot;取平台均值&quot;会给出 51.16 h（+0.7 %）。这属于<strong>题面未给定</strong>的信息，论文必须写明假设。</li>
+<li><strong>判据口径</strong>：必须用中心（最大值）判定。工作区已量化：用平均含水率会把 57.15 h 低估成 35.5 h（低估 21.6 h）。本文独立验证了同一结论（末态 C 沿 σ 严格单调递减，中心即最大值）。</li>
+<li><strong>附录 2 的 h、h_m 被沿用到问题 2–4</strong>：题面未再给，属于合理但需声明的沿用。</li>
+</ol>
+<hr />
+<h2>4 复现</h2>
+<pre><code class="language-powershell">cd methodB_spectral
+python selftest.py        # 谱基恒等式 / 平凡解 / 守恒律 / 与独立FV对拍
+python test_sem.py        # 网格自收敛 + FV 对拍 + 守恒恒等式
+python run_all.py all     # 生成 results/result1-4.xlsx（约 6 分钟）
+python compare_AB.py      # 逐格对表 -&gt; _compare_AB.md
+python audit_energy.py    # 量纲正确的能量审计
+</code></pre>
+<p>依赖：numpy / scipy / openpyxl（Python 3.9）。</p>
+<hr />
+<h2>5 本文档与论文的 PDF 版本</h2>
+<pre><code class="language-powershell">python paper_tools\make_figs.py                                    # 生成插图
+python paper_tools\make_paper.py                                   # 生成论文 Markdown
+python paper_tools\md2pdf.py &quot;论文_中药材烘干_材料坐标谱元法.md&quot; &quot;论文_中药材烘干_材料坐标谱元法.pdf&quot; --style paper
+python paper_tools\md2pdf.py &quot;方法B_独立求解与交叉比对报告.md&quot; &quot;方法B_独立求解与交叉比对报告.pdf&quot; --style report
+</code></pre>
+<p><code>paper_tools/md2pdf.py</code> 是为出 PDF 自建的轻量排版链路：
+Markdown →（<code>markdown_it</code> 解析，公式先占位保护）→ HTML + CSS（A4、三线表、图题注、防分页）→
+MathJax 3 渲染公式 → 无头 Edge <code>--print-to-pdf</code> 打印 → PyMuPDF 加页脚页码。
+不依赖 pandoc / LaTeX / weasyprint，纯离线可复现。</p>
+
+</body></html>

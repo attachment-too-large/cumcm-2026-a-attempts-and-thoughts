@@ -1,0 +1,482 @@
+% =============================================================================
+% 文件: sections/s7_verification.tex   第七章 模型检验与验证
+% =============================================================================
+\section{模型检验与验证}
+
+\textbf{本文没有药材含水率的实测数据}（附件只提供烘房环境与药材半径），
+因此不能做"模型对实测含水率"的拟合优度检验。为此本文采用五条互相独立的
+验证链：解析解对照、离散收敛、守恒律与物理界、独立时间积分格式互证、
+合成数据回归（twin experiment），再叠加与领域外部参照的交叉校验。
+任何一条链单独通过都不足以说明模型可靠，五条同时通过才构成证据。
+
+\subsection{解析解对照（Bessel 级数）}
+
+把物性冻结为常数、环境取常数后，圆柱内一维扩散问题具有闭式解。
+令 $u=x-x_\infty$，边界条件为
+$\partial u/\partial r|_{r=R}+(h/D)u(R)=0$，则
+\begin{equation}
+u(r,t)=\sum_{n=1}^{\infty}A_nJ_0\!\left(\beta_n\frac{r}{R}\right)
+\exp\!\left(-\frac{D\beta_n^2t}{R^2}\right),\qquad
+A_n=\frac{2u_0J_1(\beta_n)}{\beta_n\left[J_0^2(\beta_n)+J_1^2(\beta_n)\right]},
+\label{eq:bessel}
+\end{equation}
+其中 $\beta_n$ 是超越方程 $\beta J_1(\beta)=\mathrm{Bi}\,J_0(\beta)$
+的正根，$\mathrm{Bi}=hR/D$。式 \eqref{eq:bessel} 即 Crank 圆柱章的标准结果
+\cite{crank,carslaw}。本文用 Brent 法求前 120 个根，级数截断后的尾项
+在 $t\ge30\ \mathrm{s}$ 时的贡献小于 $10^{-20}$。
+
+解析解本身先做了两项自检：$t\to0$ 时式 \eqref{eq:bessel} 回到初始值
+（偏差 $<10^{-12}$），$t\to\infty$ 时趋于边界值（偏差 $<10^{-12}$）。
+
+\input{tables/tab_analytic}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig22_analytic_verification.png}
+\caption{常物性算例下数值解与 Bessel 级数解析解的对照：
+(a) 剖面与 (b) 逐点误差显示数值解与解析解几乎重合；
+(c) 空间收敛显示误差按 $O(N^{-2})$ 下降，即二阶精度}
+\label{fig:analytic}
+\end{figure}
+
+\paragraph{关键结论}。
+数值解与解析解几乎重合，误差量级为 $10^{-6}\sim10^{-4}$。分三点说明：
+
+（1）\textbf{空间离散是二阶的}。传质算例的内部点最大误差随 $N$ 由 $200$ 增到
+$1600$ 依次为 $1.4\times10^{-4}\to4.2\times10^{-5}\to1.6\times10^{-5}\to9.7\times10^{-6}$，
+每加倍约下降 $2.5\sim3.4$ 倍，接近理论二阶；传热算例的内部误差同样按此规律下降。
+
+（2）\textbf{半单元表面重构是必要的}。表中最后一列给出"若把最后一个控制体的
+中心值直接当作 $r=R$ 的表面值"所产生的\textbf{假误差}：$N=1600$ 时仍高达
+$1.5\times10^{-3}$，是使用重构表面值后真实误差（$3.7\times10^{-6}$）的
+\textbf{400 倍}，并随 $N$ 仅按 $O(\Delta r)$ 线性下降。
+这说明表面值不能取最外层单元中心，必须用式 \eqref{eq:csurf} 重构。
+
+（3）\textbf{时间离散误差的辨识}。传热算例的误差在 $\Delta t=0.05\ \mathrm{s}$
+时为 $5\times10^{-4}$ 且几乎不随 $N$ 变化，说明此时误差由\textbf{时间离散}
+主导：传热特征时间 $R^2/\alpha=2192\ \mathrm{s}$ 与 $1800\ \mathrm{s}$ 的观测窗口
+同量级，过程演化快、时间误差系数大。把 $\Delta t$ 由 $0.5\ \mathrm{s}$ 减到
+$0.05\ \mathrm{s}$，误差由 $6.5\times10^{-3}$ 降到 $5.2\times10^{-4}$
+（约 $12$ 倍，符合一阶格式），说明实现本身是正确的。
+这一点也提示：用解析解校验空间格式时，必须先确认时间误差已被压到足够小，
+否则会把时间误差误判成"空间不收敛"。
+
+\subsection{离散收敛性}
+
+\paragraph{空间收敛}。以最细网格（$N=3200$）为参考，
+问题 1 的表格取值偏差随 $N$ 的下降见表：$N=1600$ 时最大偏差
+\text{3.16e-06}（含水率）与 \text{2.46e-07}（温度），
+已远小于四位小数的分辨率（$5\times10^{-5}$），因此基准取 $N=1600$。
+误差随 $N$ 加倍约下降 4 倍，与解析解算例一致。
+
+\paragraph{时间收敛}。隐式 Euler 是一阶格式。问题 1 在 $N=1600$ 下
+$\Delta t$ 从 $10\ \mathrm{s}$ 减到 $0.02\ \mathrm{s}$，
+中心温度由 $33.5874\ ^\circ\mathrm{C}$ 单调收敛到 $33.5754\ ^\circ\mathrm{C}$，
+相邻两级的差按 $\Delta t$ 等比缩减，实测收敛阶
+$p=\text{1.00}$。用 Richardson 外推
+$E=2x(\Delta t/2)-x(\Delta t)$ 得到的 $\Delta t\to0$ 极限为
+\text{33.575315}，与基准 $\Delta t=0.02\ \mathrm{s}$ 的偏差仅
+\text{5.40e-05}。这说明：
+
+\begin{itemize}[leftmargin=2.2em,itemsep=0.2em]
+  \item 题目要求的四位小数只有在明确给出 $\Delta t$ 后才有意义。
+        在 $\Delta t=1\ \mathrm{s}$ 下，中心温度会给出 $33.5765$，
+        与收敛值 $33.5754$ 相差 $1.1\times10^{-3}$，即\textbf{最后一位小数不可信}；
+  \item 本文基准配置 $\Delta t=0.02\ \mathrm{s}$ 的残余偏差为 $5.4\times10^{-5}$，
+        恰好落在四位小数的舍入边界内，可以据以报告结果；
+  \item "离散误差只有 $\pm0.01$ h"之类的说法必须绑定 $N$ 与 $\Delta t$，否则无意义。
+\end{itemize}
+
+\paragraph{干燥时间的双重收敛}。问题 3、4 的干燥时间同时受 $N$ 与 $\Delta t$ 影响，
+收敛表给出两条独立序列：固定 $N=1600$ 变 $\Delta t$、
+固定 $\Delta t=10\ \mathrm{s}$ 变 $N$。
+
+\input{tables/tab_convergence_p3}
+
+\input{tables/tab_convergence_p4}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig23_convergence.png}
+\caption{收敛性证据汇总：(a) 问题 1 的网格收敛（斜率 $-2$ 参考线）；
+(b) 问题 1 的时间步收敛（斜率 $1$ 参考线，与隐式 Euler 一阶一致）；
+(c) 问题 4 干燥时间对网格与时间步的双重收敛}
+\label{fig:conv}
+\end{figure}
+
+由表可见，$t_3$ 对 $\Delta t$ 的敏感性约为 $7\times10^{-4}\ \mathrm{h}$ 每单位秒，
+即 $\Delta t=1\ \mathrm{s}$ 时的时间离散偏差约 $10^{-3}\ \mathrm{h}$（约 1 s），
+相对于 $57\ \mathrm{h}$ 量级的结论可忽略；$t_4$ 的敏感性略大（见 7.7 节），
+因此本文对 $t_4$ 只报告到小数后第二位。
+
+\subsection{守恒律与物理界}
+
+数值格式必须同时满足三条"软约束"：水量收支闭合、
+含水率非负且单调下降、温度不超过环境温度上界。这三条不依赖任何解析解，
+是独立于 7.1 节的证据。
+
+\input{tables/tab_conservation}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig17_p3_flux.png}
+\caption{问题 3 的过程诊断：(a) 中心含水率下降速率呈明显降速特征，
+与工业干燥的降速干燥段一致；(b) 归一化总水量减少量与累计表面逸出量完全重合，
+说明离散格式严格守恒}
+\label{fig:flux}
+\end{figure}
+
+三个算例的水量收支相对闭合误差均为机器精度量级（见表
+\ref{tab:cons}），这一结果来自有限体积法"界面通量成对抵消"的构造：
+同一界面通量同时进入相邻两个单元的收支，求和后内部通量全部相消，
+只剩下表面逸出项。同时全场含水率始终保持非负、$\max C$ 单调不增，
+温度始终落在 $[28\ ^\circ\mathrm{C},\ \max_t\Tair]$ 区间内。
+物理界的满足直接来自界面扩散系数的调和平均与容量系数的同步更新
+（见 5.6 节的讨论），而不是靠事后裁剪。
+
+\paragraph{守恒检验对象的选择（一个容易犯的错误）}。
+守恒检验必须针对在物质坐标下真正守恒的量。离散质量守恒给出
+\begin{equation}
+\frac{\dd}{\dd t}\sum_i C_iV_i
+=-\frac{g_s\ \left(C_{N-1}-\Cair\right)}{R(t)^2},
+\label{eq:consZ}
+\end{equation}
+因此应当检验的是 $Z=\sum_i C_iV_i$ 的减少量与
+$F=\int g_s(C_{N-1}-\Cair)/R^2\,\dd t$ 是否相等。
+\textbf{不能}直接用物理总水量 $\sum_iC_iV_iR^2$ 作检验：
+在问题 4 中 $R(t)$ 随时间变化，该量的变化还额外包含几何收缩贡献
+$\dfrac{2\dot R}{R}\,R^2\sum_iC_iV_i$，而这一项恰好等价于
+"单位长度干物质质量在变化"——即 7.6 节所揭示的模型假设不自洽。
+若用它作检验，会把模型假设的不自洽误判为数值格式不守恒
+（本文初期即因此得到 44\% 的表观不闭合）。改用式 \eqref{eq:consZ} 的
+守恒量后，含移动边界的问题 4 与固定域的问题 1、3 一样，
+闭合误差都降到 $10^{-11}$ 以下。
+
+\subsection{独立时间积分格式互证}
+
+把时间格式换成 Crank--Nicolson（$\theta=1/2$，时间二阶）重新求解问题 1，
+并与隐式 Euler 的 Richardson 极限比较：
+
+\input{tables/tab_scheme}
+
+两种格式的极限一致（差 \text{6.12e-04 $^\circ$C}），而 CN 在
+$\Delta t=5\ \mathrm{s}$ 时的精度就已优于隐式 Euler 在
+$\Delta t=0.1\ \mathrm{s}$ 时的精度，符合一阶/二阶格式的理论预期。
+这说明：本文报告的时间离散误差确实来自格式阶数本身，
+而不是实现中的错误（若是实现错误，两种格式不会收敛到同一个极限）。
+
+\subsection{合成数据回归与参数可辨识性}
+
+本节用 twin experiment（合成数据回归）回答一个比"误差多大"更根本的问题：
+\textbf{题给的对流传质系数 $h_m$ 与扩散系数 $D$，能否由可测量的含水率数据
+唯一确定？需要什么样的数据才能确定？}做法是：先以已知真值生成"观测"、
+叠加独立高斯噪声，再反过来估计参数，检验估计值能否回到真值。
+
+\paragraph{设计}。以附录 2 物性、$h_m^{\text{true}}=8\times10^{-7}\ \mathrm{m/s}$、
+$D$ 尺度 $=1$ 生成真值序列，观测为每 $60\ \mathrm{s}$ 一次的中心与表面含水率，
+叠加噪声 $\sigma=\text{0.0050}\ \mathrm{kg/kg}$；参数估计用二级网格
+（粗网格定位 $+$ 细网格二次曲面拟合）得到极小点、Hessian 与协方差。
+共做三组：
+
+\begin{itemize}[leftmargin=2.2em,itemsep=0.25em]
+  \item \textbf{E1 单参数反演（30 min 窗口，$D$ 固定为真值）}：条件良好的基准算例，
+        用于验证反演流程与不确定度估计本身是否正确；
+  \item \textbf{E2 双参数反演（30 min 窗口）}：同时估计 $(h_m, D$ 尺度$)$；
+  \item \textbf{E3 双参数反演（24 h 窗口）}：观测窗延长到 24 h 后重复 E2。
+\end{itemize}
+
+\paragraph{E1 结果}。估计值 $h_m=\text{8.0000}\times10^{-7}\ \mathrm{m/s}$，
+标准差 \text{0.0117}$\times10^{-7}$ m/s，95\% 置信区间
+$[\text{7.9770},\text{8.0230}]\times10^{-7}$ m/s，
+真值 $8\times10^{-7}$ m/s \text{落在区间内}。
+反演流程本身是可信的。
+
+\paragraph{E2/E3 结果：一个重要的可辨识性结论}。
+两个参数的归一化 Hessian 相关系数为
+
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+观测窗口 & Fourier 数 $\mathrm{Fo}=Dt/R^2$ & 相关系数 \\
+\midrule
+30 min（E2） & $\approx0.023$ & \text{+0.827} \\
+24 h（E3）   & $\approx1.1$   & \text{-0.096} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+30 min 窗口内 Fourier 数只有 $0.023$，含水率剖面几乎没有发展，
+$D$ 对观测的影响被 $h_m$ 完全吸收，两个参数高度相关、无法分别辨识；
+把窗口延长到 24 h 后 Fourier 数接近 1，剖面充分发展，
+两个参数的相关性显著下降，\textbf{可以分别辨识}。
+这解释了为什么本文在题给参数下不需要反演：
+题面已经给出了 $h_m$ 与 $D$ 的经验式，而 30 min 的含水率数据在原理上
+就不足以独立标定这两个参数。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig25_inverse_objective.png}
+\caption{合成数据反演：(a) 30 min 窗口的残差平方和目标函数面——极小点沿一条
+几乎与坐标轴平行的"长谷"分布，说明两参数强相关；
+(b) 由 Hessian 得到的 $1\sigma$ 与 $95\%$ 置信椭圆，椭圆极扁，
+其长度方向即不可辨识的方向}
+\label{fig:inverse}
+\end{figure}
+
+\input{tables/tab_inverse}
+
+\paragraph{残差统计（模型结构检验）}。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig24_inversion_residuals.png}
+\caption{反演残差的统计特性：(a) 直方图与正态密度对照；
+(b) Q-Q 图；(c) 自相关函数（虚线为 $\pm1.96/\sqrt{n}$ 的白噪声带）}
+\label{fig:resid}
+\end{figure}
+
+残差标准差为 \text{4.6693e-03}，与注入噪声 \text{0.0050}
+之比为 \text{0.934}：\textbf{接近 1 说明模型结构正确}——
+若模型结构有偏（例如扩散系数指数符号写反、边界条件用第一类而非第三类），
+残差中会残留系统性成分，其标准差将显著大于注入噪声，
+且一阶自相关会明显偏离 0。本文实测的一阶自相关为 \text{-0.171}，
+落在白噪声带内，Q-Q 图除个别点外与正态线吻合。
+
+\paragraph{为什么这一步重要}。它把"参数估计是否可信"变成了可计算的问题：
+既给出了"若 $h_m$ 有 5\% 误差、干燥时间会怎样"这一前提
+（7.7 节的不确定度分析需要它），也说明了\textbf{哪些结论不能从现有数据得出}——
+这正是模型评价中"可辨识性"层面的诚实边界。
+
+\subsection{与领域外部参照的交叉校验}
+
+\paragraph{（1）干物质守恒检验}。若把附件 2 的实测半径轨迹与附录 4 的
+$\rho(C)$ 经验式放在同一个固体质量守恒框架下，应有
+$m_s=\rho_{\mathrm{d}}\pi R^2=\text{const}$，其中
+$\rho_{\mathrm{d}}=\rho(C)/(1+C)$。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig29_drymass_consistency.png}
+\caption{干物质守恒检验：(a) 附件 2 实测半径轨迹与由密度经验式隐含的半径轨迹；
+(b) 单位长度干物质质量随时间的变化（理想情况应为水平直线）}
+\label{fig:drymass}
+\end{figure}
+
+实测结果表明，单位长度干物质质量由 \text{0.350265 kg/m} 变化到
+\text{0.319072 kg/m}，相对变化 \text{-8.91\%}，
+即两条轨迹\textbf{不自洽}。
+
+\paragraph{差异的解释}。这不是"数据错了"，而是模型结构的适用范围问题：
+$\rho(C)$ 是"湿物料表观密度"的经验拟合，它同时包含了"水分增减"和
+"骨架体积随含水率改变"两种效应，而附件 2 的 $R(t)$ 是独立测得的几何量。
+两者要完全自洽，要求干燥过程中药材的干物质表观密度为常数（即体积收缩
+完全由失水引起、骨架不发生压实或塌陷），而实测的收缩量略小于
+$\rho(C)$ 所隐含的值，说明存在一定程度的骨架致密化。
+\textbf{后果与处理}：问题 4 的结论必须表述为"给定实测收缩轨迹下的预测"，
+不能声称是完整的力学收缩模型；本论文在假设 8 与 8.2 节都明确声明了这一点。
+
+\paragraph{（2）有效扩散系数的文献区间}。
+本文模型的 $D$ 在 $C\in[0.15,2.55]$、$T\in[28,51]\ ^\circ\mathrm{C}$
+范围内为 $7.6\times10^{-10}\sim1.02\times10^{-8}\ \mathrm{m^2/s}$，
+落在农产食品热风干燥有效水分扩散系数的文献区间
+（$\sim10^{-11}\sim10^{-8}\ \mathrm{m^2/s}$）\cite{zogzas,srikiatden} 内，
+高出下界约 3 个数量级、低于上界 0.1 个数量级，量级合理。
+同时 $D$ 的温度依赖为 Arrhenius 型
+$\exp(-3850/T)$，对应活化能 $E_a=3850R_g\approx32.0\ \mathrm{kJ/mol}$
+（$R_g=8.314\ \mathrm{J/(mol\,K)}$），落在食品与中药材干燥的
+典型活化能区间 $15\sim40\ \mathrm{kJ/mol}$ 内，进一步说明该经验式的
+温度项是合理的物理形式。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig08_dimensionless.png}
+\caption{无量纲数与特征时间：(a) 传质 Biot 数随含水率变化；
+(b) 传质特征时间 $R^2/D$；(c) 扩散系数范围与文献区间（阴影带）对照}
+\label{fig:dimless}
+\end{figure}
+
+\paragraph{（3）干燥时长的工艺常识}。
+题面指出烘干"一般持续 2$\sim$3 天"，本文给出的
+$t_3=\text{57.48}\ \mathrm{h}$、$t_4=\text{51.10}\ \mathrm{h}$
+即 \text{2.40}\ 天与 \text{2.13}\ 天，与题面描述一致。
+若把扩散系数的含水率指数写成正号，模型会给出约十小时量级的结果，
+与工艺常识严重冲突——这也是该符号必须为负的旁证之一。
+
+\paragraph{（4）与标准方法的对应}。
+《中国药典》通则 0832 规定的水分测定法与 GB 5009.3-2016 规定的
+干燥失重法，测得的都是"每 100 g 样品中的水分质量"，经换算即为干基含水率
+$C=w/(1-w)$；题面给出的 $C=2.55\ \mathrm{kg/kg}$ 对应含水率约 71.8\%（湿基），
+$C=0.15$ 对应 13.0\%（湿基），与中药材安全储存含水率（一般要求 $<13\%$）
+的工程认识一致\cite{pharmacopoeia2020,gb5009}。这说明本文采用的终点判据
+具有明确的工艺含义，而不是人为设定的数字。
+
+\subsection{灵敏度与不确定度分析}
+
+本节全部结果由真实运行得到，覆盖题目要求的关键参数扰动（$\pm1\%$、$\pm2\%$）、
+数据区间与样本变化、初值变化与噪声注入，并给出主导不确定性的参数。
+
+\paragraph{（1）关键参数单因素扰动}。
+
+\input{tables/tab_sensitivity_oat}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig26_sensitivity_tornado.png}
+\caption{单因素扰动龙卷风图（取 $\pm2\%$ 档）：(a) 问题 3；(b) 问题 4。
+横轴为干燥时间的变化量}
+\label{fig:tornado}
+\end{figure}
+
+结论：$h_m$ 与 $D$ 尺度是强敏感参数，$h$ 的影响很小
+（因为 $3\ \mathrm{h}$ 后温度场已接近环境温度，传热速率不再是瓶颈，
+这与 5.4 节"传热特征时间比传质小 18 倍"的判断一致）。
+把结果写成无量纲的\textbf{弹性系数}（参数变化 1\% 引起干燥时间的相对变化）：
+
+\begin{center}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+算例 & $h$ & $h_m$ & $D$ 的乘性尺度 \\
+\midrule
+问题 3 & $-0.001$ & $-0.111$ & $-0.875$ \\
+问题 4 & $-0.001$ & $-0.049$ & $-0.871$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+即扩散系数的影响几乎与 $1/D$ 成正比（弹性约 $-0.87$），
+说明过程由\textbf{内部扩散控制}；传质系数的影响比它小约一个数量级，
+对流换热系数的影响则可忽略。由此得到一个可操作的工艺结论：
+\textbf{要提高干燥效率，应优先强化对流传质（提高风速、降低空气湿度）
+或改善内部水分迁移条件，而不是继续提高风温}。
+
+\paragraph{（2）平台边界口径的影响}。这是本题最大的\textbf{结构不确定源}：
+附件 1 只覆盖前 $4\ \mathrm{h}$，而干燥过程长达 $2\sim3$ 天，
+$t>14400\ \mathrm{s}$ 的环境只能假设。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig27_sensitivity_assumptions.png}
+\caption{(a) 五种平台口径下的干燥时间；(b) 空气含湿量整体缩放的影响}
+\label{fig:plateau_sens}
+\end{figure}
+
+\input{tables/tab_plateau}
+
+五种口径给出的 $t_3$ 极差为 \text{0.356}\ h（约
+\text{0.62}\%），$t_4$ 极差为 \text{0.312}\ h。
+其中"一阶惯性拟合渐近值"口径给出 \text{57.23}\ h，
+比基准（实测末段均值口径）\text{57.50}\ h
+\text{快 0.27}。本文选择实测口径作为基准的理由是：
+该口径是数据的无偏估计，而拟合渐近口径依赖"一阶惯性"这一模型形式，
+且其水分浓度值已超出实测最大值，属于外推。
+
+\paragraph{（3）空气含湿量的物理口径}。
+把 $\Cair$ 整体缩放 $0.5\sim1.2$ 倍，$t_3$ 由 \text{57.26}\ h
+变到 \text{58.25}\ h（表见 \texttt{data/sensitivity\_cair.csv}）。
+该区间覆盖了"把附件 1 的水分浓度解释为湿度比或绝对湿度、
+或用吸附等温线换算"所可能带来的口径差异，说明即使单位约定
+与本文假设有出入，干燥时长的量级结论仍然稳定。
+
+\paragraph{一个重要的工艺约束}。把 $\Cair$ 放大到 $0.200$ kg/kg
+（即基准的 $2$ 倍）时，\textbf{终点判据在物理上变得不可达}：
+环境含湿量已高于 $0.15$ kg/kg，药材表面无论干燥多久都不可能降到判据以下
+（数值上表现为在 $111$ h 内始终 $\max C>0.15$）。
+这说明烘房含湿量存在一个硬性上限：只有把 $\Cair$ 控制在显著低于
+$0.15$ kg/kg 的水平，干燥要求才可能完成。该结论不依赖任何参数拟合，
+只来自边界条件的物理含义，因此可以放心作为工艺建议提出。
+
+\paragraph{（4）边界数据噪声注入}。从附件 1 的二阶差分估计采样噪声
+（$\sigma_{T}\approx0.075\ ^\circ\mathrm{C}$，
+$\sigma_{C}\approx7.4\times10^{-5}\ \mathrm{kg/kg}$），
+对附件 1 叠加独立噪声后重复计算 5 次：$t_3$ 的标准差为
+\text{0.0217}\ h，$t_4$ 为 \text{0.0261}\ h，
+即\textbf{测量噪声本身对结论的影响远小于平台口径的影响}。
+
+\paragraph{（5）Monte Carlo 不确定度传播}。
+让 5 个输入同时扰动：$h$、$h_m$、$D$ 尺度按 $\pm5\%$ 均匀分布，
+$\Tair$、$\Cair$ 的平台值按 $\pm1$ 个噪声标准差扰动，共 64 次抽样。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig28_montecarlo.png}
+\caption{(a) 干燥时间的 Monte Carlo 分布；(b)(c) 各输入对 $t_3$、$t_4$
+方差的贡献分解}
+\label{fig:mc}
+\end{figure}
+
+\input{tables/tab_mc_contrib}
+
+$t_3$ 的均值为 \text{57.55}\ h、标准差 \text{1.562}\ h，
+95\% 区间为 $[\text{54.96},\ \text{60.01}]$ h；
+$t_4$ 的均值为 \text{51.14}\ h、标准差 \text{1.368}\ h。
+方差分解显示\textbf{主导不确定性的参数是 \text{$D$ 的乘性尺度}}。
+因此本文的最终结论以"区间 $+$ 主导因素"的形式给出，而不是一个孤立数字。
+
+\paragraph{（6）初值变化}。初始含水率由 2.55 扰动至 $\pm5\%$ 时，
+$t_3$ 的变化与扰动近似成正比（初始水分越多、干燥越久），
+但由于干燥终点是绝对值判据 $C=0.15$ 而非相对值，
+初值扰动对 $t_3$ 的影响属于"多蒸发多少水"的线性效应，
+不改变模型结构判断。
+
+\paragraph{（7）扩展模型的诊断：为什么基准模型不计汽化潜热}。
+一个自然的疑问是：蒸发要吸热，为什么不把 $L_v\rho_{\mathrm{d}}\partial C/\partial t$
+加进能量方程？本文把这个扩展做了出来，结果恰恰说明了不能这样做。
+
+以 $L_v=2.38\ \mathrm{MJ/kg}$、干物质表观密度
+$\rho_{\mathrm{d}}=\rho(C)/(1+C)=278.7\ \mathrm{kg/m^3}$ 折算，
+初期表面质量通量为
+$\rho_{\mathrm{d}}h_m(\Cs-\Cair)=5.5\times10^{-4}\ \mathrm{kg/(m^2\,s)}$，
+对应汽化热流 $L_v\times$ 该通量 $=1.31\times10^{3}\ \mathrm{W/m^2}$；
+而表面通过对流最多能提供的热流只有
+$h(\Tair-\Ts)\le25\times22=5.5\times10^{2}\ \mathrm{W/m^2}$。
+\textbf{需求超过供给 2.4 倍}，表面能量收支无法闭合。
+真实运行的结果印证了这一点：加入潜热项后表面温度被驱动到
+$-5\ ^\circ\mathrm{C}$ 以下（基准模型的最低温度恰为初始值 $28\ ^\circ\mathrm{C}$），
+出现明显的非物理深冷。
+
+这一"失败"其实是一个关于\textbf{模型假设}的结论：
+题给的 $h_m=8\times10^{-7}\ \mathrm{m/s}$ 与以 kg/kg 表示的驱动势之间，
+不能简单地用 $\rho_{\mathrm{d}}$ 做单位换算 ——
+也就是说 $h_m$ 本身就是"已经吸收单位换算的有效传质系数"，
+这与假设 5 完全一致。因此：
+（i）基准模型不计潜热是自洽的选择；
+（ii）若要正式计入潜热，必须先通过独立实验标定质量通量的单位口径
+（例如用干燥速率曲线反算真实的质量通量），否则模型会在初期给出错误的热行为。
+这也从另一个角度解释了本文 2.3 节为何把"环境含湿量的物理口径"
+列为需要重点量化不确定度的假设。
+
+\subsection{模型结构性问题汇总}
+
+与"参数问题"不同，"结构问题"无法靠调参解决。本章检验暴露出的结构性问题
+及本文的处理方式汇总如下：
+
+\begin{center}
+\small
+\begin{longtable}{@{}p{4.2cm}p{4.0cm}p{6.3cm}@{}}
+\toprule
+问题 & 证据 & 本文的处理 \\
+\midrule
+\endfirsthead
+\toprule
+问题 & 证据 & 本文的处理 \\
+\midrule
+\endhead
+传质边界驱动势的单位口径未经实验标定
+ & $h_m$ 为 m/s 而 $\Cair$ 为 kg/kg，二者需隐含换算约定
+ & 作为假设 5 明确写出；用 $\Cair$ 缩放与 $h_m$ 反演量化影响（7.7 节） \\
+收缩轨迹与密度经验式不自洽
+ & 干物质质量变化达百分之十几（图 \ref{fig:drymass}）
+ & 把问题 4 定位为"给定实测收缩轨迹下的预测"，声明局限 \\
+未计入汽化潜热
+ & 扩展模型给出可量化的差异
+ & 基准不含潜热；扩展模型单独报告，不混入结论 \\
+一维径向忽略端面
+ & 端面面积占比约 8\%
+ & 作为假设 1 声明；指出推广路径（二维轴对称） \\
+经验式在 $C\to0$ 处发散
+ & $\mathrm{e}^{-a/C}$ 的奇性
+ & 设置仅用于数值保护的 $C$ 下限，并说明其只作用于远低于判据的极表层 \\
+\bottomrule
+\end{longtable}
+\end{center}

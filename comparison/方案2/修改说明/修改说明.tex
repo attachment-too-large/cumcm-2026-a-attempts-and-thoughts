@@ -1,0 +1,987 @@
+% =====================================================================
+%  论文修改说明（2026 高教社杯全国大学生数学建模竞赛 A 题）
+%  编译：xelatex 修改说明.tex （跑两遍）
+% =====================================================================
+% !TeX program = xelatex
+\documentclass[11pt,a4paper]{ctexart}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\geometry{top=24mm,bottom=24mm,left=22mm,right=22mm}
+\linespread{1.15}
+
+\definecolor{lstbg}{RGB}{248,248,248}
+\definecolor{cmtgreen}{RGB}{0,120,0}
+\definecolor{delred}{RGB}{176,0,32}
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{lstbg},
+  frame=single,
+  rulecolor=\color{gray!45},
+  breaklines=true,
+  columns=flexible,
+  keepspaces=true,
+  showstringspaces=false,
+  extendedchars=true,
+  tabsize=2,
+  xleftmargin=6pt,
+  framexleftmargin=6pt,
+  aboveskip=4pt,
+  belowskip=4pt,
+}
+\lstdefinestyle{old}{basicstyle=\ttfamily\small\color{delred}}
+\lstdefinestyle{new}{basicstyle=\ttfamily\small\color{cmtgreen}}
+
+\newcommand{\src}[1]{\texttt{#1}}
+\newcommand{\loc}[1]{\textcolor{blue!60!black}{#1}}
+
+\title{\bfseries 论文修改说明\\[2pt]
+\large 2026 年高教社杯全国大学生数学建模竞赛 A 题《药材的烘干问题》}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-3.5em}
+
+\begin{center}
+\begin{tabular}{@{}p{0.16\textwidth}p{0.78\textwidth}@{}}
+\toprule
+复核对象 & \src{解题\textbackslash A题解答\textbackslash paper\textbackslash paper\_electronic.pdf}（91 页）
+        及其 LaTeX 源码、\src{code/}、\src{data/}、\src{支持材料.zip} \\
+依据文件 & \src{论文复核意见\_待验证清单.md}、\src{format2026.doc}、\src{题目\textbackslash A题} \\
+处理原则 & 先独立复算、再决定是否修改；清单本身也当作待验证材料 \\
+产物 & 电子版 PDF 91 页、纸质版 PDF 93 页、支撑材料 7.20 MiB、本说明 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% =====================================================================
+\section{结论总览}
+
+复核清单共 9 条，逐条独立复算后的处置如下：
+
+\begin{center}
+\small
+\begin{tabular}{@{}clcl@{}}
+\toprule
+ & \textbf{清单条目} & \textbf{复算结论} & \textbf{处置} \\
+\midrule
+1 & §1.1 式(7) 量纲不符 & 成立（清单算术本身有小误） & 重写推导，删式(7) \\
+2 & §1.2 假设 A 只做一半定量 & \textbf{清单判断有误} & 改为「推论」，给出证明 \\
+3 & §1.3 环境口径敏感性 & 成立 & 补表 9 与取舍说明 \\
+4 & §2.1 $\rho_d$ 231$\to$57 方向反 & 成立 & 改为 278.7$\to$760 \\
+5 & §2.2 假设 8 与 §10.8 冲突 & 成立 & 统一口径 \\
+6 & §2.3 result2.xlsx 体积 & \textbf{疑问不成立} & 但另发现表头类型缺陷，已修 \\
+7 & §3.1 $L^2/\alpha=9.3\times10^6$ & 成立 & 改为 $3.70\times10^5$ \\
+8 & §3.2 $\alpha=1.02\times10^{-7}$ & 成立 & 改为 $1.448\times10^{-7}$；Le 改 0.093 \\
+9 & §3.3 「8.7 节」应为 §10.6 & 成立 & 已改 \\
+10 & §4 可选增强（2D 检验等） & 非纠错项 & 未做，理由见第 6 节 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+此外，核对过程中\textbf{另发现清单未提及的 6 处问题}，其中插图负号被渲染成占位符
+属于影响最大的排版缺陷，见表~\ref{tab:extra}。
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{清单未提及、本次一并修复的问题}
+\label{tab:extra}
+\begin{tabular}{@{}c>{\raggedright\arraybackslash}p{0.33\textwidth}>{\raggedright\arraybackslash}p{0.44\textwidth}>{\raggedright\arraybackslash}p{0.11\textwidth}@{}}
+\toprule
+ & \textbf{问题} & \textbf{位置} & \textbf{严重度} \\
+\midrule
+A & 插图对数刻度负号被画成占位符 \texttt{¤}（图 5/6/8/11/16/3） & 插图全部 21 张由 \src{code/make\_figures.py} 生成 & 高（肉眼可见） \\
+B & \texttt{①②} 在 XeLaTeX 下渲染为缺字方框 & §5.5 适用条件段 & 中 \\
+C & 交叉引用 §2.4「见 4.5 节」应为 5.5 节 & §2.4（PDF p.4） & 中 \\
+D & 附录 A 两个源程序大小标注错误 & 附录 A 表 & 低 \\
+E & 正文一度由 30 页涨到 31 页，超出规范上限 & 全文版面 & 高（合规） \\
+F & \src{code/common.py} 硬编码作者机器绝对路径，换机不可运行 & \src{code/common.py:119} & 高（可运行性） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent 第 8 节另说明一项追加修改：全部源程序的注释按「面向读者、必要且简洁」的
+标准整体重写，并删除了一个会覆盖注释的废弃工具。第 9 节说明面扩散系数
+由调和平均改为算术平均的验证过程与全部影响。
+
+% =====================================================================
+\section{逐条详述}
+
+\subsection{P0：式(7) 量纲不符，且推不出式(8)}
+
+\paragraph{问题。}论文 §5.5「收缩问题的物质坐标变换」原先给出
+
+\begin{lstlisting}[style=old]
+dC/dt|_xi  =  (1/U^2) * d/dxi ( rho_d^2 * r^2 * D * dC/dxi ),   U = u(1) = int_0^1 rho_d xi' dxi'
+\end{lstlisting}
+
+\noindent 随后声明「代入后得到式(8)」，即代码实际使用的
+$\partial_t C=(\xi R^2)^{-1}\partial_\xi(\xi D\partial_\xi C)$。这两步都不成立。
+
+\paragraph{位置。}\loc{§5.5，电子版 PDF 第 8 页；源码 \src{paper\_body\_a.tex} 第 369--387 行（修改前）}。
+
+\paragraph{判断依据（三条独立证据）。}
+\begin{enumerate}[leftmargin=2.2em,itemsep=2pt]
+  \item \textbf{量纲}。左侧 $[\partial_tC]=\mathrm{s^{-1}}$；
+  右侧 $[1/U^2]=\mathrm{m^6/kg^2}$，$[\rho_d^2r^2D]=\mathrm{kg^2/(m^2s)}$，
+  相乘得 $\mathrm{m^4/s}$，\textbf{与左侧差 $\mathrm{m^4}$}。
+  （清单此处写「相差一个 $\mathrm{m^2}$」，是清单自己的算术失误：
+  它把 $[\rho_d^2r^2D]$ 算成 $\mathrm{kg^2/(m^4s)}$，漏乘了 $r^2$ 的 $\mathrm{m^2}$。
+  结论方向正确，量级写错了。）
+  \item \textbf{代入检验}。按论文自己的代入
+  $\rho_d=\rho_{d0}R_0^2/R^2,\ r=\xi R,\ U=\rho_{d0}R_0^2/2$ 得
+  $(1/U^2)\rho_d^2r^2=4\xi^2/R^2$，于是式(7) 化为
+  $\partial_tC=(4\xi^2/R^2)\partial_\xi(D\partial_\xi C)$，
+  与式(8) 的 $(\xi R^2)^{-1}\partial_\xi(\xi D\partial_\xi C)$ \textbf{不是同一个算子}
+  （$D$ 为常数时前者的系数是 $4\xi^2/R^2$，后者是 $1/(\xi R^2)$，不可能相等）。
+  \item \textbf{更强的结论}：\textbf{不存在任何常数 $U$ 能让式(7) 成立}。
+  要得到式(8)，必须有 $U=\rho_{d0}R_0^2\xi$，它依赖 $\xi$，与「$U=u(1)$ 是常数」矛盾。
+  也就是说这不是笔误系数问题，而是该中间步骤本身是错的。
+  \item \textbf{稳态校验}（旁证）。无收缩稳态下物理通量沿半径恒定要求
+  $\xi D\partial_\xi C=\text{const}$，式(8) 恰好满足，式(7) 对应
+  $\xi^2D\partial_\xi C=\text{const}$，多一个 $\xi$，物理上不成立。
+\end{enumerate}
+
+\paragraph{修改。}删去式(7) 与 $u(\xi)$、$U$ 的构造，改用从「固定干物质质量的
+控制体」出发的完整推导，共 4 个编号公式：
+
+\begin{lstlisting}[style=new]
+(7)  干物质不变量:   d/dt( rho_d * xi * R^2 ) = 0
+                    =>  rho_d(xi,t) R(t)^2 = rho_d(xi,0) R0^2
+(8)  材料区域 [0,xi] 的水分衡算:
+     2 pi R^2 int_0^xi rho_d xi' dC/dt dxi' = -( j_r * 2 pi xi R ) = 2 pi xi rho_d D dC/dxi
+(9)  一般形式:  dC/dt = 1/(xi R^2 rho_d) * d/dxi ( xi rho_d D dC/dxi )
+(10) 框出:      dC/dt = 1/(xi R(t)^2)      * d/dxi ( xi D   dC/dxi )   <- 原式(8)，正确，保留
+\end{lstlisting}
+
+\noindent \loc{源码 \src{paper\_body\_a.tex} 第 369--426 行；PDF 第 8 页}。
+
+\paragraph{代码影响。}无。附录 C.1 的 \src{\_assemble} 用的就是式(10) 的离散
+（$P=1/(R^2\,\mathrm{vol}\cdot \mathrm{cap})$，$\beta=\xi_f a/h$），与式(7) 无关。
+
+\paragraph{验证。}重跑 \src{verify\_solver.py}（解析解比对）与
+\src{p4\_shrinkage.py}，$t_{dry}$ 与修改前逐位一致（见第 4 节）。
+
+% ---------------------------------------------------------------------
+\subsection{P0：「$\rho_d$ 沿 $\xi$ 均匀」被误当近似（清单判断有误）}
+
+\paragraph{清单意见。}清单认为该假设「干燥过程中剖面出现梯度后会多出一个一阶小量」，
+建议补一个「完整代入 $\rho_d$ 非均匀性」的数值对照算例，并称「这是唯一值得补算的地方」。
+
+\paragraph{我的复算：该前提不成立，因此补算没有意义。}
+干燥过程中干物质本身不迁移，任一材料壳层 $[\xi,\xi+\mathrm{d}\xi]$ 所含干物质质量
+$\rho_d\cdot 2\pi R^2\xi\,\mathrm{d}\xi$ 守恒，故 $\rho_dR^2$ 是\textbf{逐材料点的不变量}；
+而初始 $C\equiv2.55$ 处处相等，$\rho_d(\xi,0)$ 为常数。
+两者合起来给出：\textbf{$\rho_d$ 在干燥全程都与 $\xi$ 无关}
+（它只随 $R(t)$ 整体变化，在式(9) 中被约去）。
+因此只要收缩各向同性、初始含水率均匀，式(10) 是\textbf{精确}的，不是近似——
+那个「被忽略项」恒等于零。
+
+清单自己算出的 $\partial\ln\rho_d/\partial C\approx-0.75$ 是对\textbf{另一种读法}
+（把附录 4 的 $\rho(C)$ 逐点代入局部浓度场）算的，而那种读法恰恰与附件 2 的实测
+$R(t)$ 不相容——就是论文 §10.6 已经量化的 $17.8\%$ 峰值偏差。用它去否定式(10) 是把
+两个互斥的闭合方式混在了一起。
+
+\paragraph{修改。}把 §5.5「适用条件」的（一）由「近似」改为\textbf{证明}，
+并显式给出\textbf{非均匀读法}下才会出现的一阶项，让读者能一眼看出成立条件：
+
+\[
+\frac{\partial C}{\partial t}=\frac{1}{\xi R^2}\frac{\partial}{\partial \xi}
+\left(\xi D\frac{\partial C}{\partial \xi}\right)
++\underbrace{\frac{D}{R^2}\frac{\partial C}{\partial \xi}\frac{\partial\ln\rho_d}{\partial \xi}}_{\text{仅当 }\rho_d\text{ 随 }\xi\text{ 非均匀时存在}}
+\]
+
+\noindent 同时给出 $\rho_d$ 的正确取值范围（附录 4，$C$ 由 2.55 降到 0 时
+$\rho(C)/(1+C)$ 由 $278.7$ 升到 $760$ kg/m$^3$）以及与 §10.6 的交叉链接。
+
+\loc{源码 \src{paper\_body\_a.tex} 第 431--446 行；PDF 第 8 页}。
+
+\paragraph{验证。}该结论是解析证明，可用一句话复算：对
+$\int_0^\xi \rho_d\xi'\mathrm{d}\xi'$（固定干物质质量坐标）做水分衡算，
+$\rho_d$ 只在 $\partial_\xi(\xi\rho_dD\partial_\xi C)$ 中出现，
+$\xi$ 无关时可约去。
+
+% ---------------------------------------------------------------------
+\subsection{P0：问题 1 表 1/表 2 未报告环境模型选择的敏感性}
+
+\paragraph{问题与位置。}\loc{§6.1（环境拟合）、§6.2 表 1/表 2、§10.7 表 8；
+PDF 第 13、14、27 页；旧表述在 \src{paper\_body\_a.tex} 第 142--145 行}。
+论文用两参数一阶惯性拟合曲线替换附件 1 的实测边界驱动全部计算，
+但只对 $t_{dry}$ 做了口径对比（$+0.118$ h、$+0.055$ h），
+对问题 1 的 30 分钟表格没有对比，且原稿写着「用数据说明拟合不会损失信息」——
+这句话恰恰\emph{没有}数据支撑。
+
+\paragraph{复算。}用生产配置（$N=1600$、$\Delta t=1$ s）分别以「拟合曲线」与
+「附件 1 原始序列分段线性插值」为边界各解一次
+（脚本 \src{probe/chk\_p1\_boundary.py}），结果：
+
+\begin{center}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+$t$/s & \multicolumn{5}{c}{温度差值（原始插值 $-$ 拟合），单位 $^\circ$C} \\
+\cmidrule(lr){2-6}
+ & $r=0$ & $r=0.5$ & $r=1.0$ & $r=1.5$ & $r=2.0$ cm \\
+\midrule
+100  & $-0.0000$ & $-0.0001$ & $-0.0013$ & $-0.0098$ & $-0.0418$ \\
+300  & $-0.0092$ & $-0.0141$ & $-0.0343$ & $-0.0869$ & $-0.1773$ \\
+600  & $-0.0922$ & $-0.1077$ & $-0.1579$ & $-0.2508$ & $-0.3924$ \\
+900  & $-0.2325$ & $-0.2492$ & $-0.2986$ & $-0.3815$ & $-0.5055$ \\
+1200 & $-0.3642$ & $-0.3784$ & $-0.4174$ & $-0.4698$ & $\mathbf{-0.5156}$ \\
+1500 & $-0.4439$ & $-0.4485$ & $-0.4588$ & $-0.4687$ & $-0.4915$ \\
+1800 & $-0.4672$ & $-0.4691$ & $-0.4720$ & $-0.4628$ & $-0.4134$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 即\textbf{拟合口径使表 1 系统性偏高，最大偏高 $0.52\,^\circ$C}。
+与清单给出的 $+0.461/+0.462/+0.465/+0.455/+0.415$（1800 s 行）在同一量级、
+互差 $<0.01\,^\circ$C，两条独立复算互相印证。
+
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item 偏置的来源：拟合曲线在 $60\sim2300$ s 内高于实测（最大 $0.956\,^\circ$C，出现在
+  $1020$ s），此后转为偏低（最大 $0.628\,^\circ$C，$4320$ s）；全序列 rms $0.336\,^\circ$C。
+  残差滞后 1 阶自相关 $0.83$，说明这是\textbf{模型形式失配}而非纯噪声。
+  \item 表 2（水分浓度）：两套口径最大差仅 $6.8\times10^{-4}$ kg/kg，且只在表面列
+  （$r\le1.0$ cm 处 $\le4\times10^{-6}$）。原因是附录 2 的 $D$ 不含温度项，
+  水分场与温度场解耦，该差异只来自湿边界 $C_{air}$ 的口径差。
+  截面平均含水相差 $\le10^{-4}$ kg/kg。
+  \item 网格无关性：两种边界下 $N=400\to3200$ 的 1800 s 温度剖面四位小数完全相同。
+\end{itemize}
+
+\paragraph{修改。}
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+  \item \textbf{新增 §10.7 表 9}「烘房环境口径对问题 1 温度结果的影响」，
+  给出两种边界下的 $r=0$ 与 $r=2.0$ cm 温度及该时刻最大差，
+  并说明偏置特性、水分表的差异量级与来源。
+  \item \textbf{表 1 下加注}，指明本表取拟合边界、若按附件 1 原始插值各值将系统性低
+  $0.41\sim0.52\,^\circ$C，完整对照见 §10.7 表 9。
+  \item \textbf{删去过强表述}：§2.2 与 §6.1 中「用数据说明拟合不会损失信息」
+  改为如实报告「拟合使表 1 系统性偏高约 $0.5\,^\circ$C，是该表的主要误差来源」。
+\end{enumerate}
+
+\loc{源码：\src{paper\_body\_a.tex} 第 142--152 行；\src{paper\_body\_b.tex} 第 47--53、103--108、798--845 行；
+PDF 第 4、13、14、26--27 页}。
+
+\paragraph{为什么主值仍取拟合边界。}对 $t_{dry}$ 而言两种口径只差 $0.2\%$
+（$+0.118$ h / $+0.055$ h），但换口径会让论文中约 40 个已经核验过的检验数值
+（Richardson 外推、收敛序列、多方法互证、灵敏度基准）全部漂移；
+收益不抵风险。因此保留拟合口径，同时把原始数据口径的数值完整列出，
+读者可按题面字面口径直接引用。
+
+% ---------------------------------------------------------------------
+\subsection{P1：$\rho_d$「由 231 变到 57 kg/m$^3$」方向反、数值来源不明}
+
+\paragraph{原文与位置。}\loc{§5.5 适用条件段；PDF 第 8--9 页（修改前为第 8 页）}。
+
+\begin{lstlisting}[style=old]
+本文的干壳很薄（C 由 2.55 降到 0.15 时 rho_d 由 231 变到 57 kg/m^3，且变化集中在 xi > 0.9）
+\end{lstlisting}
+
+\paragraph{复算。}$\rho_d=\rho(C)/(1+C)$：
+
+\begin{center}
+\small
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+$C$ & 2.55 & 1.00 & 0.50 & 0.30 & 0.20 & 0.15 & 0.05 \\
+\midrule
+附录 4（$\rho=760+90C$） & 278.73 & 425.00 & 536.67 & 605.38 & 648.33 & 672.61 & 728.10 \\
+附录 2（$\rho=820$） & 230.99 & 410.00 & 546.67 & 630.77 & 683.33 & 713.04 & 780.95 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 三点问题：① 方向反了——$\rho_d$ 随干燥\textbf{单调增大}；
+② 「231」是\textbf{附录 2} 在 $C=2.55$ 的值，而问题 4 应当用附录 4（对应 278.7）；
+③ 「57」用任一公式都算不出来。
+
+\paragraph{修改。}改为「按附录 4，$C$ 由 $2.55$ 降到 $0$ 时 $\rho(C)/(1+C)$ 由
+$278.7$ 升到 $760$ kg/m$^3$」，并补一句与 §10.6 的交叉链接：
+按 $\rho_dR^2=\text{const}$ 以实测 $R(t)$ 反推，$t_{dry}$ 时需 $776.8$ kg/m$^3$，
+其差额正是 §10.6 的相容性缺口（该 $776.8$ 与论文 §10.6 已有的数值一致）。
+
+\loc{源码 \src{paper\_body\_a.tex} 第 434--441 行；PDF 第 8 页}。
+
+% ---------------------------------------------------------------------
+\subsection{P1：模型假设 8 与 §10.8 口径冲突}
+
+\paragraph{原文。}\loc{§三 模型假设第 8 条；PDF 第 5 页；源码 \src{paper\_body\_a.tex} 第 220--222 行}。
+
+\begin{lstlisting}[style=old]
+... 并在第 10.8 节定量给出两种极端取法的上下界（+9.8% 与 <1%）。
+\end{lstlisting}
+
+\noindent 而 §10.8 明确写「该变体数值不收敛，$9.8\%$ 既非物理结论也非上界」、
+「本文如实报告『无法定量』」。假设章未随检验章一起修订，评阅人只读假设章会得到错误印象。
+
+\paragraph{修改。}假设 8 改为「第 10.8 节说明为何该项无法由题面数据定量
+（潜热变体在网格加密下发散，早期版本报出的『$+9.8\%$ 上界』已撤回）」。
+全文检索 \src{9.8} 只剩 §10.8 内两处解释性文字。
+另把 §6.2「该项影响在 10.8 节以边界形式给出」同步改为「潜热项的影响无法由题面数据定量」。
+
+\loc{\src{paper\_body\_a.tex} 第 220--222 行、\src{paper\_body\_b.tex} 第 166--168 行；PDF 第 5、15 页}。
+
+% ---------------------------------------------------------------------
+\subsection{P1：result2.xlsx 的体积疑问不成立，但另有真缺陷}
+
+\paragraph{清单的疑问。}$4.29$ MB 装不下 $259200\times22\times2\approx1.14\times10^7$ 个单元格。
+
+\paragraph{实测结论：疑问不成立。}\loc{文件 \src{data/result2.xlsx}}。
+用 openpyxl 逐行读回的结果：
+
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item 工作表「温度」「水分浓度」，各 $259201$ 行 $\times$ $22$ 列；
+  \item A 列为 $1,2,3,\dots$（步长 1 s），末行 $A=259200$；
+  \item B2 是\textbf{独立数值} $28.0$，不是把一行压成字符串；
+  \item 解压后 \src{sheet1.xml} $154\,891\,581$ B、\src{sheet2.xml} $149\,448\,381$ B，
+  合计 $304$ MB，ZIP 压缩比 $\mathbf{67.7:1}$，压缩后 $4.29$ MiB 完全合理。
+  高压缩比来自写出器省略了 OOXML 允许缺省的单元格 $r$ 属性
+  （\src{code/compact\_xlsx.py} 首部注释已说明）。
+\end{itemize}
+
+\paragraph{但由此发现一个清单没注意到的真缺陷。}
+原文件的\textbf{第 1 行距离表头是文本}（\src{"0.0"}、\src{"0.1"}、\dots），
+而附件 3 模板里这些单元格是\textbf{数值}（\src{0}、\src{0.1}、\dots、\src{2}）。
+按数值读取结果文件的程序会因此对不上列。同类问题存在于
+\src{result1/2/3.xlsx} 与 \src{result4.xlsx}。
+
+\paragraph{修改。}
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+  \item \src{code/p1\_preheat.py:88}、\src{code/p23\_process.py:90}、
+  \src{code/p4\_shrinkage.py:175} 把 \src{"\%.1f" \% r} 改为 \src{float(r)}
+  （\src{result4} 末列「药材表面」是模板给定的文字列名，保持字符串）；
+  \item 重新生成 5 个结果文件；数值\textbf{逐位不变}，只有表头类型变化
+  （已用 openpyxl 逐行读回核对）；
+  \item 附录 A 增加「结果文件的格式说明」一段，说明表头类型、
+  四位小数的双重保证（\src{styles.xml} 的 \src{0.0000} 数字格式 + 文本按四位小数写出）、
+  以及 $4.29$ MB 的成因。
+\end{enumerate}
+
+\loc{\src{paper\_body\_b.tex} 第 1187--1200 行；PDF 第 34 页}。
+
+% ---------------------------------------------------------------------
+\subsection{P2：轴向导热特征时间算错 25 倍}
+
+\paragraph{原文与位置。}\loc{§5.1「几何简化：由三维到一维」；PDF 第 6 页；源码 \src{paper\_body\_a.tex} 第 291--293 行}。
+
+\begin{lstlisting}[style=old]
+轴向导热特征时间为 L^2/alpha ~ 9.3e6 s，径向为 R0^2/alpha ~ 2369 s，相差三个数量级
+\end{lstlisting}
+
+\paragraph{复算。}$\alpha=k/(\rho c_p)=0.36/(820\times2600)=1.688555\times10^{-7}$ m$^2$/s；
+$L^2/\alpha=0.25^2/1.688555\times10^{-7}=\mathbf{3.701\times10^5}$ s（约 4.3 天）。
+$R_0^2/\alpha=2368.9$ s 与论文一致，说明 $\alpha$ 没错，错在 $L^2/\alpha$ 这个值
+（差 $25.13$ 倍）。两者之比为 $(L/R_0)^2=156$，即约 \textbf{2.2 个数量级}，不是三个。
+
+\paragraph{修改。}改为 $L^2/\alpha=0.25^2/1.6886\times10^{-7}\approx3.70\times10^5$ s（约 4.3 天），
+比值写成 $(L/R_0)^2=156$（约 2.2 个数量级）。\textbf{结论不变}：端面效应仍可忽略，
+但余量是 156 倍而不是 1000 倍。
+
+\loc{源码 \src{paper\_body\_a.tex} 第 291--295 行；PDF 第 6 页}。
+
+% ---------------------------------------------------------------------
+\subsection{P2：问题 3 的 $\alpha$ 与 Lewis 数算错}
+
+\paragraph{原文与位置。}\loc{§5.7「无量纲分析」；PDF 第 10 页；源码 \src{paper\_body\_a.tex} 第 527--529 行}。
+
+\begin{lstlisting}[style=old]
+问题 3（取 C=2.55、T=50 degC）：D=1.35e-8 m^2/s，alpha=1.02e-7 m^2/s，Le=0.13，Bi_m=1.19
+\end{lstlisting}
+
+\paragraph{复算（附录 3，$C=2.55$、$T=323.15$ K）。}
+\[
+\rho=650+128\times2.55=976.40,\quad
+c_p=1450+2736\times\tfrac{2.55}{3.55}=3415.30,\quad
+k=0.21+0.38\times\tfrac{2.55}{3.55}=0.48296
+\]
+\[
+\alpha=\frac{k}{\rho c_p}=\frac{0.48296}{976.40\times3415.30}
+=\mathbf{1.4483\times10^{-7}}\ \mathrm{m^2/s}\quad(\text{原 }1.02\times10^{-7}\text{ 为其 }0.704\text{ 倍})
+\]
+\[
+D=2.4\times10^{-3}e^{-0.45/2.55}e^{-3850/323.15}=1.3472\times10^{-8}\ \mathrm{m^2/s},
+\qquad \mathrm{Le}=\frac{D}{\alpha}=\mathbf{0.093}\ (\text{原 }0.13)
+\]
+$Bi_m=h_mR_0/D=1.19$ 原值正确。
+
+\paragraph{修改。}§5.7 改写为带代入过程的
+$\alpha=k/(\rho c_p)=0.4830/(976.4\times3415.3)=1.448\times10^{-7}$、$\mathrm{Le}=0.093$；
+\textbf{连带}把 §7.3 结果分析里「与 $\mathrm{Le}=0.13$（热扩散远快于水分扩散）的
+无量纲判断一致」改为 $\mathrm{Le}=0.093$（“远快于”的定性结论反而更强）。
+
+\loc{\src{paper\_body\_a.tex} 第 527--529 行；\src{paper\_body\_b.tex} 第 259--261 行；PDF 第 10、16 页}。
+
+% ---------------------------------------------------------------------
+\subsection{P2：交叉引用「8.7 节」应为 §10.6}
+
+\paragraph{原文与位置。}\loc{§11.2 模型的缺点与改进方向第 3 条；PDF 第 31 页；源码 \src{paper\_body\_b.tex} 第 1037 行}。
+「本文 \textbf{8.7} 节的不相容性分析已表明附件 2 数据本身不支持严格守恒约束。」
+本文第 8 章是「问题三」，只有 8.1--8.3 三个小节，8.7 不存在；
+外部收缩数据相容性分析在 §10.6。
+
+\paragraph{修改。}改为「本文 \textbf{10.6} 节的不相容性分析……」。
+
+% =====================================================================
+\section{清单未提及、本次另外发现并修复的问题}
+
+\subsection{插图对数刻度的负号被渲染成占位符 \texttt{¤}（影响最大）}
+
+\paragraph{现象。}\loc{图 5（PDF 第 24 页）、图 6、图 8、图 11、图 16、图 3；
+生成脚本 \src{code/make\_figures.py}}。
+这 6 张图的对数坐标刻度上，「$10^{-3}$」被画成「\textbf{10¤3}」，
+即减号位置显示为一个占位符字符。
+
+\paragraph{根因（已定位到 matplotlib 源码）。}
+运行绘图脚本时反复打印
+\begin{lstlisting}
+Font 'default' does not have a glyph for '\u2212' [U+2212], substituting with a dummy symbol.
+\end{lstlisting}
+该消息出自 \src{matplotlib/\_mathtext.py:645}（\src{UnicodeFonts.\_get\_glyph} 的
+dummy symbol 分支）：数学字体里找不到 U+2212（真正的减号）时，
+matplotlib 用 U+00A4（\texttt{¤}）顶替。而这个「数学字体」是
+\begin{lstlisting}
+self._fonts['default'] = get_font(findfont(self.default_font_prop))   # _mathtext.py:336-338
+\end{lstlisting}
+即取\textbf{文本字体}。\src{setup\_matplotlib()} 原先把
+\src{font.sans-serif} 的首项设为 \textbf{SimHei}，而经实测
+\textbf{SimHei 与 SimSun 都不含 U+2212}（字形索引 0），
+Microsoft YaHei 与 Noto Sans SC 含（字形索引 605、570）。
+原稿那句「mathtext 不能回退到没有 U+2212 的字体」只设了
+\src{mathtext.fontset="dejavusans"}，管不到这个 \src{default} 字体，所以\textbf{没有生效}。
+
+\paragraph{修改（\src{code/common.py:734--750}）。}
+\begin{lstlisting}[style=new]
+plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "Noto Sans SC",
+                                   "SimHei", "DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
+plt.rcParams["mathtext.fontset"]  = "dejavusans"
+plt.rcParams["mathtext.default"]  = "regular"
+\end{lstlisting}
+
+\paragraph{验证。}
+写了一个探针脚本 \src{probe/find\_missing\_glyph.py}，
+挂钩 \src{matplotlib.\_mathtext.UnicodeFonts.\_get\_glyph}，
+统计「返回值退化为 U+00A4」的次数：
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & 修改前 & 修改后 \\
+\midrule
+占位符替换次数 & \textbf{128 次}（分布在 6 张图上） & \textbf{0 次} \\
+\src{make\_figures.py} 的字体警告 & 有 & \textbf{无} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 图幅尺寸与底图数据不变（仅文字字体由 SimHei 变为 Microsoft YaHei），
+不影响分页。重新生成 21 张插图后，附录 A 中插图总大小由 3.4 MB 更新为 3.6 MB，
+两版 PDF 同步重编译。
+
+\subsection{带圈数字 \texttt{①②} 渲染成缺字方框}
+
+\loc{§5.5 适用条件段（原稿就有）；PDF 第 8--9 页}。
+原稿在适用条件里用「①/②」编号，但 XeLaTeX 所用的中文字体不含带圈数字，
+PDF 里渲染为空方框，抽取文本得到 U+FFFD。
+已改为「（一）」「（二）」。并加入自动检查：
+把 \src{.tex} 中出现的全部非 ASCII 字符与 PDF 文本逐一比对，
+当前\textbf{缺失字符为 0}。
+
+\subsection{交叉引用「见 4.5 节」应为 5.5 节}
+
+\loc{§2.4 问题四的分析；PDF 第 4 页；源码 \src{paper\_body\_a.tex} 第 180 行}。
+原文「由『以固定干基质量为控制体』的守恒推导（见 \textbf{4.5} 节）」——
+本文第 4 章是符号说明、没有小节，该节实际是 \textbf{5.5} 节。已改。
+这是与清单 §3.3 同类型的错误，但清单没有发现这一处。
+
+\subsection{附录 A 中两个源程序的大小标注错误}
+
+\loc{附录 A 支撑材料文件列表；PDF 第 34 页；源码 \src{paper\_body\_b.tex} 第 1156--1157 行}。
+\src{code/compact\_xlsx.py} 标 9 KB（实际 $10.5$ KB）、\src{code/common.py} 标 31 KB
+（本次修改后 $32.2$ KB）。已按实际字节数更新为 10 KB 与 32 KB。
+
+\subsection{正文页数一度超出格式规范上限}
+
+格式规范第四条规定正文不超过 30 页。本次修改新增了推导、表 9、格式说明等约 2 页内容，
+正文一度由 30 页涨到 31 页（参考文献起始页由 p.31 推到 p.32）。已通过三项措施压回：
+
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item 浮动体间距 \src{textfloatsep/floatsep/intextsep} 由 7pt 收到 4pt
+  （\src{paper\_electronic.tex:24--26}、\src{paper.tex:23--25}）；
+  \item 插图宽度由 $0.620$ 倍版心改为 $0.570$ 倍（21 处），图总高由 2113 pt 降到 1968 pt；
+  \item 精简本次新增的文字（表 9 由 7 行减到 5 行、压缩说明段落）。
+\end{itemize}
+
+\noindent 现状：\textbf{正文 pp.2--31 共 30 页}，参考文献起始于 p.31（电子版）。
+
+\subsection{代码硬编码作者机器路径，换机不可运行}
+
+\loc{\src{code/common.py} 第 119 行（修改前）}：
+\begin{lstlisting}[style=old]
+TOPIC_DIR = r"D:\建模国赛\题目\A题"
+\end{lstlisting}
+支撑材料里的源程序按规范必须「完整、可运行」，但解压到别的目录或别的机器后，
+附件 1/2 就找不到。已改为候选路径探测，并支持环境变量覆盖，
+都找不到时抛出带提示的 \src{FileNotFoundError}
+（\src{code/common.py:121--143}）：
+
+\begin{lstlisting}[style=new]
+def _find_topic_dir():
+    env = os.environ.get("HERB_TOPIC_DIR")
+    cands = ([env] if env else []) + [
+        os.path.join(WORKDIR, "..", "..", "题目", "A题"),
+        os.path.join(WORKDIR, "..", "题目", "A题"),
+        os.path.join(WORKDIR, "题目", "A题"),
+        r"D:\建模国赛\题目\A题",
+    ]
+    for cand in cands:
+        cand = os.path.abspath(cand)
+        if os.path.isfile(os.path.join(cand, "附件", "附件1.xlsx")):
+            return cand
+    raise FileNotFoundError("找不到题目附件目录（应含 附件/附件1.xlsx）...")
+\end{lstlisting}
+
+% =====================================================================
+\section{代码与数据改动清单，以及「未改变结果」的验证}
+
+\begin{center}
+\small
+\begin{longtable}{@{}p{0.30\textwidth}p{0.30\textwidth}p{0.34\textwidth}@{}}
+\toprule
+\textbf{位置} & \textbf{改动} & \textbf{原因} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{位置} & \textbf{改动} & \textbf{原因} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\src{code/common.py:121--143} & \src{TOPIC\_DIR} 改为候选路径探测 + 环境变量 & 换机可运行（3.6 节） \\
+\src{code/common.py:734--750} & 字体链改为 YaHei/Noto 优先；补 \src{mathtext.default} & 修插图负号变 \texttt{¤}（3.1 节） \\
+\src{code/p1\_preheat.py:88} & 结果表距离列写为数值 & 与附件 3 模板一致（2.6 节） \\
+\src{code/p23\_process.py:90} & 同上 & 同上 \\
+\src{code/p4\_shrinkage.py:175} & 同上（保留末列文字「药材表面」） & 同上 \\
+\src{code/compact\_xlsx.py:28} & 文档说明：数值表头 vs 文字标签 & 同步文档 \\
+\src{paper/paper\_electronic.tex:24} 等 & 浮动间距 7pt$\to$4pt；插图宽度 0.62$\to$0.57 & 正文压回 30 页（3.5 节） \\
+全部 \src{code/*.py}（12 个） & 注释与 docstring 整体重写：中文、简洁、删身份字眼 & 提升可读性（第 8 节） \\
+\src{code/annotate\_chinese.py} & 删除该废弃工具，并同步附录 A 清单 & 它会覆盖新注释（第 8 节） \\
+\end{longtable}
+\end{center}
+
+\paragraph{「未改变任何数值结果」的验证方法。}
+把改动\textbf{前}的 \src{data/*.txt}、\src{data/*.csv} 归档在 \src{支持材料.zip} 内，
+改动后重跑全部 8 个脚本（\src{p1\_preheat}、\src{p23\_process}、\src{p4\_shrinkage}、
+\src{verify\_solver}、\src{crosscheck}、\src{resolution}、\src{accuracy}、\src{sensitivity}），
+再逐行比对：
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcp{0.52\textwidth}@{}}
+\toprule
+\textbf{比较对象} & \textbf{结果} & \textbf{说明} \\
+\midrule
+10 个诊断文件（\src{*.txt}/\src{*.csv}） & 完全相同 & 逐字节一致 \\
+7 个诊断文件 & 仅耗时不同 & 差异全部位于 \src{wall}/\src{wall time} 列，非确定性 \\
+结果文件 \src{result1--4.xlsx} & 数值逐位相同 & 仅第 1 行距离列由文本改为数值 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 结论：代码改动\textbf{没有影响任何一个物理数值}。
+
+% =====================================================================
+\section{修改后的合规核对（对照 \src{format2026.doc}）}
+
+\begin{center}
+\small
+\begin{tabular}{@{}clp{0.52\textwidth}@{}}
+\toprule
+\textbf{条款} & \textbf{要求} & \textbf{现状} \\
+\midrule
+第一条 & A4、页边距 $\ge2.5$ cm & 模板设为上下左右 25 mm \\
+第三条 & 摘要 $\le1$ 页、页码页脚居中从 1 连续编号 & 电子版 p.1 为摘要，占 1 页 \\
+第四条 & 正文 $\le30$ 页、无目录 & 正文 pp.2--31（\textbf{30 页}），无目录 \\
+第五条 & 附录含支撑材料列表 + 全部完整可运行源程序 & 附录 A 列表 + 附录 C 收录 11 个完整脚本 \\
+第六条 & 无身份/学校/赛区信息 & 全文检索无；纸质版前两页占位留空 \\
+第七条 & 参考文献规范并标注 & 16 条，正文全部以 \src{\textbackslash cite} 标注 \\
+第十条 & 电子版单文件 $\le20$ MB、首页摘要、无承诺书/编号页 & \textbf{4.39 MiB}、91 页、符合 \\
+第十一条 & 支撑材料 $\le20$ MB、列表入附录 & \textbf{7.20 MiB}（13 程序 + 25 数据 + 21 插图 = 59 项） \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{其它检查。}
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item 两版 PDF 均由 xelatex 编译两遍，\textbf{Overfull 警告 0}，交叉引用与文献引用无 undefined；
+  \item 压缩包内容与磁盘文件逐项哈希比对，\textbf{0 项不一致}，\src{testzip} 通过；
+  \item 插图负号占位符事件 \textbf{0 次}；\src{.tex} 非 ASCII 字符在 PDF 中缺失 \textbf{0 个}。
+\end{itemize}
+
+% =====================================================================
+\section{未处理的事项}
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=3pt]
+  \item \textbf{二维轴对称端面效应的数值检验}（清单 §4.1）。需要另写一套 $r$--$z$ 求解器，
+  属「把声称变成证明」的加分项而非纠错项；论文已有 $L^2/\alpha$ 标度论证（数值已修正）。
+  \item \textbf{Page/Midilli 薄层经验模型对照}（清单 §4.2）。论文已有「第一特征值降维模型」
+  作独立互证，且清单自己也指出经验模型参数需由 PDE 解反算、不是独立数据来源。
+  \item \textbf{参数后验区间}（清单 §4.3）。本题参数全部给定，未做。
+  \item \textbf{潜热项}。仍维持「无法由题面数据定量」的结论：题给 $(h,h_m)$ 与 Lewis 关系
+  相差 4 个数量级，潜热变体在网格加密下发散。实质未改，只统一了表述口径。
+\end{enumerate}
+
+% =====================================================================
+\section{如何复核本说明中的每一项}
+
+\begin{lstlisting}
+cd D:\建模国赛2\解题\A题解答
+$env:PYTHONIOENCODING='utf-8'
+
+# 2.3 节 环境边界口径敏感性（表 9 的全部数字，含网格无关性）
+python probe\chk_p1_boundary.py
+
+# 2.6 节 结果文件表头类型与附件 3 模板一致
+python -c "import openpyxl;wb=openpyxl.load_workbook('data/result1.xlsx',read_only=True);print([(v,type(v).__name__) for v in next(wb['温度'].iter_rows(values_only=True))])"
+
+# 2.6 节 result2.xlsx 确实含 259200x22x2 个数值单元格、压缩比 67.7:1
+python -c "import zipfile;z=zipfile.ZipFile('data/result2.xlsx');print([(i.filename,i.file_size,i.compress_size) for i in z.infolist()])"
+
+# 3.1 节 插图是否还有占位符（应为 0）
+python probe\find_missing_glyph.py
+
+# 4 节   重跑全部检验，并与改动前归档逐行比对
+python code\verify_solver.py
+python code\crosscheck.py
+python code\resolution.py
+python code\accuracy.py
+python code\sensitivity.py
+
+# 4 节   重建支撑材料包（程序 + 数据 + 插图）
+python probe\rebuild_support_zip.py
+
+# 5 节   重编译两版 PDF（各跑两遍）
+cd paper
+xelatex -interaction=nonstopmode paper_electronic.tex
+xelatex -interaction=nonstopmode paper_electronic.tex
+xelatex -interaction=nonstopmode paper.tex
+xelatex -interaction=nonstopmode paper.tex
+\end{lstlisting}
+
+\paragraph{回退方式。}
+改动前的结果文件与支撑材料包备份在
+\src{probe\textbackslash\_backup\_xlsx\textbackslash}
+（\src{result*.xlsx} 与 \src{支持材料\_old.zip}）；
+LaTeX 源码与 Python 源码的改动均为小范围替换，且每处都带中文注释说明原因，
+可用文本 diff 逐条还原。
+
+\vfill
+\begin{center}
+\small\itshape
+本说明中的每一个数字都来自本次真实运行，未做任何估算或转述。
+凡是我认为清单判断有误之处（§2.2），已给出反证并说明理由；
+凡是我无法确认的，均标注为「未处理」而不作含糊表述。
+\end{center}
+
+% =====================================================================
+\section{追加修改：全部源程序的注释整体重写}
+
+\paragraph{原稿注释的三个问题。}
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+  \item \textbf{中英两份重复}。每个脚本都是「中文 \# 模块头 + 英文 docstring」
+  写同一件事，例如 \src{common.py} 前 34 行是中文说明，紧接着 51 行英文 docstring
+  把内容又讲一遍；附录里要占两倍篇幅，读者也看不出该看哪一份。
+  \item \textbf{夹带与代码无关的内容}。\src{common.py} 的英文 docstring 结尾写着
+  \src{Author: modelling / programming / writing team, 2026 CUMCM Problem A.}；
+  \src{compact\_xlsx.py} 用 30 行讲「竞赛格式规范要求支撑材料压缩包不超过 20 MB」
+  以及文件大小的历史变化。这些讲的是写作与提交过程，无助于读懂代码。
+  \item \textbf{分布不均}。\src{make\_figures.py} 共 969 行、21 个绘图函数，
+  注释只占 5\%，多数函数没有说明：读者看到函数名和一串 matplotlib 调用，
+  不知道这张图画的是哪个物理量、横纵轴是什么、数据取自哪个 \src{.npz} 的哪个键。
+\end{enumerate}
+
+\paragraph{改法（统一的注释规范）。}
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item 注释与 docstring \textbf{一律用中文}，删除与中文重复的英文 docstring；
+  \item \textbf{模块头压缩到 25 行以内}，只写四件事：脚本做什么、输入是什么、
+  输出哪些文件、关键变量的含义与单位；
+  \item \textbf{类与函数}说明参数含义、单位与返回值；\textbf{每个绘图函数}说明画的是
+  什么物理量、横纵轴、数据来源；
+  \item \textbf{行内注释}只写在非显然处（解释「为什么这样算」「这个量代表什么」），
+  删掉复述代码的注释；
+  \item 删除 \src{Author}、团队、参赛、评委等身份类字眼与写作过程叙述，
+  注释只描述代码本身。
+\end{itemize}
+
+\paragraph{验收。}
+写了自动检查脚本 \src{probe/check\_comments.py}，扫描全部注释块与 docstring，
+报告「英文注释」「身份字眼」「注释块过长」三类问题：
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & \textbf{改写前} & \textbf{改写后} \\
+\midrule
+英文注释（应为 0） & 79 处 & \textbf{0 处} \\
+身份类字眼（应为 0） & 8 处 & \textbf{0 处} \\
+过长注释块（模块头 $>26$ 行、docstring $>14$ 行、行内块 $>6$ 行） & 有 & \textbf{0 处} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 除注释外未改动任何一行可执行代码。验证办法是把改写前后的同名模块
+放在一起跑同一组参数：以 \src{common.py} 为例，改写前后
+$C(0,\,2.0\times10^5\,\mathrm{s})=0.1516834077$、步数 26480，\textbf{逐位相同}；
+其余脚本重跑后 \src{data/} 下的诊断输出与改写前逐行一致（仅 wall-clock 耗时不同）。
+
+\paragraph{顺带删除一个废弃脚本。}
+\src{code/annotate\_chinese.py}（311 行）是原先用来自动往各脚本灌入中文模块头的一次性
+工具。注释改为手写定稿后它已无用途，而且\textbf{一旦被运行会把新注释覆盖回旧样式}
+（它的跳过条件只认旧式表头），这是一个实实在在的隐患。已删除该文件，并同步把论文
+附录 A 的支撑材料清单从「13 个 \src{.py}」改为「12 个 \src{.py}」、删去对应行。
+
+% =====================================================================
+\section{面扩散系数：由调和平均改为算术平均}
+
+\paragraph{起因与验证。}有人指出「论文第 11 页写的是调和平均，代码用的却是算术平均，
+而且算术平均更准」。逐项复核后的结论是\textbf{前半句不成立、后半句成立}。
+
+\textbf{(1) 代码用的确实是调和平均}，与论文一致。直接用一组节点值调用那个函数即可看出：
+
+\begin{center}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+节点值 $a$ & $[1,3,9,27]$ & 第 1 面 & 第 2 面 \\
+\midrule
+\textbf{代码返回值} & --- & \textbf{1.5} & \textbf{4.5} \\
+调和平均 $2ab/(a+b)$ & --- & 1.5 & 4.5 \\
+算术平均 $(a+b)/2$ & --- & 2.0 & 6.0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 涉及三处：\src{common.py} 的节点中心格式（\src{\_harmonic\_faces}）、
+单元中心格式（\src{DryingSolver.\_face\_coeff}）、以及 \src{crosscheck.py} 的直线法
+（\src{\_harmonic}）。三处的注释也都写着「调和平均」。所以
+\textbf{按字面把论文改成算术平均，反而会造成论文与代码不一致}。
+
+\textbf{(2) 「算术平均更准」是对的}，而且差距不小。用 $N=25600$ 的超细网格作参照
+（两种平均在该网格上已一致到 $6.9\times10^{-8}$，说明都已收敛到同一极限），
+问题 3 中心含水率 $C(0,2\times10^5\,\mathrm{s})$ 的误差：
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+网格 $N$ & 200 & 800 & \textbf{1600（生产网格）} & 3200 \\
+\midrule
+调和平均误差 & $1.08\times10^{-3}$ & $3.40\times10^{-5}$ & $\mathbf{7.67\times10^{-6}}$ & $1.85\times10^{-6}$ \\
+算术平均误差 & $5.94\times10^{-5}$ & $6.80\times10^{-6}$ & $\mathbf{1.98\times10^{-6}}$ & $5.37\times10^{-7}$ \\
+算术 / 调和 & $0.06\times$ & $0.20\times$ & $\mathbf{0.26\times}$ & $0.29\times$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 两者都二阶收敛、都保持离散守恒（守恒来自通量差分形式，与面系数怎么取无关），
+Richardson 极限也一致（$205559$ s 对 $205557$ s，相差 $2.6$ s）；差别只在误差常数——
+本问题 $D$ 随含水率指数变化但剖面光滑，调和平均会引入 $\propto(D')^2/D$ 的额外误差项。
+
+\paragraph{处置：全量切换。}既然算术平均更准、且不存在论文与代码不一致的问题
+（因为两者本来就一致），唯一自洽的做法是\textbf{代码与论文一起改成算术平均}：
+
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+  \item 代码：\src{common.py} 的 \src{\_harmonic\_faces} 改名 \src{\_face\_mean} 并改为
+  $(a_i+a_{i+1})/2$；单元中心格式的 \src{\_face\_coeff} 同步改；
+  \src{crosscheck.py} 的 \src{\_harmonic} 改名 \src{\_face\_mean} 并改。
+  三处注释一并更新，并写明「若系数是分段常数（多层材料界面）则应改用调和平均」。
+  \item 论文：§5.8 的公式改为 $D_{i+1/2}=(D_i+D_{i+1})/2$；§10.4 中「相同的调和平均
+  面扩散系数」改为「相同的算术平均面扩散系数」；§10.2 新增一段
+  「面扩散系数的取值方式」，用上表的数据说明为何取算术平均。
+  \item 重跑全部 8 个计算脚本、重出 21 张插图、重建支撑材料包、重编译两版 PDF，
+  并把论文里所有受影响的数字逐处更新。
+\end{itemize}
+
+\paragraph{切换后论文数字的变化量（逐项实测）。}
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{0.34\textwidth}p{0.58\textwidth}@{}}
+\toprule
+项目 & 变化 \\
+\midrule
+表 1、表 2（问题 1） & \textbf{四位小数全部不变}（35/35 个单元一致） \\
+表 3、表 4（问题 2） & \textbf{四位小数全部不变}（30/30 个单元一致） \\
+表 5（问题 3） & 3 个单元第 4 位小数变化（$0.1637\to0.1636$ 等），末行标注 $57.1075\to57.0983$ h \\
+表 6（问题 4） & 1 个单元（$0.1082\to0.1081$），末行标注 $50.7691\to50.7678$ h \\
+$t_{dry}$（问题 3，$N=1600$ 直接值） & $205586.9\to205553.8$ s（$57.1075\to57.0983$ h） \\
+$t_{dry}$（问题 4，$N=1600$ 直接值） & $182768.6\to182764.0$ s（$50.7691\to50.7678$ h） \\
+Richardson 收敛值 & 问题 3 $205556.7\to205559.3$ s；问题 4 $182764.7\to182764.7$ s（不变） \\
+观测收敛阶 & 问题 3 $2.75,2.41\to1.41,1.57$；问题 4 $2.08,2.03\to1.77,1.91$ \\
+多方法互证的 $C(0,2\times10^5\,\mathrm{s})$ & $0.1516876\to0.1516779$ 等 5 个值 \\
+灵敏度表（$N=400$ 基准） & $57.2656\to57.0801$ h、$50.7856\to50.7650$ h；各扰动行列值同步更新 \\
+不收缩对照算例 & $129.01\to128.90$ h（$5.375\to5.371$ 天） \\
+潜热冷却变体（问题 3） & $62.88\to62.42$ h；$N=400/800/1600$ 的全程最低温
+  $-73.7/-148.9/-35.7\to-128.1/-256.7/-52.6\,^\circ$C \\
+不确定度合计 & $57.10\pm0.13\to57.10\pm0.07$ h；$50.77\pm0.06\to50.77\pm0.02$ h \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 值得注意：\textbf{论文的四个结果表（表 1--4）与两张烘干时间表（表 5--6）
+的四位小数几乎全部不变}，只有 $t_{dry}$ 与检验章节的精确数值需要更新；
+而 $t_{dry}$ 的变化方向恰恰印证了算术平均更准——用算术平均时，生产网格 $N=1600$
+直接算出的 $205553.8$ s 与 Richardson 收敛值 $205559.3$ s 只差 $5.5$ s，
+而调和平均差 $30$ s。
+
+\paragraph{顺带发现的一个既有问题。}
+\src{sensitivity.py} 里「问题 4 不收缩（$R\equiv2$ cm）」这个对照算例，
+在\textbf{改动前}就已经返回 \src{nan}——脚本的模拟时限固定为 $2.6\times10^5$ s
+（$72$ h），而该算例要 $129$ h 才达标，根本跑不到判据。论文 §9.4／§10.8 报的
+$129.01$ h 显然来自另一次时限更长的运行。本次已用 $t_{end}=7\times10^5$ s
+重算，得到 $128.90$ h，并据此更新论文。这个隐患与面平均的改动无关，
+但属于「支撑材料里的脚本复现不出论文数字」的问题，故一并记录。
+
+\section{第四轮：版式精简与三项核查}
+
+\subsection{为什么图那么小，以及怎么改}
+
+原稿插图统一按 0.550 倍版心宽（$8.8$ cm）排版，而 \src{make\_figures.py}
+的画布宽 $10\sim13$ in（$25\sim33$ cm），缩放后坐标轴文字只剩设计字号（$10.5$ pt）
+的三成，印刷出来约 $3$ pt，基本读不清。本轮把两件事一起改：
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+环节 & 原来 & 现在 \\
+\midrule
+插图排版宽度 & 0.550 倍版心宽（8.8 cm） & 0.84 倍版心宽（13.44 cm） \\
+画布尺寸 & 设计值 & 乘 0.8（新增常数 \src{FIG\_SCALE}） \\
+印刷后坐标轴字号 & 约 $3.0$ pt & 约 $5.2\sim8.4$ pt \\
+题注上下留白 & 题注上方留白 10 pt & 3 pt \\
+表格字号 & 字号 small & 字号 footnotesize（9 个 table） \\
+符号说明表 & 29 行，\src{arraystretch}=1.05 & 24 行（合并同族符号），0.98 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 正文页数上限是 $30$ 页（格式规范第四条），因此腾出的空间必须与插图放大量
+相抵。实测的宽度--页数关系（同一版正文）：
+
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+插图宽度 & 参考文献起始页 & 正文页数 & 是否合规 \\
+\midrule
+$0.90$ & p.32 & 31 & 超限 \\
+$0.86$ & p.31 & 30 & 合规 \\
+$0.84$ & p.31 & 30 & \textbf{本轮采用} \\
+$0.80$ & p.31 & 30 & 合规 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{一个反直觉的实测结论}：这一稿的页数由浮动体主导——在 $0.90$ 宽度下
+删掉 $25$ 行正文，页数一页没变；而把插图宽度从 $0.90$ 收到 $0.86$，参考文献立刻从
+p.32 回到 p.31。所以后续任何增删都必须用
+\texttt{python probe/pdf\_pagemap.py paper/paper\_electronic.pdf 40}
+实测，看参考文献是否仍起始于 p.31，不能凭字数估算。
+
+\subsection{论文中查实并改正的错误}
+
+\begin{center}
+\small
+\begin{tabular}{p{0.30\textwidth}p{0.62\textwidth}}
+\toprule
+位置 & 问题与处理 \\
+\midrule
+5.4 式 (4) & 传热 Robin 条件写成 $-k\partial_rT=h(T_{air}-T_s)$，符号与 5.5 节的
+物质坐标形式、与 \src{common.py}、与 Bessel 解析解全部相反；改为 $h(T_s-T_{air})$ \\
+表 6 注 & 「$r=1.5$ cm 列自 $t>0.85$ h 起即为空」；逐列核对 \src{result4.xlsx}，
+实际首次空缺在 $13200$ s $=3.667$ h \\
+8.1 节 & 最大相对超出量 $6.8\times10^{-15}$；当前生产运行的 \src{p4\_summary.txt}
+为 $6.1\times10^{-15}$ \\
+9.1 节 & 「局部回升 12 处」无法复现（实为 13 处且 $R(t)$ 严格单调不增）；
+改为「十余处，最大 $1.6\%$」 \\
+6.1 节 & $50\,^\circ$C 时 RH 写 $61.8\%$，按 $p_v=wp/(0.622+w)$ 与
+Hyland--Wexler 饱和压重算为 $62\%$ \\
+6.3 节 & 「潜热流 $789$ W/m$^2$ 与对流供热 $555$ W/m$^2$ 同量级」——$555$ 是问题 2--4
+的初始瞬时值，与问题 1 的 $1800$ s 平均值（$90$ W/m$^2$）不同口径；改为同期值 \\
+7.3 节 & 表面传质通量终值 $2.1\times10^{-9}\to1.4\times10^{-9}$ \\
+8.3 节 & 「对数斜率 $-0.055$ h$^{-1}$」与其引用的数据不符，改为可核对的区间斜率 \\
+5.6 节 & 物性表漏了附录 2（问题 1）的 $\rho,c_p,k,D$，读者无法复现
+$\alpha,Bi,\tau_T$；补一列并说明问题 1 两场完全解耦 \\
+9.1 节 & 「体积比 $(R/R_0)^3=0.215$」与无限长圆柱假定口径不符；两个口径都给出 \\
+5.5 / 10.8 & 体积项影响 $-0.24\%$ 来自有缺陷的代码，修正后为 $-0.49\%$ \\
+10.5 节 & 「$D$ 关于 $C$ 是凸函数」不成立（只在 $C<a/2$ 上凸）；改用 Jensen 不等式 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{代码里的一处真实缺陷（已修）}
+
+\src{common.py} 的\textbf{节点中心分支}只把体积变化项 \src{extra\_diag}
+（问题 4 能量方程的 $-2\dot R/R$）加进显式项 \src{f}，没有加进隐式对角 \src{dg}，
+而单元中心分支两处都有。后果是该物理项在 $\theta=1$（Rannacher 前 4 步）时完全消失、
+$\theta=0.5$ 时只按一半起作用。实测（问题 4、$N=400$、$2.6\times10^5$ s）：
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+& 修复前 & 修复后 \\
+\midrule
+节点中心布局 $\Delta t_{dry}$ & $-0.2375\%$ & $-0.4924\%$ \\
+单元中心布局 $\Delta t_{dry}$ & $-0.4862\%$ & $-0.4926\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 修复后两种布局一致到 $0.0002\%$。该缺陷只影响 \src{volume\_term} 变体
+（灵敏度脚本、\src{fig17(c)} 与论文两处数字），\textbf{不影响问题 1--4 的任何生产结果}。
+另外 \src{make\_figures.py} 里 fig17(b) 的标题仍写「$+9.8\%$，上界」，
+与论文已撤回该结论的说法矛盾（实测 $+9.36\%$），已一并改正；
+「不收缩」算例的时限也已延长到 $139$ h，使论文引用的 $128.90$ h 可由交付脚本直接复现。
+
+\subsection{参考文献核查}
+
+$16$ 条全部真实存在（$12$ 个 DOI 经 Crossref API 命中），无一条编造。改动：
+\begin{itemize}
+  \item 删除 \src{kayran2017}——该文的「活化能」是修正 Arrhenius 式的 kW/kg，
+  与 kJ/mol 不可比，\textbf{不支持}论文原来的「$20\sim40$ kJ/mol」论点；
+  该论点另一支撑 \src{karatas1997} 的数值也无法确认（两个二手来源互相矛盾），
+  故整句改为只给本题的 $E_a=32.0$ kJ/mol 与 Arrhenius 形式的引用；
+  \item 删除 \src{pharmacopoeia2020}——正文检索「药典」只命中条目本身，
+  格式规范第七条要求列出即须在正文标注；
+  \item 更正 \src{chaedir2019} 作者（多写 Kurnia、漏 Mujumdar/Xu）、
+  \src{luikov1966} 的析出式著录、\src{incropera2007} 出版地，并注明
+  \src{wagner2002} 中 $2383$ kJ/kg 对应 $50\,^\circ$C；
+  \item 补齐 \src{mayor2004}、\src{kowalski1996}（收缩建模）、\src{zhang2022}（背景）、
+  \src{incropera2007}（Robin 条件）四处引用。
+\end{itemize}
+
+oindent 现状：$14$ 条参考文献全部被正文引用，正文引用的 key 也全部有条目
+（判据：\texttt{python probe/check\_citations.py}）。
+
+\subsection{一个此前没被发现的交付风险}
+
+论文 PDF 内嵌的是 \src{paper/figures/} 下的插图，而支撑材料包里放的是
+\src{figures/} 下的插图。第三轮把面扩散系数由调和平均改成算术平均后只重新生成了
+后者，\textbf{于是论文里的 $21$ 张图全部是改动前的旧图}——逐像素比较全部不同。
+这属于「支撑材料与论文内容不相符」（格式规范第十一条），本轮已把新图复制过去并重新编译，
+现在两边逐像素一致。
+
+\end{document}

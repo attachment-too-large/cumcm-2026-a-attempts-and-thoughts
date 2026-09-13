@@ -1,0 +1,233 @@
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex.fmt)
+ restricted \write18 enabled.
+entering extended mode
+(中药材烘干_两方案对比检验报告_LaTeX版.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(D:\miktex\tex/latex/ctex\ctexart.cls
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+(D:\miktex\tex/latex/ctex/config\ctexbackend.cfg)
+(D:\miktex\tex/latex/l3kernel\expl3.sty
+(D:\miktex\tex/latex/l3backend\l3backend-xetex.def))
+Document Class: ctexart 2026/08/11 v2.6.5 Chinese adapter for class article (CT
+EX)
+(D:\miktex\tex/latex/ctex\ctexhook.sty
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+) (D:\miktex\tex/latex/ctex\ctexpatch.sty
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+) (D:\miktex\tex/latex/base\fix-cm.sty (D:\miktex\tex/latex/base\ts1enc.def))
+(D:\miktex\tex/latex/ctex/config\ctexopts.cfg)
+(D:\miktex\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(D:\miktex\tex/latex/base\size12.clo))
+(D:\miktex\tex/latex/ctex/engine\ctex-engine-xetex.def
+(D:\miktex\tex/xelatex/xecjk\xeCJK.sty
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+(D:\miktex\tex/latex/l3packages/xtemplate\xtemplate.sty)
+(D:\miktex\tex/latex/fontspec\fontspec.sty
+(D:\miktex\tex/latex/l3packages/xparse\xparse.sty)
+(D:\miktex\tex/latex/fontspec\fontspec-xetex.sty
+(D:\miktex\tex/latex/base\fontenc.sty)
+(D:\miktex\tex/latex/fontspec\fontspec.cfg)))
+(D:\miktex\tex/xelatex/xecjk\xeCJK.cfg)))
+(D:\miktex\tex/latex/zhnumber\zhnumber.sty
+(D:\miktex\tex/latex/zhnumber\zhnumber-utf8.cfg))
+(D:\miktex\tex/latex/ctex/scheme\ctex-scheme-chinese-article.def
+(D:\miktex\tex/latex/ctex/config\ctex-name-utf8.cfg))
+(D:\miktex\tex/latex/ctex/fontset\ctex-fontset-windows.def))
+(D:\miktex\tex/latex/ctex/config\ctex.cfg)
+(D:\miktex\tex/latex/geometry\geometry.sty
+(D:\miktex\tex/latex/graphics\keyval.sty)
+(D:\miktex\tex/generic/iftex\ifvtex.sty (D:\miktex\tex/generic/iftex\iftex.sty)
+) (D:\miktex\tex/latex/geometry\geometry.cfg))
+(D:\miktex\tex/latex/hyperref\hyperref.sty
+(D:\miktex\tex/latex/kvsetkeys\kvsetkeys.sty)
+(D:\miktex\tex/generic/kvdefinekeys\kvdefinekeys.sty)
+(D:\miktex\tex/generic/pdfescape\pdfescape.sty
+(D:\miktex\tex/generic/ltxcmds\ltxcmds.sty)
+(D:\miktex\tex/generic/pdftexcmds\pdftexcmds.sty
+(D:\miktex\tex/generic/infwarerr\infwarerr.sty)))
+(D:\miktex\tex/latex/hycolor\hycolor.sty)
+(D:\miktex\tex/latex/hyperref\nameref.sty
+(D:\miktex\tex/latex/refcount\refcount.sty)
+(D:\miktex\tex/generic/gettitlestring\gettitlestring.sty
+(D:\miktex\tex/latex/kvoptions\kvoptions.sty)))
+(D:\miktex\tex/latex/etoolbox\etoolbox.sty)
+(D:\miktex\tex/generic/stringenc\stringenc.sty)
+(D:\miktex\tex/latex/hyperref\pd1enc.def)
+(D:\miktex\tex/generic/intcalc\intcalc.sty)
+(D:\miktex\tex/latex/hyperref\puenc.def) (D:\miktex\tex/latex/url\url.sty)
+(D:\miktex\tex/generic/bitset\bitset.sty
+(D:\miktex\tex/generic/bigintcalc\bigintcalc.sty)))
+(D:\miktex\tex/latex/hyperref\hxetex.def
+(D:\miktex\tex/latex/rerunfilecheck\rerunfilecheck.sty
+(D:\miktex\tex/generic/uniquecounter\uniquecounter.sty)))
+(D:\miktex\tex/latex/amsmath\amsmath.sty
+For additional information on amsmath, use the `?' option.
+(D:\miktex\tex/latex/amsmath\amstext.sty
+(D:\miktex\tex/latex/amsmath\amsgen.sty))
+(D:\miktex\tex/latex/amsmath\amsbsy.sty)
+(D:\miktex\tex/latex/amsmath\amsopn.sty))
+(D:\miktex\tex/latex/amsfonts\amssymb.sty
+(D:\miktex\tex/latex/amsfonts\amsfonts.sty)) (D:\miktex\tex/latex/tools\bm.sty)
+ (D:\miktex\tex/latex/booktabs\booktabs.sty)
+(D:\miktex\tex/latex/tools\array.sty) (D:\miktex\tex/latex/tools\longtable.sty)
+ (D:\miktex\tex/latex/makecell\makecell.sty)
+(D:\miktex\tex/latex/graphics\graphicx.sty
+(D:\miktex\tex/latex/graphics\graphics.sty
+(D:\miktex\tex/latex/graphics\trig.sty)
+(D:\miktex\tex/latex/graphics-cfg\graphics.cfg)
+(D:\miktex\tex/latex/graphics-def\xetex.def)))
+(D:\miktex\tex/latex/listings\listings.sty
+(D:\miktex\tex/latex/listings\lstpatch.sty)
+(D:\miktex\tex/latex/listings\lstmisc.sty)
+(D:\miktex\tex/latex/listings\listings.cfg))
+(D:\miktex\tex/xelatex/xecjk\xeCJK-listings.sty
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+)
+==> First Aid for listings.sty no longer applied!
+    Expected:
+        2024/09/23 1.10c (Carsten Heinz)
+    but found:
+        2025/11/14 1.11b (Carsten Heinz)
+    so I'm assuming it got fixed.
+(D:\miktex\tex/latex/xcolor\xcolor.sty
+(D:\miktex\tex/latex/graphics-cfg\color.cfg)
+(D:\miktex\tex/latex/graphics\mathcolor.ltx))
+(D:\miktex\tex/latex/caption\caption.sty
+(D:\miktex\tex/latex/caption\caption3.sty)
+(D:\miktex\tex/latex/caption\ltcaption.sty))
+(D:\miktex\tex/latex/enumitem\enumitem.sty)
+(D:\miktex\tex/latex/listings\lstlang1.sty)
+No file 中药材烘干_两方案对比检验报告_LaTeX版.aux.
+*geometry* driver: auto-detecting
+*geometry* detected driver: xetex
+
+Package hyperref Warning: Rerun to get /PageLabels entry.
+
+(D:\miktex\tex/latex/amsfonts\umsa.fd) (D:\miktex\tex/latex/amsfonts\umsb.fd)
+(body_compare.tex
+Overfull \hbox (150.1243pt too wide) in paragraph at lines 20--34
+ [] 
+[1]
+Missing character: There is no ① in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ② in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ③ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ④ in font [lmroman10-regular]:mapping=tex-text;!
+
+Overfull \hbox (56.95647pt too wide) in paragraph at lines 48--56
+ [] 
+Missing character: There is no ① in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ③ in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ② in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ④ in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ① in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ② in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ③ in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ④ in font [lmroman12-regular]:mapping=tex-text;!
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `math shift' on input line 76.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `math shift' on input line 76.
+
+Missing character: There is no 中 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 心 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 表 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 面 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 表 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no 面 in font [lmroman8-regular]:mapping=tex-text;!
+Missing character: There is no ① in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ② in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ③ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ④ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ⟹ in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ⟹ in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ① in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ④ in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ⟹ in font [lmroman12-regular]:mapping=tex-text;!
+[2] [3]
+Missing character: There is no ✓ in font [lmroman10-regular]:mapping=tex-text;!
+
+Overfull \hbox (15.96225pt too wide) in paragraph at lines 212--220
+ [] 
+Missing character: There is no ✓ in font [lmroman12-regular]:mapping=tex-text;!
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `math shift' on input line 260.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `\nabla' on input line 260.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `\ln' on input line 260.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `\rho' on input line 260.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `subscript' on input line 260.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `math shift' on input line 260.
+
+[4]
+Missing character: There is no ⟹ in font [lmroman12-regular]:mapping=tex-text;!
+Missing character: There is no ⟹ in font [lmroman12-regular]:mapping=tex-text;!
+[5]
+Overfull \hbox (482.21516pt too wide) in paragraph at lines 338--347
+ [] 
+
+Overfull \hbox (380.18965pt too wide) in paragraph at lines 367--381
+ [] 
+[6]
+Overfull \hbox (499.83128pt too wide) in paragraph at lines 389--400
+ [] 
+Missing character: There is no ① in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ② in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ① in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ② in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ③ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ③ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ④ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ④ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ⑤ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ⑥ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ⑤ in font [lmroman10-regular]:mapping=tex-text;!
+Missing character: There is no ⑦ in font [lmroman10-regular]:mapping=tex-text;!
+
+Overfull \hbox (681.4636pt too wide) in paragraph at lines 408--417
+ [] 
+
+Overfull \hbox (620.8606pt too wide) in paragraph at lines 431--442
+ [] 
+[7]
+! TeX capacity exceeded, sorry [input stack size=10000].
+\@let@token ...fvmode \else \aftergroup \maybe@ic 
+                                                  \fi 
+l.465 ...m \textbf{补全参考文献引用}（当前 0 次 \texttt{\cite}
+                                                  ）。
+Output written on 中药材烘干_两方案对比检验报告_LaTeX版.pdf (7 pages).
+Transcript written on 中药材烘干_两方案对比检验报告_LaTeX版.log.

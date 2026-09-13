@@ -1,0 +1,65 @@
+forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Extra alignment tab has been changed to \cr.
+<template> ...egin \relax \d@llarend \endtemplate 
+                                                  
+l.29 P4 &
+          h_m-2% & +0.0518 & +0.101 \\
+You have given more \span or & marks than there were
+in the preamble to the \halign or \valign now in progress.
+So I'll assume that you meant to type \cr instead.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.29 P4 & h_
+            m-2% & +0.0518 & +0.101 \\
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.30 P4 &
+          D+1% & -0.4449 & -0.871 \\
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Extra alignment tab has been changed to \cr.
+<template> ...egin \relax \d@llarend \endtemplate 
+                                                  
+l.33 P4 &
+          D-2% & +0.9175 & +1.795 \\
+You have given more \span or & marks than there were
+in the preamble to the \halign or \valign now in progress.
+So I'll assume that you meant to type \cr instead.
+
+! Misplaced \noalign.
+<recently read> \noalign 
+                         
+l.34 \bottomrule
+                
+I expect to see \noalign only after the \cr of
+an alignment. Proceed, and I'll ignore this case.
+
+! Missing } inserted.
+<inserted text> 
+                }
+l.35 \end
+         {tabular}
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+! Missing \endgroup inserted.
+<inserted text> 
+              

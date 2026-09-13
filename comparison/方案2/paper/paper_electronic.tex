@@ -1,0 +1,78 @@
+% =====================================================================
+%  2026 高教社杯全国大学生数学建模竞赛  A 题  药材的烘干问题
+%  【电子版 / 提交版】去掉承诺书与编号专用页，第一页即摘要页
+%  依据《全国大学生数学建模竞赛论文格式规范（2026 年修订稿）》第十条
+%  编译：xelatex paper_electronic.tex
+% =====================================================================
+% !TeX program = xelatex
+\documentclass[withoutpreface,bwprint]{cumcmthesis}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{array}
+\usepackage{longtable}
+
+\hypersetup{pdftitle={药材的烘干问题}, pdfauthor={}, unicode=true}
+
+% 版面压缩：正文页数上限为 30 页（格式规范第四条），在不违反规范的前提下
+% 收紧浮动体与文本之间的垂直间距
+\setlength{\textfloatsep}{3pt plus 1pt minus 1pt}
+\setlength{\floatsep}{3pt plus 1pt minus 1pt}
+\setlength{\intextsep}{3pt plus 1pt minus 1pt}
+% 题注上下留白：默认 \abovecaptionskip=10pt，收紧后每幅图/表省 7pt
+\setlength{\abovecaptionskip}{3pt}
+\setlength{\belowcaptionskip}{2pt}
+
+\definecolor{lstbg}{RGB}{248,248,248}
+\definecolor{lstcmt}{RGB}{0,128,0}
+\definecolor{lstkw}{RGB}{0,0,200}
+\lstset{
+  language=Python,
+  backgroundcolor=\color{lstbg},
+  basicstyle=\ttfamily\fontsize{6.6}{7.6}\selectfont,
+  keywordstyle=\color{lstkw}\bfseries,
+  commentstyle=\color{lstcmt},
+  stringstyle=\color{red!70!black},
+  numbers=left,
+  numberstyle=\ttfamily\fontsize{5.5}{6.5}\selectfont\color{gray},
+  numbersep=5pt,
+  frame=single,
+  rulecolor=\color{gray!45},
+  breaklines=true,
+  breakatwhitespace=false,
+  postbreak=\mbox{\textcolor{gray}{$\hookrightarrow$}\space},
+  columns=flexible,
+  keepspaces=true,
+  showstringspaces=false,
+  extendedchars=true,
+  tabsize=4,
+  xleftmargin=14pt,
+  framexleftmargin=14pt,
+  captionpos=b,
+}
+
+\title{药材的烘干问题}
+\tihao{A}
+\baominghao{}
+\schoolname{}
+\membera{}
+\memberb{}
+\memberc{}
+\supervisor{}
+\yearinput{2026}
+\monthinput{9}
+\dayinput{}
+
+\begin{document}
+\maketitle
+
+\input{paper_body_a.tex}
+\input{paper_body_b.tex}
+\input{paper_appendix.tex}
+
+\end{document}

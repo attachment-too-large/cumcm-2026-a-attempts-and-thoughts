@@ -1,0 +1,2 @@
+﻿s05_verification.py exit=0 elapsed=459s
+s11_recheck_conservation.py exit=0 elapsed=129s

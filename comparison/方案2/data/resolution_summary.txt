@@ -1,0 +1,60 @@
+==============================================================================
+RESOLUTION STUDY, PROBLEM 3 (Appendix 3, fixed radius)
+==============================================================================
+    method    n    dt  C_center   C_surf   C_mean      wall
+   MOL/BDF   75 600.0  0.151460 0.053709 0.124869  0.141933
+   MOL/BDF  150 600.0  0.151592 0.053719 0.125266  0.219049
+   MOL/BDF  300 600.0  0.151647 0.053724 0.125439  0.305611
+   MOL/BDF  600 600.0  0.151669 0.053727 0.125508  0.465231
+   MOL/BDF 1200 600.0  0.151677 0.053727 0.125533  0.741988
+FV/CN-node  200   1.0  0.151621 0.053722 0.124307 18.354201
+FV/CN-node  400   1.0  0.151659 0.053725 0.124382 20.212211
+FV/CN-node  800   1.0  0.151673 0.053727 0.124410 24.203392
+FV/CN-node 1600   1.0  0.151678 0.053728 0.124420 31.305247
+FV/CN-cell  200   1.0  0.151516 0.051478 0.124021 18.684653
+FV/CN-cell  400   1.0  0.151613 0.052214 0.124227 20.674678
+FV/CN-cell  800   1.0  0.151654 0.052791 0.124329 25.041586
+FV/CN-cell 1600   1.0  0.151670 0.053211 0.124380 32.266307
+
+Convergence of C_centre at t = 2.0e5 s, per scheme
+   FV/CN-node n=  400  C=0.1516587   diff=3.82e-05   observed order=-
+   FV/CN-node n=  800  C=0.1516731   diff=1.43e-05   observed order=1.41
+   FV/CN-node n= 1600  C=0.1516779   diff=4.82e-06   observed order=1.57
+   FV/CN-cell n=  400  C=0.1516125   diff=9.63e-05   observed order=-
+   FV/CN-cell n=  800  C=0.1516538   diff=4.13e-05   observed order=1.22
+   FV/CN-cell n= 1600  C=0.1516705   diff=1.67e-05   observed order=1.31
+   MOL    n=  150  C=0.1515917   diff=1.31e-04   observed order=-
+   MOL    n=  300  C=0.1516475   diff=5.58e-05   observed order=1.23
+   MOL    n=  600  C=0.1516693   diff=2.18e-05   observed order=1.36
+   MOL    n= 1200  C=0.1516770   diff=7.69e-06   observed order=1.50
+   node(N=1600) - cell(N=1600) = 7.46e-06  (0.005 % of the value)
+   node(N=1600) - MOL(n=1200)  = 9.24e-07  (0.001 % of the value)
+
+==============================================================================
+RESOLUTION STUDY, PROBLEM 4 (Appendix 4, shrinkage)
+==============================================================================
+    method    n  C_center   C_surf   C_mean
+   MOL/BDF  150  0.141937 0.053068 0.112896
+   MOL/BDF  300  0.141959 0.053070 0.112945
+   MOL/BDF  600  0.141966 0.053071 0.112959
+   MOL/BDF 1200  0.141967 0.053071 0.112963
+FV/CN-node  200  0.141948 0.053069 0.112363
+FV/CN-node  400  0.141962 0.053071 0.112383
+FV/CN-node  800  0.141966 0.053071 0.112389
+FV/CN-node 1600  0.141967 0.053071 0.112390
+FV/CN-cell  200  0.141845 0.052373 0.112191
+FV/CN-cell  400  0.141924 0.052743 0.112316
+FV/CN-cell  800  0.141953 0.052940 0.112366
+FV/CN-cell 1600  0.141963 0.053026 0.112383
+
+==============================================================================
+MEAN MOISTURE: FULL PDE vs REDUCED FIRST-EIGENVALUE MODEL
+==============================================================================
+  problem 3 : Cbar(6h,12h,24h,48h) PDE = [0.78066 0.3353  0.18389 0.13137]
+  problem 3 : Cbar(6h,12h,24h,48h) LUM = [0.78105 0.32218 0.1578  0.11104]
+  problem 3 : max relative deviation after 6 h = 15.66 %
+      the cross-section MEAN reaches 0.15 kg/kg at 35.17 h (the centre needs longer)
+  problem 4 : Cbar(6h,12h,24h,48h) PDE = [1.06237 0.47288 0.20335 0.12151]
+  problem 4 : Cbar(6h,12h,24h,48h) LUM = [1.15653 0.46685 0.17202 0.10218]
+  problem 4 : max relative deviation after 6 h = 16.86 %
+      the cross-section MEAN reaches 0.15 kg/kg at 34.50 h (the centre needs longer)

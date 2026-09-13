@@ -1,0 +1,63 @@
+% !TeX program = xelatex
+\PassOptionsToPackage{hidelinks}{hyperref}
+\documentclass[withoutpreface,bwprint]{cumcmthesis}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs,array,longtable,makecell}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{enumitem}
+\definecolor{lstbg}{RGB}{248,248,248}
+\definecolor{lstcmt}{RGB}{0,128,0}
+\definecolor{lstkw}{RGB}{0,0,200}
+\lstset{language=Python, backgroundcolor=\color{lstbg},
+  basicstyle=\ttfamily\fontsize{7}{8.4}\selectfont,
+  keywordstyle=\color{lstkw}\bfseries, commentstyle=\color{lstcmt},
+  numbers=left, numberstyle=\tiny\color{gray}, numbersep=5pt, frame=single,
+  rulecolor=\color{gray!45}, breaklines=true, columns=flexible,
+  keepspaces=true, showstringspaces=false, extendedchars=true, tabsize=4}
+\captionsetup{font={small,bf},labelsep=quad}
+\setlength{\parskip}{2pt}
+
+\title{中药材热风烘干问题的耦合扩散建模与逐步推导}
+\tihao{A}
+\baominghao{}\schoolname{}\membera{}\memberb{}\memberc{}\supervisor{}
+\yearinput{2026}\monthinput{9}\dayinput{}
+\begin{document}
+\maketitle
+\begin{abstract}
+
+中药材热风烘干是「热湿耦合传递 + 尺寸收缩」的典型问题。本文以圆柱形药材（长 25 cm、
+半径 2 cm）为对象，建立温度—干基含水率耦合的轴对称扩散方程组，并给出\textbf{从物理守恒
+到可编程实现的完整推导}。
+
+\textbf{建模方面}，以环形壳层为控制体，由能量守恒与 Fourier 定律推得
+$\rho c_p\partial_tT=r^{-1}\partial_r(rk\partial_rT)$；把控制体绑定在干物质上，由水分守恒与
+Fick 定律推得 $\partial_tC=r^{-1}\partial_r(rD\partial_rC)$。表面取 Robin 条件，中心取对称
+条件，初始条件由题面给出。引入无量纲数（$Bi=1.389$、$Bi_m=3.24$、$\mathrm{Le}=0.029$）
+先做量级判断：热扩散特征时间 2369 s、水分扩散特征时间 $8.1\times10^4$ s，两者相差 34 倍，
+预告了「温度显著上升、水分仅表层变化」的结果形态。
+
+\textbf{收缩处理方面}，引入物质坐标 $\xi=r/R(t)$，证明几何相似收缩下对流项与坐标变换项
+精确抵消，移动边界问题化为固定域纯扩散问题。本文同时指出该推导中「干物质守恒」与
+「$\rho_d$ 由局部含水率决定」之间的内在张力，并给出一条只需单条假设、无逻辑缺口的替代
+推法，两者最终得到同一个方程。
+
+\textbf{数值方法方面}，采用节点中心有限体积离散（表面节点恰好落在物理边界上）与
+$\theta$ 法时间推进（取 $\theta=1/2$ 为 Crank--Nicolson，前 4 步改用隐式 Euler 作
+Rannacher 启动以抑制初值跳跃引起的振荡）。本文给出该格式守恒性的严格证明（望远镜求和），
+以及放大因子 $g=(1+z/2)/(1-z/2)\to-1$ 的推导，说明为何必须做 Rannacher 启动。
+
+\textbf{结果}：问题 1 在 1800 s 内温度整体升至 $33.6\sim36.8$ ℃、水分仅表层由 2.55 降至
+1.5109；问题 2 在 3 h 末温度趋于均匀（中心 49.85 ℃）；问题 3 的烘干时长为
+$205\,559\sim205\,810$ s（取决于环境数据处理口径）；问题 4 的收缩对照实验表明
+\textbf{收缩使烘干时间缩短 60.6\%}，远大于物性表差异的影响。
+
+\textbf{关键词}：热湿耦合扩散；干基含水率；Robin 边界；物质坐标；有限体积法；
+Rannacher 启动；尺寸收缩
+
+\end{abstract}
+\input{body_detail.tex}
+\end{document}

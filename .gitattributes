@@ -1,0 +1,12 @@
+# 统一按 LF 存储，避免跨平台查看时出现多余字符
+* text=auto eol=lf
+
+# 二进制文件不参与换行转换
+*.pdf binary
+*.png binary
+*.xlsx binary
+*.zip binary
+*.rar binary
+*.doc binary
+*.docx binary
+*.npz binary
