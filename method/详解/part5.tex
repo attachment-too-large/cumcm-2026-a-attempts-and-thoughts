@@ -1,15 +1,26 @@
 % =====================================================================
-%  第五部分  对照求解器与结果文件
+%  第五部分  其余程序逐行解释
 % =====================================================================
-\part{对照求解器与结果文件}
+\part{其余程序逐行解释}
 
-第三部分讲了 \texttt{spectral.py}、\texttt{common.py}、\texttt{analytic\_p1.py} 与 \texttt{run\_all.py}。还有五个文件没有讲：两个对照求解器 \texttt{fv\_theta.py} 与 \texttt{fv\_uniform.py}，生成结果文件的 \texttt{make\_results.py}，画图的 \texttt{make\_figs.py} 与 \texttt{make\_fig3.py}。这一部分逐个讲清楚，最后说明从运行验证到出表出图的完整顺序。每一段代码清单都取自真实文件，清单之前写明它对应文件里的第几行到第几行。
+第三部分讲了 \texttt{spectral.py}、\texttt{common.py}、\texttt{analytic\_p1.py}
+以及三个直接调它们的驱动脚本。还有六个文件没有讲：
+两套对照求解器 \texttt{fv\_theta.py} 与 \texttt{fv\_uniform.py}，
+生成结果文件的 \texttt{make\_results.py}，
+插图体系 \texttt{fig\_core.py} 与 \texttt{make\_figures.py}，
+以及补算受控算例的 \texttt{make\_controlled\_comparison.py}。
+这一部分逐个讲清楚，最后说明从运行验证到出表出图的完整顺序。
+
+每一段代码清单都取自真实文件，清单之前写明它对应文件里的第几行到第几行。
+
 % =====================================================================
 \section{对照求解器之一：节点中心有限体积 fv\_theta.py}
 
 \subsection{这个文件的两个用途}
 
-第三部分说明过为什么要有对照求解器：程序算错了不会报错，只会给出一个看起来正常的数，唯一的办法是用完全不同的方法算同一个问题。这个文件就是第二种方法，它做两件事。第一，用节点中心有限体积法加定步长 theta 法求解问题一到问题四，与谱配置法对比。第二，研究一个具体问题：时间方向用固定步长、并把物性冻结在上一时间步时，烘干时间的误差随步长怎样变化，复跑报告第 11 节给出了结论：这个格式在时间方向只有一阶精度。
+第三部分说明过为什么要有对照求解器：程序算错了不会报错，只会给出一个看起来正常的数，唯一的办法是用完全不同的方法算同一个问题。这个文件就是第二种方法，它做两件事。
+
+第一，用节点中心有限体积法加定步长 theta 法求解问题一到问题四，与谱配置法对比。第二，研究一个具体问题：时间方向用固定步长、并把物性冻结在步首时，烘干时间的误差随步长怎样变化。复跑报告第 11 节给出的结论是：这个格式在时间方向只有一阶精度。
 
 \subsection{有限体积法的三个概念与网格记号}
 
@@ -56,8 +67,18 @@ vol_N=\frac{1}{2}\left(h-\frac{h^2}{4}\right)=\frac{h}{2}-\frac{h^2}{8},
 \end{equation}
 
 这就是 \texttt{vol[N] = h / 2.0 - h * h / 8.0} 的来历。
+
 \why{最后一个控制体的测度为什么不是 h 除以 2}
 测度里的因子 $\xi$ 在 $1-h/2$ 到 $1$ 上接近 $1$ 而不是常数；若直接用半宽乘端点值得到 $h/2$，误差是 $h^2/8$，相对误差 $h/4$，当 $N=1600$ 时约万分之一点六。这个偏差会让表面通量出现系统性误差，而表面通量直接决定烘干时间。
+
+\begin{lstlisting}[language=Python]
+    vol = np.empty(N + 1)
+    vol[0] = h * h / 8.0
+    vol[1:N] = xi[1:N] * h
+    vol[N] = h / 2.0 - h * h / 8.0
+\end{lstlisting}
+
+上面四行是 \texttt{fv\_theta.py} 的第 49 行到第 52 行。\texttt{np.empty(N + 1)} 建一个长度 $N+1$ 的空数组，\texttt{vol[1:N]} 是切片、包含下标 $1$ 到 $N-1$。
 
 \textbf{一个自洽检验。}整个区域的测度是 $\int_0^1\xi\,\mathrm{d}\xi=\left[\xi^2/2\right]_0^1=\frac12$。用等差数列求和公式 $\sum_{i=1}^{n}i=\frac{n(n+1)}{2}$ 取 $n=N-1$，内部测度之和是 $h^2\frac{(N-1)N}{2}=\frac{1}{N^2}\frac{(N-1)N}{2}=\frac{N-1}{2N}$。三部分相加：
 \begin{equation}
@@ -69,9 +90,9 @@ vol_0+\sum_{i=1}^{N-1}vol_i+vol_N
 其中首尾的 $h^2/8$ 与 $-h^2/8$ 抵消，最后一步把 $h=1/N$ 代入 $h/2$。取 $N=5$、$h=0.2$ 实算，测度数组是 $[0.005,\,0.04,\,0.08,\,0.12,\,0.16,\,0.095]$：首项是 $h^2/8=0.005$，中间四项是 $\xi_ih$，末项是 $0.1-0.005=0.095$，六项和正好是 $0.5$。
 
 \keypoint
-体积测度是 $\int\xi\,\mathrm{d}\xi$ 在一个控制体上的值：内部是 $\xi_ih$，圆心处是 $h^2/8$，表面处是 $h/2-h^2/8$，三部分加起来必须等于 $1/2$。
+体积测度是 $\int\xi\,\mathrm{d}\xi$ 在一个控制体上的值：内部是 $\xi_ih$，圆心处是 $h^2/8$，表面处是 $h/2-h^2/8$，三部分加起来必须等于 $1/2$。这三行测度代码，加上后面主轴上的两段特判，就是「不用正则化坐标」要付的代价。主求解器因为换了坐标，这三行完全不需要。
 
-\subsection{面通量为什么取相邻节点系数的算术平均}
+\subsection{面通量与离散算子}
 
 第 $i$ 与第 $i+1$ 个控制体之间的面在 $\xi_{i+1/2}$ 处，穿过它的通量写成
 \begin{equation}
@@ -87,37 +108,103 @@ coef_{i+1/2}=\frac{coef_i+coef_{i+1}}{2}.
 \frac{coef_i+coef_{i+1}}{2}=coef_i+\frac h2c'+\frac{h^2}{4}c''+\cdots ,
 \end{equation}
 
-而面位置在 $\xi_i$ 右侧 $h/2$ 处的真值是$coef\left(\xi_i+\frac h2\right)=coef_i+\frac h2c'+\frac{h^2}{8}c''+\cdots$。两者相减，$coef_i$ 项与 $\frac h2c'$ 项消掉，剩下$\left(\frac{h^2}{4}-\frac{h^2}{8}\right)c''+\cdots=\frac{h^2}{8}c''+\cdots$，
+而面位置在 $\xi_i$ 右侧 $h/2$ 处的真值是 $coef\left(\xi_i+\frac h2\right)=coef_i+\frac h2c'+\frac{h^2}{8}c''+\cdots$。两者相减，$coef_i$ 项与 $\frac h2c'$ 项消掉，剩下 $\left(\frac{h^2}{4}-\frac{h^2}{8}\right)c''+\cdots=\frac{h^2}{8}c''+\cdots$，
 误差是 $h^2$ 量级，与整个格式的空间精度同量级；若物性处处相同则 $c''=0$，算术平均精确。
+
 \why{什么情况下不能用算术平均}
-若物性在每个控制体内是常数、在面上跳跃，正确做法是取调和平均$2coef_icoef_{i+1}/(coef_i+coef_{i+1})$，它保证面上通量连续。本题物性由含水率与温度决定，两者在空间上都是光滑函数，不存在跳跃。
+若物性在每个控制体内是常数、在面上跳跃，正确做法是取调和平均 $2coef_icoef_{i+1}/(coef_i+coef_{i+1})$，它保证面上通量连续。本题物性由含水率与温度决定，两者在空间上都是光滑函数，不存在跳跃。
 
-\subsection{清单：网格与主循环}
+把式 \eqref{eq:p5-face} 代入守恒式，得到半离散方程
+\begin{equation}
+\frac{\mathrm{d}\phi_i}{\mathrm{d}t}=\frac{1}{R^2\kappa_ivol_i}\left(g_{i+1/2}-g_{i-1/2}\right),
+\label{eq:p5-fvode}
+\end{equation}
 
-文件第 20 行到第 28 行，函数 \texttt{simulate} 的开头：
+其中 $\kappa_i$ 是容量：水分场取 $1$，温度场取 $\rho c_p$。
+
+文件第 103 行到第 133 行，函数 \texttt{\_operator} 的全部内容：
 
 \begin{lstlisting}[language=Python]
-def simulate(N, prob, t_end, dt_plan, shrink=False, theta=0.5, n_ram=4,
-             t_report=None, report_idx=None):
-    h = 1.0 / N
-    xi = np.arange(N + 1) * h
-    xif = (np.arange(N) + 0.5) * h
-    vol = np.empty(N + 1)
-    vol[0] = h * h / 8.0
-    vol[1:N] = xi[1:N] * h
-    vol[N] = h / 2.0 - h * h / 8.0
+def _operator(N, h, xi, xif, vol, coef, kappa, R, beta, amb):
+    """组装三对角算子 (a, up, lo) 与边界常数向量 c，满足
+    dphi_i/dt = a_i*phi_i + up_i*phi_{i+1} + lo_i*phi_{i-1} + c_i。
+
+    coef 为扩散/导热系数（面上取算术平均），kappa 为容量（水分取 1、温度取 rho*cp），
+    beta 为表面传递系数（水分 hm、温度 h），amb 为环境值（C_air 或 T_air），单位同 phi。
+    i=0 侧由对称性 g_{-1/2} = 0 自然封闭，故第 0 行只有一个面；i=N 侧把 Robin 通量
+    -R*beta*(phi_N - amb) 展开，未知量留在对角、环境值进常数项 c。
+    """
+    a = np.zeros(N + 1)     # 主对角
+    up = np.zeros(N + 1)    # 上对角 (i -> i+1)
+    lo = np.zeros(N + 1)    # 下对角 (i -> i-1)
+    c = np.zeros(N + 1)
+
+    face = 0.5 * (coef[:-1] + coef[1:])          # 面系数（算术平均）
+    gf = xif * face / h                          # 内部面系数 xi_{i+1/2}*coef/h
+
+    inv = 1.0 / (R ** 2 * kappa * vol)           # 每行都要除的体积热容因子
+    # i = 0：轴心节点，只有外侧一个面（g_{-1/2} = 0），故只有一个非对角元
+    a[0] = -inv[0] * gf[0]
+    up[0] = inv[0] * gf[0]
+    # i = 1..N-1：内部节点，左右各一个面，对角是两者的负和
+    i = np.arange(1, N)
+    a[i] = -inv[i] * (gf[i] + gf[i - 1])
+    up[i] = inv[i] * gf[i]
+    lo[i] = inv[i] * gf[i - 1]
+    # i = N：表面节点，左侧一个面再加上 Robin 通量项 R*beta，环境值进常数项 c
+    a[N] = -inv[N] * (gf[N - 1] + R * beta)
+    lo[N] = inv[N] * gf[N - 1]
+    c[N] = inv[N] * R * beta * amb
+    return (a, up, lo), c
 \end{lstlisting}
 
-第 20 行和第 21 行是参数表：\texttt{N} 是网格数，\texttt{prob} 是问题编号，\texttt{t\_end} 是终止时刻，\texttt{dt\_plan} 是时间步计划；\texttt{theta} 默认 $0.5$、\texttt{n\_ram} 默认 $4$，分别对应 theta 法的权重与启动步数；\texttt{t\_report} 与 \texttt{report\_idx} 是想输出结果的时刻。第 22 行算 $h=1/N$，第 23 行生成 $N+1$ 个节点，第 24 行生成 $N$ 个内部面。第 25 行到第 28 行是上面推的三个测度，\texttt{np.empty(N + 1)} 建长度 $N+1$ 的空数组，\texttt{vol[1:N]} 是切片，包含下标 $1$ 到 $N-1$。文件第 30 行到第 41 行：
+\textbf{三对角矩阵}是只有主对角线及其上下各一条对角线上元素非零的矩阵；本题第 $i$ 个节点的方程只联系 $\phi_{i-1}$、$\phi_i$、$\phi_{i+1}$，所以矩阵是三对角的，三条对角线在代码里叫 \texttt{a}（主对角）、\texttt{up}（联系 $i$ 与 $i+1$）、\texttt{lo}（联系 $i$ 与 $i-1$）。
+
+这个函数把式 \eqref{eq:p5-fvode} 组装成三对角形式。第 117 行实现式 \eqref{eq:p5-face} 的面系数：\texttt{coef[:-1]} 去掉最后一个元素、\texttt{coef[1:]} 去掉第一个元素，相加乘 $0.5$ 后第 $i$ 个元素就是 $(coef_i+coef_{i+1})/2$；第 118 行再乘面位置 \texttt{xif}、除以 $h$，得到 $\xi_{i+1/2}coef_{i+1/2}/h$，数组长度 $N$ 对应 $N$ 个内部面。第 120 行的 \texttt{inv} 是每行都要除的体积热容因子，\texttt{face} 是面上的系数（算术平均），\texttt{gf} 是带上 $\xi$ 因子与 $1/h$ 的面通量系数。
+
+三段分支正是这部分开头说的代价。
+
+\textbf{第 $0$ 个节点（轴心）}只有外侧一个面，因为由 $g=\xi\,coef\,\partial\phi/\partial\xi$ 知 $\xi=0$ 处 $g=0$，圆心处的面通量恒等于零，对称条件不需要另外写，所以只有一个非对角元，对应第 122 行和第 123 行。
+
+\textbf{中间的节点}左右各一个面，第 $i$ 行右侧面的系数是 \texttt{gf[i]}、左侧是 \texttt{gf[i-1]}，
+把式 \eqref{eq:p5-face} 代入式 \eqref{eq:p5-fvode} 得
+\begin{equation}
+\frac{gf_i\left(\phi_{i+1}-\phi_i\right)-gf_{i-1}\left(\phi_i-\phi_{i-1}\right)}{R^2\kappa_ivol_i}
+=\frac{gf_i\,\phi_{i+1}-\left(gf_i+gf_{i-1}\right)\phi_i+gf_{i-1}\,\phi_{i-1}}{R^2\kappa_ivol_i},
+\end{equation}
+
+所以上对角是 $+\texttt{inv}_igf_i$、主对角是 $-\texttt{inv}_i(gf_i+gf_{i-1})$、下对角是 $+\texttt{inv}_igf_{i-1}$，与第 125 行到第 128 行一致；第 125 行用数组一次生成下标 $1$ 到 $N-1$，不需要写循环。
+
+\textbf{第 $N$ 个节点（表面）}左侧一个面再加上 Robin 通量项：表面外侧的通量由边界条件给出。第二部分把表面条件化成式 \eqref{eq:robinC}，
+即 $-coef\left.\frac{\partial\phi}{\partial r}\right|_{r=R}=\beta\left(\phi_N-\phi_{\text{amb}}\right)$，水分取 $\beta=h_m$、$\phi_{\text{amb}}=C_{\text{air}}$，温度取 $\beta=h$、$\phi_{\text{amb}}=T_{\text{air}}$；
+用 $\frac{\partial}{\partial r}=\frac1R\frac{\partial}{\partial\xi}$ 并把两边乘 $-R$，再取表面处 $\xi=1$，得到
+\begin{equation}
+g_{N+1/2}=-R\,\beta\left(\phi_N-\phi_{\text{amb}}\right).
+\label{eq:p5-gsurf}
+\end{equation}
+
+代入式 \eqref{eq:p5-fvode} 后右边是 $\left[-R\beta\left(\phi_N-\phi_{\text{amb}}\right)-gf_{N-1}\left(\phi_N-\phi_{N-1}\right)\right]/\left(R^2\kappa_Nvol_N\right)$，按未知量归并成
+$-\frac{gf_{N-1}+R\beta}{R^2\kappa_Nvol_N}\phi_N+\frac{gf_{N-1}}{R^2\kappa_Nvol_N}\phi_{N-1}+\frac{R\beta}{R^2\kappa_Nvol_N}\phi_{\text{amb}}$，三项依次进主对角、下对角与常数向量 \texttt{c}，对应第 130 行到第 132 行：未知量留在对角，环境值进常数项 \texttt{c[N]}。
+
+符号检查：干燥时 $\phi_N>\phi_{\text{amb}}$，由式 \eqref{eq:p5-gsurf} 得 $g_{N+1/2}<0$，
+而式 \eqref{eq:p5-fvode} 里它带正号，于是 $\phi_N$ 减小，与水分被带走的物理事实一致。
+
+\textbf{同一个函数组装两个场。}调用处只需要传两套系数，也就是文件第 86 行到第 89 行：
 
 \begin{lstlisting}[language=Python]
-    C = np.full(N + 1, cm.C0)
-    T = np.full(N + 1, cm.T0)
-    t = 0.0
-    step = 0
-    out_t, out_C, out_T = [], [], []
-    ri = 0
+        Lc, cc = _operator(N, h, xi, xif, vol, D, np.ones(N + 1), R,
+                           cm.hm, Cair)
+        Lt, ct = _operator(N, h, xi, xif, vol, k, rho * cp, R,
+                           cm.h, Tair)
+\end{lstlisting}
 
+水分场取 \texttt{coef=D}、容量为 $1$、表面系数 \texttt{hm}、环境值 \texttt{Cair}；温度场取 \texttt{coef=k}、容量 \texttt{rho*cp}、表面系数 \texttt{h}、环境值 \texttt{Tair}。这与主求解器的做法是一样的：算子写一份，两个场共用，只是系数不同。
+
+\subsection{清单：时间推进与 Rannacher 启动}
+
+文件第 63 行到第 67 行是步长查表：
+
+\begin{lstlisting}[language=Python]
     def cur_dt(tt):
         for (t_lim, d) in dt_plan:
             if tt < t_lim:
@@ -125,10 +212,20 @@ def simulate(N, prob, t_end, dt_plan, shrink=False, theta=0.5, n_ram=4,
         return dt_plan[-1][1]
 \end{lstlisting}
 
-第 30 行和第 31 行用 \texttt{np.full} 把含水率与温度初始化成题目给的初值，对应式 \eqref{eq:ic}。第 32 行和第 33 行记录当前时刻与已走步数，\texttt{step} 用来判断是否还在启动阶段。第 34 行的三个列表装输出，\texttt{ri} 是报告时刻的下标。第 37 行到第 41 行定义时间步计划的取用规则：\texttt{dt\_plan} 是若干二元组（时刻上限，步长），函数返回第一个满足当前时刻小于上限的步长，都不满足时返回最后一个。
-\texttt{run\_all.py} 传的是 \texttt{[(7200.0, min(1.0, d)), (1e18, d)]}，意思是前 $7200$ 秒用不超过 $1$ 秒的步长，之后用 $d$。前两个小时是升温阶段，表面含水率从 $2.55$ 急降、温度从 $28$ 升到接近 $50$ 摄氏度，而这个格式时间方向只有一阶精度、误差与步长成正比，所以变化最快的一段要用小步长。
+\texttt{dt\_plan} 是若干二元组（时刻上限，步长），函数返回第一个满足当前时刻小于上限的步长，都不满足时返回最后一个。
+\texttt{run\_all.py} 与 \texttt{verify\_data.py} 传的都是 \texttt{[(7200.0, min(1.0, d)), (1e18, d)]}，意思是前 $7200$ 秒用不超过 $1$ 秒的步长，之后用 $d$。前两个小时是升温阶段，表面含水率从 $2.55$ 急降、温度从 $28$ 升到接近 $50$ 摄氏度，而这个格式时间方向只有一阶精度、误差与步长成正比，所以变化最快的一段要用小步长。
 
-文件第 43 行到第 67 行，推进循环的全部内容：
+文件第 44 行到第 46 行是网格与内部面：
+
+\begin{lstlisting}[language=Python]
+    h = 1.0 / N
+    xi = np.arange(N + 1) * h
+    xif = (np.arange(N) + 0.5) * h
+\end{lstlisting}
+
+第 44 行算 $h=1/N$，第 45 行生成 $N+1$ 个节点，第 46 行生成 $N$ 个内部面。
+
+文件第 69 行到第 100 行，函数 \texttt{simulate} 的推进循环：
 
 \begin{lstlisting}[language=Python]
     while t < t_end - 1e-9:
@@ -138,10 +235,16 @@ def simulate(N, prob, t_end, dt_plan, shrink=False, theta=0.5, n_ram=4,
         R = float(cm.R_of(t)) if shrink else cm.R0
         Cair = float(cm.C_air(t))
         Tair = float(cm.T_air(t))
+        # Rannacher 启动：CN 对初值跳变敏感、会激发非物理的高频振荡，故前 n_ram 步
+        # 改用后向 Euler（theta=1）先把快模态阻尼掉，再切回 theta=0.5 取二阶精度。
         th = 1.0 if step < n_ram else theta
 
+        # 物性冻结在步首状态上、整步不再更新：每步于是只解两个常系数三对角系统，
+        # 代价是时间精度降为一阶（这也是本格式被称为"系数冻结"的原因）。
         rho, cp, k, D = cm.props(prob, C, T)
 
+        # 同一个 _operator 组装两个场：水分取 coef=D、容量 kappa=1、表面系数 hm、
+        # 环境 C_air；温度取 coef=k、容量 kappa=rho*cp、表面系数 h、环境 T_air。
         Lc, cc = _operator(N, h, xi, xif, vol, D, np.ones(N + 1), R,
                            cm.hm, Cair)
         Lt, ct = _operator(N, h, xi, xif, vol, k, rho * cp, R,
@@ -152,82 +255,27 @@ def simulate(N, prob, t_end, dt_plan, shrink=False, theta=0.5, n_ram=4,
         t += dt
         step += 1
 
+        # 报告时刻可能落在步内部，故只要本步末时刻越过它就记录，快照取步末状态。
         while ri < len(report_idx) and t >= report_idx[ri] - 1e-9:
             out_t.append(t); out_C.append(C.copy()); out_T.append(T.copy())
             ri += 1
     return xi, out_t, out_C, out_T
 \end{lstlisting}
 
-第 43 行的循环条件写成 \texttt{t < t\_end - 1e-9} 而不是直接比较，因为浮点累加有舍入误差，$0.1+0.2$ 不等于 $0.3$ 就是这个原因，留 $10^{-9}$ 的余量可以避免多走或少走一步。第 44 行按计划取步长，第 45 行和第 46 行把最后一步缩短成刚好走到终止时刻。第 47 行取当前半径，问题一到问题三恒为 $R_0$，问题四由附件 2 的分段线性插值给出，这里用步首时刻的值。
-第 48 行和第 49 行取烘房环境值。第 50 行决定这一步的权重，也就是下面讲的 Rannacher 启动。第 52 行是系数冻结那一行：用旧时刻的 \texttt{C} 和 \texttt{T} 算出四个物性，整个时间步内不再改变，隐式部分与显式部分都用它。第 54 行到第 57 行构造两个离散算子：水分那次的系数是 \texttt{D}、除以 $\kappa=1$、
-边界系数 \texttt{cm.hm}、环境值 \texttt{Cair}；温度那次的系数是 \texttt{k}、除以 $\kappa=\rho c_p$、边界系数 \texttt{cm.h}、环境值 \texttt{Tair}；两个调用只差这四处，这正是第二部分第五章说的两个方程形式相同的用处。第 59 行和第 60 行各解一次三对角方程组得到新时刻的含水率与温度；含水率先更新，温度用的还是旧时刻算出的物性，同一步内不再反复迭代。
-第 61 行和第 62 行推进时刻与步数。第 64 行到第 66 行在走到报告时刻时把结果复制存起来，\texttt{C.copy()} 必须写，否则存下的只是最后一次值的引用。第 67 行返回节点数组与三个输出列表。
+第 69 行的循环条件写成 \texttt{t < t\_end - 1e-9} 而不是直接比较，因为浮点累加有舍入误差，$0.1+0.2$ 不等于 $0.3$ 就是这个原因，留 $10^{-9}$ 的余量可以避免多走或少走一步。第 70 行按计划取步长，第 71 行和第 72 行是收尾处理：如果这一步会跨过终了时刻，就把步长截短到恰好落在终点上。第 73 行取当前半径，问题一到问题三恒为 $R_0$，问题四由附件 2 的分段线性插值给出，这里用步首时刻的值。
+第 74 行和第 75 行取烘房环境值。第 78 行决定这一步的权重，也就是下面讲的 Rannacher 启动，前 \texttt{n\_ram}（默认 $4$）步用 $\theta=1$、之后才用 $\theta=0.5$。第 82 行是系数冻结那一行：用旧时刻的 \texttt{C} 和 \texttt{T} 算出四个物性，整个时间步内不再改变，隐式部分与显式部分都用它。第 86 行到第 89 行构造两个离散算子，两个调用只差四处，这正是前面说的两个方程形式相同的用处。第 91 行和第 92 行各解一次三对角方程组得到新时刻的含水率与温度；含水率先更新，温度用的还是旧时刻算出的物性，同一步内不再反复迭代。
+第 93 行和第 94 行推进时刻与步数。第 97 行到第 99 行在走到报告时刻时把结果复制存起来，\texttt{C.copy()} 必须写，否则存下的只是最后一次值的引用。第 100 行返回节点数组与三个输出列表。
 
-\subsection{清单：离散算子的构造}
-
-文件第 70 行到第 93 行，函数 \texttt{\_operator} 的全部内容：
-
-\begin{lstlisting}[language=Python]
-def _operator(N, h, xi, xif, vol, coef, kappa, R, beta, amb):
-    """构造 L（三对角, 以 banded 形式返回）与边界常数向量 c。"""
-    a = np.zeros(N + 1)     # 主对角
-    up = np.zeros(N + 1)    # 上对角 (i -> i+1)
-    lo = np.zeros(N + 1)    # 下对角 (i -> i-1)
-    c = np.zeros(N + 1)
-
-    face = 0.5 * (coef[:-1] + coef[1:])          # 面系数（算术平均）
-    gf = xif * face / h                          # 内部面系数 xi_{i+1/2}*coef/h
-
-    inv = 1.0 / (R ** 2 * kappa * vol)
-    # i = 0
-    a[0] = -inv[0] * gf[0]
-    up[0] = inv[0] * gf[0]
-    # i = 1..N-1
-    i = np.arange(1, N)
-    a[i] = -inv[i] * (gf[i] + gf[i - 1])
-    up[i] = inv[i] * gf[i]
-    lo[i] = inv[i] * gf[i - 1]
-    # i = N
-    a[N] = -inv[N] * (gf[N - 1] + R * beta)
-    lo[N] = inv[N] * gf[N - 1]
-    c[N] = inv[N] * R * beta * amb
-    return (a, up, lo), c
-\end{lstlisting}
-
-\textbf{三对角矩阵}是只有主对角线及其上下各一条对角线上元素非零的矩阵；本题第 $i$ 个节点的方程只联系 $\phi_{i-1}$、$\phi_i$、$\phi_{i+1}$，所以矩阵是三对角的，三条对角线在代码里叫 \texttt{a}（主对角）、\texttt{up}（联系 $i$ 与 $i+1$）、\texttt{lo}（联系 $i$ 与 $i-1$）。
-第 77 行实现式 \eqref{eq:p5-face} 的面系数：\texttt{coef[:-1]} 去掉最后一个元素、\texttt{coef[1:]} 去掉第一个元素，相加乘 $0.5$ 后第 $i$ 个元素就是 $(coef_i+coef_{i+1})/2$；第 78 行再乘面位置 \texttt{xif}、除以 $h$，得到 $\xi_{i+1/2}coef_{i+1/2}/h$，数组长度 $N$ 对应 $N$ 个内部面。
-第 80 行的 \texttt{inv} 是离散方程的前置因子。方程本身来自把$\kappa\frac{\partial\phi}{\partial t}=\frac{1}{\xi R^2}\frac{\partial}{\partial\xi}\left(\xi\,coef\,\frac{\partial\phi}{\partial\xi}\right)$两边乘 $\xi$ 再在控制体上积分，把通量记作 $g=\xi\,coef\,\partial\phi/\partial\xi$，得到
-\begin{equation}
-\frac{\mathrm{d}\phi_i}{\mathrm{d}t}=\frac{g_{i+1/2}-g_{i-1/2}}{R^2\kappa_ivol_i},
-\qquad\text{于是}\quad \texttt{inv}=\frac{1}{R^2\kappa_ivol_i}.
-\label{eq:p5-fvode}
-\end{equation}
-
-第 81 行到第 83 行填第 $0$ 行：这里只有 $g_{1/2}$ 没有 $g_{-1/2}$，因为由 $g=\xi\,coef\,\partial\phi/\partial\xi$知 $\xi=0$ 处 $g=0$，圆心处的面通量恒等于零，对称条件不需要另外写。第 84 行到第 88 行填中间各行：第 $i$ 行右侧面的系数是 \texttt{gf[i]}、左侧是 \texttt{gf[i-1]}，
-把式 \eqref{eq:p5-face} 代入式 \eqref{eq:p5-fvode} 得
-\begin{equation}
-\frac{gf_i\left(\phi_{i+1}-\phi_i\right)-gf_{i-1}\left(\phi_i-\phi_{i-1}\right)}{R^2\kappa_ivol_i}
-=\frac{gf_i\,\phi_{i+1}-\left(gf_i+gf_{i-1}\right)\phi_i+gf_{i-1}\,\phi_{i-1}}{R^2\kappa_ivol_i},
-\end{equation}
-
-所以上对角是 $+\texttt{inv}_igf_i$、主对角是 $-\texttt{inv}_i(gf_i+gf_{i-1})$、下对角是 $+\texttt{inv}_igf_{i-1}$，与第 86 行到第 88 行一致；第 85 行用数组一次生成下标 $1$ 到 $N-1$，不需要写循环。第 89 行到第 92 行填第 $N$ 行。表面外侧的通量由边界条件给出：第二部分把表面条件化成式 \eqref{eq:robinC}，
-即 $-coef\left.\frac{\partial\phi}{\partial r}\right|_{r=R}=\beta\left(\phi_N-\phi_{\text{amb}}\right)$，水分取 $\beta=h_m$、$\phi_{\text{amb}}=C_{\text{air}}$，温度取 $\beta=h$、$\phi_{\text{amb}}=T_{\text{air}}$；
-用 $\frac{\partial}{\partial r}=\frac1R\frac{\partial}{\partial\xi}$ 并把两边乘 $-R$，再取表面处 $\xi=1$，得到
-\begin{equation}
-g_{N+1/2}=-R\,\beta\left(\phi_N-\phi_{\text{amb}}\right).
-\label{eq:p5-gsurf}
-\end{equation}
-
-代入式 \eqref{eq:p5-fvode} 后右边是$\left[-R\beta\left(\phi_N-\phi_{\text{amb}}\right)-gf_{N-1}\left(\phi_N-\phi_{N-1}\right)\right]/\left(R^2\kappa_Nvol_N\right)$，按未知量归并成
-$-\frac{gf_{N-1}+R\beta}{R^2\kappa_Nvol_N}\phi_N+\frac{gf_{N-1}}{R^2\kappa_Nvol_N}\phi_{N-1}+\frac{R\beta}{R^2\kappa_Nvol_N}\phi_{\text{amb}}$，三项依次进主对角、下对角与常数向量 \texttt{c}。符号检查：干燥时 $\phi_N>\phi_{\text{amb}}$，由式 \eqref{eq:p5-gsurf} 得 $g_{N+1/2}<0$，
-而式 \eqref{eq:p5-fvode} 里它带正号，于是 $\phi_N$ 减小，与水分被带走的物理事实一致。
-
-\subsection{清单：theta 法与 Rannacher 启动}
-
-文件第 96 行到第 108 行，函数 \texttt{\_theta\_step}：
+文件第 136 行到第 154 行，函数 \texttt{\_theta\_step}：
 
 \begin{lstlisting}[language=Python]
 def _theta_step(op, c, phi, dt, th):
+    """推进一个时间步，解 (I - dt*th*L) phi_new = phi + dt*((1-th)*L phi + c)。
+
+    op 为 _operator 返回的 (a, up, lo)，th 为 theta（1 为后向 Euler、0.5 为 CN）。
+    显式部分只做乘加，故右端不需要额外三对角求解；矩阵按 solve_banded 要求的
+    (1, 1) 带宽装箱，不必构造稠密矩阵。
+    """
     a, up, lo = op
     n = len(phi)
     lhs_a = 1.0 - dt * th * a
@@ -256,18 +304,19 @@ $\theta=0$ 时右边全是旧值，是显式欧拉法；$\theta=1$ 时全是新�
 \label{eq:p5-thetalinsys}
 \end{equation}
 
-其中 $I$ 是单位矩阵。第 99 行到第 101 行构造左边的三条对角线：\texttt{lhs\_a} 是主对角 $1-\Delta t\theta a$，因为 $a$ 是负数所以它大于 $1$；\texttt{lhs\_up} 与 \texttt{lhs\_lo} 是上下对角，\texttt{up[:-1]} 去掉最后一个元素，因为最后一行没有上对角，而那个数本来就是零。
-第 102 行和第 103 行构造右边，逐项对应式 \eqref{eq:p5-thetalinsys}：\texttt{a * phi} 是主对角乘向量，\texttt{up * np.r\_[phi[1:], 0.0]} 是上对角乘向量，其中 \texttt{np.r\_} 是拼接函数，把 \texttt{phi[1:]} 与单个 \texttt{0.0} 接成长度相同的数组，末尾补的零对应最后一行为空的上对角；下对角同理，把 \texttt{0.0} 补在最前面。
-第 104 行到第 107 行把三条对角线装成 \texttt{solve\_banded} 需要的格式。\texttt{solve\_banded} 是 scipy 的带状矩阵求解函数，只存非零对角线，快且省内存，调用格式是 \texttt{solve\_banded((l, u), ab, rhs)}，本题上下各一条；数组 \texttt{ab} 形状是 $(3,n)$，主对角放第 $1$ 行，上对角放第 $0$ 行但要向右错开一格，
-下对角放第 $2$ 行但要少最后一格，所以第 105 行写 \texttt{ab[0, 1:]}。
+其中 $I$ 是单位矩阵。第 145 行到第 147 行构造左边的三条对角线：\texttt{lhs\_a} 是主对角 $1-\Delta t\theta a$，因为 $a$ 是负数所以它大于 $1$；\texttt{lhs\_up} 与 \texttt{lhs\_lo} 是上下对角，\texttt{up[:-1]} 去掉最后一个元素，因为最后一行没有上对角，而那个数本来就是零。
+第 148 行和第 149 行构造右边，逐项对应式 \eqref{eq:p5-thetalinsys}：\texttt{a * phi} 是主对角乘向量，\texttt{up * np.r\_[phi[1:], 0.0]} 是上对角乘向量，其中 \texttt{np.r\_} 是拼接函数，把 \texttt{phi[1:]} 与单个 \texttt{0.0} 接成长度相同的数组，末尾补的零对应最后一行为空的上对角；下对角同理，把 \texttt{0.0} 补在最前面。
+第 150 行到第 153 行把三条对角线装成 \texttt{solve\_banded} 需要的格式。\texttt{solve\_banded} 是 scipy 的带状矩阵求解函数，只存非零对角线，快且省内存，调用格式是 \texttt{solve\_banded((l, u), ab, rhs)}，本题上下各一条；数组 \texttt{ab} 形状是 $(3,n)$，主对角放第 $1$ 行，上对角放第 $0$ 行但要向右错开一格，
+下对角放第 $2$ 行但要少最后一格，所以第 151 行写 \texttt{ab[0, 1:]}。
 
-第 50 行的 \texttt{th = 1.0 if step < n\_ram else theta} 表示前 \texttt{n\_ram} 步用 $\theta=1$、之后才用 $\theta=0.5$，这叫 Rannacher 启动。要知道它解决什么问题，先看两个格式怎么处理误差。把误差向量按空间算子的特征方向分解，\textbf{特征方向}是在空间算子作用下方向不变的向量，
-即 $Av=\lambda v$ 中的 $v$，$\lambda$ 叫\textbf{特征值}；误差在该方向的分量经过一个时间步被乘上的因子叫\textbf{放大因子}。本题 $A$ 的特征值都是负的，记 $\mu=-\lambda>0$：后向欧拉的放大因子是$\frac{1}{1-\Delta t\lambda}=\frac{1}{1+\Delta t\mu}$，它总在 $0$ 与 $1$ 之间、$\Delta t\mu$ 很大时接近零；Crank--Nicolson 的放大因子是
+第 78 行的 \texttt{th = 1.0 if step < n\_ram else theta} 表示前 \texttt{n\_ram} 步用 $\theta=1$、之后才用 $\theta=0.5$，这叫 Rannacher 启动。要知道它解决什么问题，先看两个格式怎么处理误差。把误差向量按空间算子的特征方向分解，\textbf{特征方向}是在空间算子作用下方向不变的向量，
+即 $Av=\lambda v$ 中的 $v$，$\lambda$ 叫\textbf{特征值}；误差在该方向的分量经过一个时间步被乘上的因子叫\textbf{放大因子}。本题 $A$ 的特征值都是负的，记 $\mu=-\lambda>0$：后向欧拉的放大因子是 $\frac{1}{1-\Delta t\lambda}=\frac{1}{1+\Delta t\mu}$，它总在 $0$ 与 $1$ 之间、$\Delta t\mu$ 很大时接近零；Crank--Nicolson 的放大因子是
 $\frac{1+\Delta t\lambda/2}{1-\Delta t\lambda/2}=\frac{1-\Delta t\mu/2}{1+\Delta t\mu/2}$，$\Delta t\mu$ 很大时它趋向 $-1$，绝对值仍不超过 $1$、格式稳定，但它不再压小高频误差，只让符号每步翻转，于是时间方向出现逐步交替、衰减很慢的振荡。问题出在起点：初值是处处等于常数的 $C$ 和 $T$，它不满足表面处的边界条件，
 因为表面一接触空气就开始失水，这个不一致让解在 $t=0$ 附近有一个急剧变化的薄层，展开后含有与 $\Delta t^2/t$ 同量级的项，Crank--Nicolson 处理不了它。前面几步改用后向欧拉可以把这批高频分量压掉，后面的 Crank--Nicolson 才给出光滑结果。后向欧拉只有一阶精度，用它的步数越多引入的额外误差越大；用 $4$ 步时这段时间的误差是
 $4$ 个 $\Delta t^2$ 量级的量，与 Crank--Nicolson 自身的截断误差同量级，不足以改变整体性质。
+
 \why{为什么可以取到 10 秒这么大的步长}
-theta 法在 $\theta$ 不小于 $\frac12$ 时无条件稳定，无论步长多大误差都不会被放大，显式格式没有这个性质。量级估算：温度场的热扩散系数 $\alpha=\frac{k}{\rho c_p}=\frac{0.36}{820\times2600}=1.69\times10^{-7}$平方米每秒（复跑报告第 1 节记录 $1.688555\times10^{-7}$）；显式格式要求步长小于$(Rh)^2/(2\alpha)$，取 $N=1600$、$R=0.02$ 米，
+theta 法在 $\theta$ 不小于 $\frac12$ 时无条件稳定，无论步长多大误差都不会被放大，显式格式没有这个性质。量级估算：温度场的热扩散系数 $\alpha=\frac{k}{\rho c_p}=\frac{0.36}{820\times2600}=1.69\times10^{-7}$ 平方米每秒（复跑报告第 1 节记录 $1.688555\times10^{-7}$）；显式格式要求步长小于 $(Rh)^2/(2\alpha)$，取 $N=1600$、$R=0.02$ 米，
 \begin{equation}
 \Delta t_{\max}=\frac{(Rh)^2}{2\alpha}
 =\frac{\left(0.02\times6.25\times10^{-4}\right)^2}{2\times1.69\times10^{-7}}
@@ -286,13 +335,15 @@ $\frac{\phi^{n+1}-\phi^{n}}{\Delta t}=\theta\left(A^n\phi^{n+1}+c^n\right)+(1-\t
 \label{eq:p5-exact}
 \end{equation}
 
-把精确解代进程序的格式，局部截断误差$\tau_n=\frac{\phi(t_{n+1})-\phi(t_n)}{\Delta t}-\theta\left(A^n\phi(t_{n+1})+c^n\right)-(1-\theta)\left(A^n\phi(t_n)+c^n\right)$；在其中加上再减去 $\theta\left(A^{n+1}\phi(t_{n+1})+c^{n+1}\right)$，把式子拆成两半：
+把精确解代进程序的格式，局部截断误差 $\tau_n=\frac{\phi(t_{n+1})-\phi(t_n)}{\Delta t}-\theta\left(A^n\phi(t_{n+1})+c^n\right)-(1-\theta)\left(A^n\phi(t_n)+c^n\right)$；在其中加上再减去 $\theta\left(A^{n+1}\phi(t_{n+1})+c^{n+1}\right)$，把式子拆成两半：
 \begin{equation}
-\tau_n=
-\underbrace{\left[\frac{\phi(t_{n+1})-\phi(t_n)}{\Delta t}
+\begin{aligned}
+\tau_n={}&\underbrace{\left[\frac{\phi(t_{n+1})-\phi(t_n)}{\Delta t}
 -\theta\left(A^{n+1}\phi(t_{n+1})+c^{n+1}\right)
--(1-\theta)\left(A^n\phi(t_n)+c^n\right)\right]}_{\text{正确格式的截断误差}}
-+\theta\left[\left(A^{n+1}-A^n\right)\phi(t_{n+1})+\left(c^{n+1}-c^n\right)\right].
+-(1-\theta)\left(A^n\phi(t_n)+c^n\right)\right]}_{\text{正确格式的截断误差}}\\
+&+\theta\left[\left(A^{n+1}-A^n\right)\phi(t_{n+1})+\left(c^{n+1}-c^n\right)\right].
+\end{aligned}
+\label{eq:p5-tau}
 \end{equation}
 
 第一个方括号是式 \eqref{eq:p5-exact} 的截断误差，$\theta=\frac12$ 时是 $\Delta t^2$ 量级。第二个方括号里 $A^{n+1}-A^n$ 是系数矩阵两个时刻之差，矩阵元素是物性的光滑函数，而物性在一步内只变化 $\Delta t$ 量级，所以每个元素之差也是 $\Delta t$ 量级；另一个因子 $\phi(t_{n+1})$ 是有限大小的数，整个第二项是 $\Delta t$ 量级。两半合起来，
@@ -320,14 +371,20 @@ $\Delta t^2$ 那一项被 $\Delta t$ 那一项盖住，局部截断误差是 $\D
 
 \subsection{find\_tdry：线性求交}
 
-文件第 111 行到第 125 行，函数 \texttt{find\_tdry} 的开头：
+文件第 157 行到第 207 行，函数 \texttt{find\_tdry}：
 
 \begin{lstlisting}[language=Python]
 def find_tdry(N, prob, dt_plan, shrink=False, hi=300000.0, crit=0.15):
-    """单次前向推进，在 max_r C 首次下穿判据处线性插值求交。"""
+    """从 t=0 单次前向推进，返回全场最大含水率首次下穿判据 crit 的时刻 [s]。
+
+    N、prob、dt_plan、shrink 同 simulate；hi 为搜索上限 3.0e5 [s]，到上限仍未
+    下穿则返回 nan；crit 为烘干判据 0.15 [kg/kg]（干基含水率）。判据取 max_r C
+    而不是平均值：轴心处水分最后才干，最大值达标即整个截面达标。
+    """
     h = 1.0 / N
     xi = np.arange(N + 1) * h
     xif = (np.arange(N) + 0.5) * h
+    # 体积测度同 simulate：节点中心格式下由 int_{xi-1/2}^{xi+1/2} xi dxi 得到。
     vol = np.empty(N + 1)
     vol[0] = h * h / 8.0
     vol[1:N] = xi[1:N] * h
@@ -338,26 +395,24 @@ def find_tdry(N, prob, dt_plan, shrink=False, hi=300000.0, crit=0.15):
     t = 0.0
     step = 0
     Cprev, tprev = None, None
-\end{lstlisting}
-
-第 111 行的 \texttt{hi} 是搜索的最长时刻 $300000$ 秒、\texttt{crit} 是判据 $0.15$。第 113 行到第 119 行与 \texttt{simulate} 的前几行相同，重新算一遍网格与测度；这个函数没有复用 \texttt{simulate}，而是自己写了一遍推进循环，因为它的每一步都要检查判据，而 \texttt{simulate} 只在指定时刻输出。第 121 行到第 124 行是初值与计数。第 125 行多出两个变量：\texttt{Cprev} 存上一步的最大含水率、\texttt{tprev} 存上一步的时刻，这两个数是线性求交要用的。文件第 126 行到第 152 行：
-
-\begin{lstlisting}[language=Python]
     while t < hi - 1e-9:
         dt = dt_plan[-1][1]
         for (t_lim, d) in dt_plan:
             if t < t_lim:
                 dt = d
                 break
+        # 时间离散口径与 simulate 不同：半径取步末（与新解同点），环境取步中点值。
         R = float(cm.R_of(t + dt)) if shrink else cm.R0   # 取步末半径
         Cair = float(cm.C_air(t + 0.5 * dt))              # 环境取步中点值
         Tair = float(cm.T_air(t + 0.5 * dt))
+        # 前 4 步 Rannacher 启动（与 simulate 的默认 n_ram=4 同口径）
         th = 1.0 if step < 4 else 0.5
         rho, cp, k, D = cm.props(prob, C, T)
         Lc, cc = _operator(N, h, xi, xif, vol, D, np.ones(N + 1), R, cm.hm, Cair)
         Lt, ct = _operator(N, h, xi, xif, vol, k, rho * cp, R, cm.h, Tair)
         Cnew = _theta_step(Lc, cc, C, dt, th)
         T = _theta_step(Lt, ct, T, dt, th)
+        # 记下本步起点 (tprev, Cprev)：判据下穿时靠这两点做插值求交。
         cprev = float(np.max(C))
         C = Cnew
         tprev, Cprev = t, cprev
@@ -372,58 +427,82 @@ def find_tdry(N, prob, dt_plan, shrink=False, hi=300000.0, crit=0.15):
     return float("nan")
 \end{lstlisting}
 
-第 127 行到第 131 行取步长，先默认取计划里最后一个步长，再从头扫描，遇到第一个满足条件的就覆盖并跳出，效果与 \texttt{cur\_dt} 相同。第 132 行取半径用的是步末时刻 $t+\Delta t$；第 133 行和第 134 行取环境值用的是步中点 $t+\Delta t/2$，环境函数在 $14400$ 秒以前是上升曲线，用中点值相当于对这一段做中点求积、比用左端点更接近积分平均；
-这两种取法与 \texttt{simulate} 的步首取值不同，但都不改变收敛阶，因为冻结系数已经把阶压到一阶了。第 135 行用 4 步 Rannacher 启动，与 \texttt{simulate} 的默认值一致。第 136 行到第 140 行与 \texttt{simulate} 相同：算物性、构造两个算子、各解一次方程组；第 139 行把新含水率存进 \texttt{Cnew} 而第 140 行把温度直接写回 \texttt{T}，写法不同是因为含水率要单独保存一步之前的值。
-第 141 行在旧值还在时算出 $\max_j\phi_j^n$ 存进 \texttt{cprev}，第 142 行才更新 \texttt{C}，第 143 行把旧时刻 $t$ 与旧最大值一起存进 \texttt{tprev} 和 \texttt{Cprev}；第 144 行把 $t$ 推到新时刻，第 146 行算新时刻的最大值，第 147 行判断是否下穿判据。
+第 157 行的 \texttt{hi} 是搜索的最长时刻 $300000$ 秒、\texttt{crit} 是判据 $0.15$。第 164 行到第 171 行与 \texttt{simulate} 的前几行相同，重新算一遍网格与测度；这个函数没有复用 \texttt{simulate}，而是自己写了一遍推进循环，因为它的每一步都要检查判据，而 \texttt{simulate} 只在指定时刻输出。第 173 行到第 176 行是初值与计数。第 177 行多出两个变量：\texttt{Cprev} 存上一步的最大含水率、\texttt{tprev} 存上一步的时刻，这两个数是线性求交要用的。
 
-现在推导第 151 行的公式。手上有两个点 $\left(t_{\text{prev}},C_{\text{prev}}\right)$ 与$\left(t,C_{\text{new}}\right)$，其中 $C_{\text{prev}}>0.15>C_{\text{new}}$。\textbf{线性插值}是用一条直线穿过两个已知点，再在直线上取中间位置的值，过这两点的直线方程是
+这个函数找的是全场最大含水率首次跌破判据的时刻。有两个设计要点。
+
+\textbf{第一，判据取全场最大值 \texttt{np.max(C)}，而不是某个固定位置的含水率。}
+理论上极值一定出现在轴心，但代码不预设这一点——取全场最大值只会让答案稍保守，而取错位置会静默给出错误答案。
+
+\textbf{第二，找到下穿的那一步之后，用线性插值求交，而不是直接返回步末时刻。}
+现在推导第 206 行的公式。手上有两个点 $\left(t_{\text{prev}},C_{\text{prev}}\right)$ 与 $\left(t,C_{\text{new}}\right)$，其中 $C_{\text{prev}}>0.15>C_{\text{new}}$。\textbf{线性插值}是用一条直线穿过两个已知点，再在直线上取中间位置的值，过这两点的直线方程是
 \begin{equation}
-C(t_*)=C_{\text{prev}}+\frac{C_{\text{new}}-C_{\text{prev}}}{t-t_{\text{prev}}}\left(t_*-t_{\text{prev}}\right)
-\;\Longrightarrow\;
-crit-C_{\text{prev}}=\frac{C_{\text{new}}-C_{\text{prev}}}{t-t_{\text{prev}}}\left(t_*-t_{\text{prev}}\right)
-\;\Longrightarrow\;
+\begin{aligned}
+&C(t_*)=C_{\text{prev}}+\frac{C_{\text{new}}-C_{\text{prev}}}{t-t_{\text{prev}}}\left(t_*-t_{\text{prev}}\right)\\
+&\quad\Longrightarrow\quad
+crit-C_{\text{prev}}=\frac{C_{\text{new}}-C_{\text{prev}}}{t-t_{\text{prev}}}\left(t_*-t_{\text{prev}}\right)\\
+&\quad\Longrightarrow\quad
 t_*=t_{\text{prev}}+\frac{crit-C_{\text{prev}}}{C_{\text{new}}-C_{\text{prev}}}\left(t-t_{\text{prev}}\right),
+\end{aligned}
 \label{eq:p5-cross}
 \end{equation}
 
-最后一步是把分式除过去再把 $t_{\text{prev}}$ 移到右边，这正是第 151 行写的式子，也是第 148 行注释说的线性插值求交。检查它是否落在这一步之内：分子 $crit-C_{\text{prev}}$ 与分母 $C_{\text{new}}-C_{\text{prev}}$ 都是负数，相除得正；触发下穿说明新值已经越过判据到了另一侧，所以分母的绝对值大于分子、商严格小于 $1$，$t_*$ 落在 $t_{\text{prev}}$ 与 $t$ 之间。
-第 149 行处理退化情形：若这一步最大值没有变化，分母是零会出错，直接返回步末时刻 $t$；另一个条件 \texttt{Cprev is None} 是防御性写法，按执行顺序到这里时它不会成立。第 152 行在跑满 \texttt{hi} 秒仍未下穿时返回 \texttt{nan}，调用者可以据此发现问题。
-\why{为什么用插值而不是直接把步末时刻当答案}
-判据一般不会恰好落在某个整步的末尾，直接取步末时刻的误差最多是一个步长；线性插值以后误差变成 $\Delta t^2$ 量级的插值误差，比格式本身的时间误差低一阶，不会成为新的误差来源。
+最后一步是把分式除过去再把 $t_{\text{prev}}$ 移到右边，这正是第 206 行写的式子，也是第 203 行注释说的线性插值求交。检查它是否落在这一步之内：分子 $crit-C_{\text{prev}}$ 与分母 $C_{\text{new}}-C_{\text{prev}}$ 都是负数，相除得正；触发下穿说明新值已经越过判据到了另一侧，所以分母的绝对值大于分子、商严格小于 $1$，$t_*$ 落在 $t_{\text{prev}}$ 与 $t$ 之间。
+第 204 行处理退化情形：若这一步最大值没有变化，分母是零会出错，直接返回步末时刻 $t$；另一个条件 \texttt{Cprev is None} 是防御性写法，按执行顺序到这里时它不会成立。第 207 行在跑满 \texttt{hi} 秒仍未下穿时返回 \texttt{nan}，调用者可以据此发现问题。
+
+\why{为什么不直接取第一个低于阈值的点}
+因为采样间隔是百秒量级，直接取点会把达标时刻系统性地推迟若干步。上述插值把误差从「半步长」降到「求解器精度」。主求解器那边用的是事件机制加稠密输出求根，两条路径的实现完全不同，但给出的结果一致，这本身就是一次互证。
+
+\subsection{时间离散口径的三处不同}
+
+\texttt{simulate} 与 \texttt{find\_tdry} 里的时间离散口径并不完全一样，三处差别都在文件注释里写明了。
+
+第 73 行取半径用的是步首时刻 $t$，第 185 行取的是步末时刻 $t+\Delta t$；第 74 行和第 75 行的环境值取步首值，第 186 行和第 187 行取的是步中点值 $t+\Delta t/2$。环境函数在 $14400$ 秒以前是上升曲线，用中点值相当于对这一段做中点求积、比用左端点更接近积分平均。第 78 行的启动步数取参数 \texttt{n\_ram}（默认 $4$），第 189 行写死为 $4$，两者默认值一致。
+
+这三种取法都不改变收敛阶，因为冻结系数已经把阶压到一阶了。但要紧的是：正因为口径不同，拿 \texttt{simulate} 与 \texttt{find\_tdry} 的单步结果直接对比是不对的，两者相差 $O(\Delta t)$，必须各自做时间步外推。\texttt{fv\_theta.py} 第 39 行到第 42 行的 docstring 专门声明了这一点，\texttt{fv\_uniform.py} 第 58 行和第 59 行的注释里又声明了一次。
+
+\keypoint
+\texttt{fv\_theta.py} 的价值有两层：一是作为与谱方法完全不同的第二族离散，用来交叉验证结果；二是用它把「固定步长加冻结系数只有一阶精度」这件事量化出来，从而说明为什么不能拿它的粗步长结果当答案。
 
 % =====================================================================
 \section{对照求解器之二：均匀网格守恒型有限体积 fv\_uniform.py}
 
-\subsection{三个层面都与主求解器不同}
+\subsection{与主求解器的三处刻意差别}
 
-交叉验证要排除两边同时犯同一个错误的可能，所以两个程序差别越大越好。这个文件在三个层面都与主求解器不同：
+交叉验证要排除两边同时犯同一个错误的可能，所以程序之间差别越大越好。这套代码里有三族离散，把它们并排放在一起看最清楚：
+
 \begin{center}
-\begin{tabular}{@{}lll@{}}
+\begin{tabular}{@{}llll@{}}
 \toprule
-层面 & 主求解器 \texttt{spectral.py} & 对照 \texttt{fv\_uniform.py} \\
+ & 主求解器 \texttt{spectral.py} & \texttt{fv\_theta.py} & \texttt{fv\_uniform.py} \\
 \midrule
-坐标 & $u=\xi^2$ 加切比雪夫节点 & $\xi=i/N$ 均匀网格 \\
-离散 & 谱微分矩阵，全局耦合 & 有限体积面通量，只用相邻点 \\
-时间 & 自适应变阶隐式 BDF & 等步长后向欧拉 \\
-非线性 & 每个右端项求值处重算物性 & Picard 迭代 3 次 \\
-线性求解 & 由积分器内部处理 & 手写追赶法 \\
+坐标 & $u=\xi^2$ & $\xi=r/R$ & $\xi=r/R$ \\
+空间离散 & 切比雪夫谱微分 & 节点中心有限体积 & 均匀网格守恒型有限体积 \\
+时间格式 & 自适应变阶 BDF & 定步长 $\theta$ 法 & 等步长后向欧拉 \\
+非线性处理 & 隐式迭代自动吸收 & 物性冻结在步首 & Picard 迭代 $3$ 次 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-坐标不同意味着矩阵元素完全不同；离散不同意味着误差来源不同，谱方法是全局逼近、误差随节点数指数下降，有限体积是局部守恒、误差按二阶下降；时间方法不同意味着步长序列与误差控制机制没有共同点。三层都不同而两边给出同一个答案，说明它们解的是同一个偏微分方程，各自的离散误差都已压到目标精度以下。
+四个维度全都不一样，这正是交叉验证需要的。如果两套方法只是同一份代码换了个名字，它们同时犯同一个错误的概率就很高，互证的价值也就没了。
 
-\subsection{清单：网格、测度与输出索引}
+坐标不同意味着矩阵元素完全不同；离散不同意味着误差来源不同，谱方法是全局逼近、误差随节点数指数下降，有限体积是局部守恒、误差按二阶下降；时间方法不同意味着步长序列与误差控制机制没有共同点。四个维度都不同而三边给出同一个答案，说明它们解的是同一个偏微分方程，各自的离散误差都已压到目标精度以下。
 
-文件第 14 行到第 32 行，函数 \texttt{solve\_fv} 的开头：
+\subsection{网格、测度与输出索引}
+
+文件第 25 行到第 53 行，函数 \texttt{solve\_fv} 的开头：
 
 \begin{lstlisting}[language=Python]
 def solve_fv(N, dt, t_end, prob, t_report, shrink=False, n_picard=3):
-    """返回 (t_report 数组, C_tab[Nr?], T_tab)。C,T 形状 (len(t_report), N+1)。"""
+    """积分到 t_end [s] 并采样，返回 (xi, C_tab, T_tab)。
+    ...
+    """
     h = 1.0 / N
     xi = np.arange(N + 1) * h
-    xif = (np.arange(N) + 0.5) * h           # 内部面 ξ_{i+1/2}, i=0..N-1
+    xif = (np.arange(N) + 0.5) * h           # 内部面 xi_{i+1/2}, i=0..N-1
 
+    # 节点中心格式的体积测度（已约去 2*pi）：节点 i 代表环形控制体
+    # int_{xi_{i-1/2}}^{xi_{i+1/2}} xi dxi，故紧贴轴心与表面的半控制体各为 h^2/8。
     vol = np.empty(N + 1)
     vol[0] = h * h / 8.0
     vol[1:N] = xi[1:N] * h
@@ -434,18 +513,26 @@ def solve_fv(N, dt, t_end, prob, t_report, shrink=False, n_picard=3):
 
     nstep = int(round(t_end / dt))
     trep = np.asarray(t_report, dtype=float)
+    # 报告时刻按"步号 = round(t/dt)"定位，落在半步上的时刻取不到值，其行保持 nan。
     idx = {int(round(t / dt)): k for k, t in enumerate(trep)}
     Ctab = np.full((len(trep), N + 1), np.nan)
     Ttab = np.full((len(trep), N + 1), np.nan)
 \end{lstlisting}
 
-第 14 行用等步长 \texttt{dt}、用 \texttt{t\_report} 指定要记录的若干时刻、用 \texttt{n\_picard} 指定非线性迭代次数，没有 \texttt{theta}，因为时间格式固定是后向欧拉。第 16 行到第 23 行生成网格与测度，与 \texttt{fv\_theta.py} 里的写法逐字相同：同样的均匀 $\xi$ 网格与同样的三个测度公式；也就是说两个对照文件共用同一套空间离散，
-差别在时间推进、非线性处理和线性求解器上，复跑报告第 6 节与第 8 节用的就是这两个格式。第 28 行算总步数，\texttt{round} 是四舍五入，因为 \texttt{t\_end / dt} 可能因浮点误差得到$7199.999999$，直接取整会少一步。第 29 行把报告时刻转成浮点数组。第 30 行建立字典，键是 \texttt{int(round(t / dt))}（该时刻对应第几步）、值是它在 \texttt{t\_report} 里的位置，
-循环里只要判断当前步数是不是键就知道要不要记录；代价是报告时刻必须是步长的整数倍，\texttt{run\_all.py} 传的 $1200$ 秒与 $1800$ 秒配 $1$、$0.5$、$0.25$ 秒都是整数倍。第 31 行和第 32 行建立两个表格、初始值填 \texttt{nan}；\texttt{nan} 是 not a number 的缩写、表示无效数值，某个报告时刻若因步数不够没走到，那一行就保持 \texttt{nan}，不会被当成零。
+清单里第一个省略号代表 docstring 的其余各行，它们写明了三个返回值的形状与含义。
+
+第 25 行用等步长 \texttt{dt}、用 \texttt{t\_report} 指定要记录的若干时刻、用 \texttt{n\_picard} 指定非线性迭代次数，没有 \texttt{theta}，因为时间格式固定是后向欧拉。第 34 行到第 43 行生成网格与测度，与 \texttt{fv\_theta.py} 里的写法逐字相同：同样的均匀 $\xi$ 网格与同样的三个测度公式；也就是说两个对照文件共用同一套空间离散，差别在时间推进、非线性处理和线性求解器上。第 45 行和第 46 行用 \texttt{np.full} 把含水率与温度初始化成题目给的初值，对应式 \eqref{eq:ic}。
+
+测度部分与 \texttt{fv\_theta.py} 完全相同，因为几何一样、网格一样。接下来是输出时刻的定位：第 48 行算总步数，\texttt{round} 是四舍五入，因为 \texttt{t\_end / dt} 可能因浮点误差得到 $7199.999999$，直接取整会少一步。第 49 行把报告时刻转成浮点数组。第 51 行建立字典，键是 \texttt{int(round(t / dt))}（该时刻对应第几步）、值是它在 \texttt{t\_report} 里的位置。
+
+\texttt{idx} 是一本「字典」，把「步号」映射到「第几个报告时刻」。因为时间步是等长的，报告时刻只要落在整数步上就能取到值；落在半步上的取不到，对应那一行就保持初始的 \texttt{nan}。第 52 行和第 53 行建立两个表格、初始值填 \texttt{nan}；\texttt{nan} 是 not a number 的缩写、表示无效数值，某个报告时刻若因步数不够没走到，那一行就保持 \texttt{nan}，不会被当成零。
+
+\why{为什么用字典而不是循环查找}
+每一时间步结束时只需查一次字典就能知道「这一步要不要记快照」，时间复杂度是常数，而不是每步都去遍历报告时刻表。代价是报告时刻必须是步长的整数倍，\texttt{run\_all.py} 传的 $1200$ 秒与 $1800$ 秒配 $1$、$0.5$、$0.25$ 秒都是整数倍。
 
 \subsection{后向欧拉离散：逐个节点写出方程}
 
-在 $\xi$ 坐标下两个方程可以合并写成$\kappa\frac{\partial\phi}{\partial t}=\frac{1}{\xi R^2}\frac{\partial}{\partial\xi}\left(\xi\,coef\,\frac{\partial\phi}{\partial\xi}\right)$，水分取 $\phi=C$、$coef=D$、$\kappa=1$，温度取 $\phi=T$、$coef=k$、$\kappa=\rho c_p$，
+在 $\xi$ 坐标下两个方程可以合并写成 $\kappa\frac{\partial\phi}{\partial t}=\frac{1}{\xi R^2}\frac{\partial}{\partial\xi}\left(\xi\,coef\,\frac{\partial\phi}{\partial\xi}\right)$，水分取 $\phi=C$、$coef=D$、$\kappa=1$，温度取 $\phi=T$、$coef=k$、$\kappa=\rho c_p$，
 与 \texttt{fv\_theta.py} 用的是同一个方程。\textbf{后向欧拉}是用新时刻的值近似右端项的一阶时间格式，把式 \eqref{eq:p5-fvode} 的时间导数换成后向差商并乘 $\Delta t$：
 \begin{equation}
 \phi_i^{n+1}-\phi_i^{n}
@@ -453,42 +540,58 @@ def solve_fv(N, dt, t_end, prob, t_report, shrink=False, n_picard=3):
 \label{eq:p5-be}
 \end{equation}
 
-\textbf{圆心节点 $i=0$。}这个控制体只有外侧一个面，在 $\xi_{1/2}=h/2$ 处，内侧没有面，因为 $g$ 在 $\xi=0$ 处等于零。面通量是$g_{1/2}=\xi_{1/2}\frac{coef_0+coef_1}{2}\frac{\phi_1-\phi_0}{h}=\frac h2\frac{coef_0+coef_1}{2h}\left(\phi_1-\phi_0\right)$，
+\textbf{圆心节点 $i=0$。}这个控制体只有外侧一个面，在 $\xi_{1/2}=h/2$ 处，内侧没有面，因为 $g$ 在 $\xi=0$ 处等于零。面通量是 $g_{1/2}=\xi_{1/2}\frac{coef_0+coef_1}{2}\frac{\phi_1-\phi_0}{h}=\frac h2\frac{coef_0+coef_1}{2h}\left(\phi_1-\phi_0\right)$，
 两个 $h$ 约掉，得到的正是代码里的 \texttt{gf = xif[0] * 0.5 * (D[0] + D[1]) / h}。代入式 \eqref{eq:p5-be} 并把未知量归到左边、记 $coef=\Delta t\,gf/(R^2\kappa_0vol_0)$：
 \begin{equation}
 \left(1+coef\right)\phi_0^{n+1}-coef\,\phi_1^{n+1}=\phi_0^{n},
 \end{equation}
 
-主对角是 $1+coef$、上对角是 $-coef$、右端是旧值，对应第 54 行算 \texttt{coef}、第 55 行 \texttt{diag += coef}、第 56 行 \texttt{A[0, i] = -coef}，\texttt{b} 保持为旧值。\textbf{内部节点 $i=1,\dots,N-1$。}两侧的面在 $\xi_{i-1/2}$ 与 $\xi_{i+1/2}$ 处，系数是$gf_p=\xi_{i+1/2}\frac{coef_i+coef_{i+1}}{2h}$、$gf_m=\xi_{i-1/2}\frac{coef_{i-1}+coef_i}{2h}$。代入式 \eqref{eq:p5-be}，并记 $cp_i=\Delta t\,gf_p/(R^2\kappa_ivol_i)$、$cm_i=\Delta t\,gf_m/(R^2\kappa_ivol_i)$，把未知量归到左边：
+主对角是 $1+coef$、上对角是 $-coef$、右端是旧值，对应第 80 行算 \texttt{gf}、第 81 行算 \texttt{coef}、第 82 行 \texttt{diag += coef}、第 83 行 \texttt{A[0, i] = -coef}，\texttt{b} 保持为旧值。
+
+\textbf{内部节点 $i=1,\dots,N-1$。}两侧的面在 $\xi_{i-1/2}$ 与 $\xi_{i+1/2}$ 处，系数是 $gf_p=\xi_{i+1/2}\frac{coef_i+coef_{i+1}}{2h}$、$gf_m=\xi_{i-1/2}\frac{coef_{i-1}+coef_i}{2h}$。代入式 \eqref{eq:p5-be}，并记 $cp_i=\Delta t\,gf_p/(R^2\kappa_ivol_i)$、$cm_i=\Delta t\,gf_m/(R^2\kappa_ivol_i)$，把未知量归到左边：
 \begin{equation}
 -cp_i\,\phi_{i+1}^{n+1}+\left(1+cp_i+cm_i\right)\phi_i^{n+1}-cm_i\,\phi_{i-1}^{n+1}=\phi_i^{n},
 \end{equation}
 
-对应第 65 行到第 72 行：\texttt{gf\_p}、\texttt{gf\_m} 是两个面系数，\texttt{cp\_}、\texttt{cm\_} 是两个系数，\texttt{diag += cp\_ + cm\_} 是主对角，\texttt{A[0, i] = -cp\_} 是上对角，\texttt{A[2, i] = -cm\_} 是下对角，\texttt{b} 保持为旧值。\textbf{表面节点 $i=N$。}外侧面的通量由式 \eqref{eq:p5-gsurf} 给出，内侧面的系数是 $gf=\xi_{N-1/2}\frac{coef_{N-1}+coef_N}{2h}$。代入式 \eqref{eq:p5-be}，把已知的环境值移到右边，记$coef_i=\Delta t\,gf/(R^2\kappa_Nvol_N)$、$coef_b=\Delta t\,R\beta/(R^2\kappa_Nvol_N)$：
+对应第 91 行到第 98 行：\texttt{gf\_p}、\texttt{gf\_m} 是两个面系数，\texttt{cp\_}、\texttt{cm\_} 是两个系数，\texttt{diag += cp\_ + cm\_} 是主对角，\texttt{A[0, i] = -cp\_} 是上对角，\texttt{A[2, i] = -cm\_} 是下对角，\texttt{b} 保持为旧值。
+
+\textbf{表面节点 $i=N$。}外侧面的通量由式 \eqref{eq:p5-gsurf} 给出，内侧面的系数是 $gf=\xi_{N-1/2}\frac{coef_{N-1}+coef_N}{2h}$。代入式 \eqref{eq:p5-be}，把已知的环境值移到右边，并记两个系数
+\begin{equation}
+coef_i=\frac{\Delta t\,gf}{R^2\kappa_Nvol_N},\qquad
+coef_b=\frac{\Delta t\,R\beta}{R^2\kappa_Nvol_N},
+\label{eq:p5-surfcoef}
+\end{equation}
+则表面节点的方程是
 \begin{equation}
 -coef_i\,\phi_{N-1}^{n+1}+\left(1+coef_i+coef_b\right)\phi_N^{n+1}
 =\phi_N^{n}+coef_b\,\phi_{\text{amb}},
 \end{equation}
 
-对应第 58 行到第 63 行：\texttt{A[2, i] = -coef\_i} 是下对角，\texttt{b[i] += coef\_b * Cair} 是右端增加的那一项；温度的写法完全相同，区别只有四处：面系数用 \texttt{k}、除法用 $\kappa=\rho_ic_{p,i}$、边界系数用 \texttt{cm.h} 而不是 \texttt{cm.hm}、环境值用 \texttt{Tair}。
+对应第 84 行到第 90 行：\texttt{A[2, i] = -coef\_i} 是下对角，\texttt{b[i] += coef\_b * Cair} 是右端增加的那一项；温度的写法完全相同，区别只有四处：面系数用 \texttt{k}、除法用 $\kappa=\rho_ic_{p,i}$、边界系数用 \texttt{cm.h} 而不是 \texttt{cm.hm}、环境值用 \texttt{Tair}。
 
 \subsection{Picard 迭代为什么能处理非线性}
 
 \textbf{非线性}指方程里含有未知量的非线性函数：本题的扩散系数、导热系数、密度和比热容都依赖 $\phi$ 和 $T$，所以离散方程组的系数里也含有未知量，不能直接解。\textbf{Picard 迭代}是求解不动点的方法：先给未知量一个猜测值，用它算出所有系数，把方程当线性方程解一遍得到新值，再拿新值算系数、再解一遍，如此重复，写成 $\phi^{(m+1)}=\Phi\left(\phi^{(m)}\right)$，其中 $\Phi$ 表示先算系数再解线性方程这一整步操作。
-如果 $\Phi$ 是\textbf{收缩映射}，也就是把任意两个猜测值之间的距离缩小，反复做下去就会收敛到唯一的不动点；本题的收缩性来自一步之内含水率与温度的变化只有 $\Delta t$ 量级，所以物性在迭代中变化很小，$\Phi$ 缩小差距的比例也是 $\Delta t$ 量级。代码第 44 行把新值初始化成旧值，第 45 行做 \texttt{n\_picard} 次循环，第 46 行在每轮开始时用当前猜测值算物性，接着第 47 行到第 73 行组装并求解水分的三对角方程组、
-第 74 行到第 100 行组装并求解温度的。
+如果 $\Phi$ 是\textbf{收缩映射}，也就是把任意两个猜测值之间的距离缩小，反复做下去就会收敛到唯一的不动点；本题的收缩性来自一步之内含水率与温度的变化只有 $\Delta t$ 量级，所以物性在迭代中变化很小，$\Phi$ 缩小差距的比例也是 $\Delta t$ 量级。代码第 69 行把新值初始化成旧值，第 70 行做 \texttt{n\_picard} 次循环，第 71 行在每轮开始时用当前猜测值算物性，接着第 72 行到第 100 行组装并求解水分的三对角方程组、
+第 101 行到第 128 行组装并求解温度的。
+
 \why{为什么用 Picard 迭代而不是别的办法}
 更快的办法是牛顿法，但它要计算\textbf{雅可比矩阵}，也就是把每个方程对每个未知量求一阶偏导数排成的大矩阵。本题未知量有两千多个（$N=400$ 时是 $2\times401$ 个），雅可比矩阵的规模与组装量都远大于三对角矩阵，还要额外推导偏导数表达式；Picard 迭代不需要雅可比矩阵，复用的是同一套三对角组装代码，只是把系数换一换。程序里的迭代次数固定 3 次、不判收敛：收缩比是 $\Delta t$ 量级，
-第三轮以后系数的改变已经远小于后向欧拉自身的截断误差 $\Delta t^2$。复跑报告第 6 节可作旁证：$N=400$、$\Delta t=0.25$ 秒时表面含水率是 $1.51094433$，与谱配置法的 $1.51091810$ 相差 $2.6\times10^{-5}$，而这个差别随步长按一阶缩小
+第三轮以后系数的改变已经远小于后向欧拉自身的截断误差。复跑报告第 6 节可作旁证：$N=400$、$\Delta t=0.25$ 秒时表面含水率是 $1.51094433$，与谱配置法的 $1.51091810$ 相差 $2.6\times10^{-5}$，而这个差别随步长按一阶缩小
 （$N=200$ 时从 $\Delta t=1$ 秒的 $1.51102304$ 变到 $\Delta t=0.5$ 秒的 $1.51097924$，变化 $4.4\times10^{-5}$；$N=400$ 时从 $\Delta t=0.5$ 秒的 $1.51096623$ 变到 $\Delta t=0.25$ 秒的 $1.51094433$，变化 $2.2\times10^{-5}$，正好减半），说明剩下的差别来自时间离散而不是迭代次数不够。
 
 \subsection{追赶法的完整推导}
 
-第 73 行和第 100 行调用自己写的求解函数 \texttt{\_thomas}，文件第 109 行到第 124 行：
+第 100 行和第 128 行调用自己写的求解函数 \texttt{\_thomas}，文件第 138 行到第 158 行：
 
 \begin{lstlisting}[language=Python]
 def _thomas(A, b):
-    """三对角求解：A 为 (3, n)，A[0]=上对角(偏移+1), A[1]=主对角, A[2]=下对角(偏移-1)。"""
+    """追赶法（Thomas 算法）解三对角系统 A x = b，返回解向量 x。
+
+    A 为 (3, n) 的紧凑带：A[0] = 上对角（偏移 +1）、A[1] = 主对角、A[2] = 下对角
+    （偏移 -1）。不选主元：本模块的矩阵由隐式扩散加正的对角项构成，主对角严格大于
+    两个非对角元之和（严格对角占优），消元过程中不会出现零主元。
+    """
     n = len(b)
     cp = np.zeros(n)
     dp = np.zeros(n)
@@ -505,6 +608,8 @@ def _thomas(A, b):
     return x
 \end{lstlisting}
 
+调用处第 100 行是 \texttt{Cnew = \_thomas(A, b)}、第 128 行是 \texttt{Tnew = \_thomas(A, b)}，两处只换了场，矩阵与右端都是刚组装好的。
+
 \textbf{追赶法}（也叫 Thomas 算法）是解三对角方程组的直接方法，分两趟：第一趟从上往下消元，第二趟从下往上回代。设未知量是 $x_0,\dots,x_{n-1}$，第 $i$ 个方程是
 \begin{equation}
 c_i\,x_{i-1}+b_i\,x_i+a_i\,x_{i+1}=d_i,
@@ -513,17 +618,19 @@ c_i\,x_{i-1}+b_i\,x_i+a_i\,x_{i+1}=d_i,
 
 其中 $c_0=0$（第一个方程没有 $x_{-1}$）、$a_{n-1}=0$（最后一个方程没有 $x_n$）；对应到代码：$a_i$ 存在 \texttt{A[0, i]}、$b_i$ 存在 \texttt{A[1, i]}、$c_i$ 存在 \texttt{A[2, i]}、$d_i$ 就是 \texttt{b[i]}。
 
-\textbf{第一趟，前向消元。}目标是每行都化成 $x_i=dp_i-cp_i\,x_{i+1}$。先取 $i=0$ 并用 $c_0=0$，得 $b_0x_0+a_0x_1=d_0$，两边除以 $b_0$ 后记$cp_0=\frac{a_0}{b_0}$、$dp_0=\frac{d_0}{b_0}$，就得到 $x_0=dp_0-cp_0x_1$，这就是代码第 114 行和第 115 行。再看能不能递推下去：取 $i=1$ 得 $c_1x_0+b_1x_1+a_1x_2=d_1$，
+\textbf{第一趟，前向消元。}目标是每行都化成 $x_i=dp_i-cp_i\,x_{i+1}$。先取 $i=0$ 并用 $c_0=0$，得 $b_0x_0+a_0x_1=d_0$，两边除以 $b_0$ 后记 $cp_0=\frac{a_0}{b_0}$、$dp_0=\frac{d_0}{b_0}$，就得到 $x_0=dp_0-cp_0x_1$，这就是代码第 148 行和第 149 行。再看能不能递推下去：取 $i=1$ 得 $c_1x_0+b_1x_1+a_1x_2=d_1$，
 把 $x_0=dp_0-cp_0x_1$ 代进去并展开，
 \begin{equation}
-c_1\left(dp_0-cp_0x_1\right)+b_1x_1+a_1x_2=d_1
-\;\Longrightarrow\;
+\begin{aligned}
+&c_1\left(dp_0-cp_0x_1\right)+b_1x_1+a_1x_2=d_1\\
+&\quad\Longrightarrow\quad
 \left(b_1-c_1cp_0\right)x_1+a_1x_2=d_1-c_1dp_0
-\;\Longrightarrow\;
+\quad\Longrightarrow\quad
 cp_1=\frac{a_1}{m},\quad dp_1=\frac{d_1-c_1dp_0}{m},
+\end{aligned}
 \end{equation}
 
-其中 $m=b_1-c_1cp_0$，这就得到 $x_1=dp_1-cp_1x_2$，与代码第 117 行到第 119 行一致（\texttt{A[2, i] * cp[i - 1]} 就是 $c_1cp_0$）。把同样的做法重复下去：假设已有 $x_{i-1}=dp_{i-1}-cp_{i-1}x_i$，代入第 $i$ 个方程并展开，
+其中 $m=b_1-c_1cp_0$，这就得到 $x_1=dp_1-cp_1x_2$，与代码第 150 行到第 153 行一致（\texttt{A[2, i] * cp[i - 1]} 就是 $c_1cp_0$）。把同样的做法重复下去：假设已有 $x_{i-1}=dp_{i-1}-cp_{i-1}x_i$，代入第 $i$ 个方程并展开，
 \begin{equation}
 c_i\left(dp_{i-1}-cp_{i-1}x_i\right)+b_ix_i+a_ix_{i+1}=d_i
 \;\Longrightarrow\;
@@ -537,127 +644,399 @@ dp_i=\frac{d_i-c_idp_{i-1}}{b_i-c_icp_{i-1}},
 \label{eq:p5-recursion}
 \end{equation}
 
-对应代码第 116 行到第 119 行的循环。\textbf{第二趟，后向回代。}最后一行没有 $x_n$，即 $a_{n-1}=0$，由式 \eqref{eq:p5-recursion} 得 $cp_{n-1}=0$，所以 $x_{n-1}=dp_{n-1}$，这就是代码第 121 行的 \texttt{x[-1] = dp[-1]}。有了最后一个未知量，其余逐个往回收：由 $x_i=dp_i-cp_ix_{i+1}$ 先算 $x_{n-2}$、再算 $x_{n-3}$，一直算到 $x_0$，这就是代码第 122 行和第 123 行的倒序循环。\why{为什么不用高斯消元}高斯消元解一般的 $n$ 阶方程组要约 $n^3/3$ 次乘法，本题 $N=400$ 时 $n=401$、约两千万次；追赶法利用稀疏结构，每趟只做 $n$ 次乘加、总共约 $8n$ 次也就是几千次。每走一个时间步都要解两次方程组，这个差别直接决定程序能不能跑完。
+对应代码第 150 行到第 153 行的循环。\textbf{第二趟，后向回代。}最后一行没有 $x_n$，即 $a_{n-1}=0$，由式 \eqref{eq:p5-recursion} 得 $cp_{n-1}=0$，所以 $x_{n-1}=dp_{n-1}$，这就是代码第 155 行的 \texttt{x[-1] = dp[-1]}。有了最后一个未知量，其余逐个往回收：由 $x_i=dp_i-cp_ix_{i+1}$ 先算 $x_{n-2}$、再算 $x_{n-3}$，一直算到 $x_0$，这就是代码第 156 行和第 157 行的倒序循环。
 
-\textbf{一个 3 乘 3 的手算例子。}取 $n=3$，为了每步都能整除，用一个结构相同、数字整齐的方程组：
+\why{为什么不用高斯消元}
+高斯消元解一般的 $n$ 阶方程组要约 $n^3/3$ 次乘法，本题 $N=400$ 时 $n=401$、约两千万次；追赶法利用稀疏结构，每趟只做 $n$ 次乘加、总共约 $8n$ 次也就是几千次。每走一个时间步都要解两次方程组，这个差别直接决定程序能不能跑完。
+
+\textbf{一个 3 乘 3 的手算例子。}上面几步都是符号推导，看不出数具体怎么走。下面取一个能手算完的小例子，把前向消元与后向回代完整走一遍，每一步都写出中间结果，可以拿计算器逐行核对。
+
+\why{为什么取这个方程组}
+取 $n=3$，方程组的形状与程序里遇到的一模一样：主对角是正的、两个次对角是负的、两个角上的元素是零。
 \begin{equation}
-\begin{cases}2x_0-x_1=2.5,\\ -x_0+2x_1-x_2=0,\\ -x_1+2x_2=2.5,\end{cases}
-\qquad a=\left(-1,-1,0\right),\quad b=\left(2,2,2\right),\quad c=\left(0,-1,-1\right),\quad d=\left(2.5,0,2.5\right),
+\begin{gathered}
+\begin{cases}2x_0-x_1=2.5,\\ -x_0+2x_1-x_2=0,\\ -x_1+2x_2=2.5,\end{cases}\\[6pt]
+a=\left(-1,-1,0\right),\quad b=\left(2,2,2\right),\quad c=\left(0,-1,-1\right),\quad d=\left(2.5,0,2.5\right).
+\end{gathered}
+\label{eq:p5-example}
 \end{equation}
 
-注意 $a_2=0$ 与 $c_0=0$ 是两个角上的元素；右端特意取成这三个数，使精确解是 $x_0=x_1=x_2=2.5$，算完可以直接核对。\textbf{初始化}（代码第 114 行和第 115 行）：$cp_0=\frac{-1}{2}=-0.5$、$dp_0=\frac{2.5}{2}=1.25$。\textbf{算 $i=1$：}先算分母 $m=b_1-c_1cp_0=2-(-1)\times(-0.5)=2-0.5=1.5$
-（注意 $c_1=-1$、$cp_0=-0.5$，相乘得 $+0.5$，所以是 $2$ 减 $0.5$），再算
+两条对角线的端点为什么是零，在这个小例子里看得最清楚：$a_2=0$ 是因为第三个方程里没有 $x_3$，$c_0=0$ 是因为第一个方程里没有 $x_{-1}$。这两个零不是凑出来的，是三对角结构本身的标志，程序里也是靠它们让第一行与最后一行各少一个非对角元。
+
+右端为什么取 $2.5$、$0$、$2.5$。把 $x_0=x_1=x_2=2.5$ 代进式 \eqref{eq:p5-example} 的三个方程：第一行 $2\times2.5-2.5=5-2.5=2.5$，第二行 $-2.5+2\times2.5-2.5=-2.5+5-2.5=0$，第三行 $-2.5+2\times2.5=-2.5+5=2.5$，恰好就是右端的那三个数。所以我们事先就知道精确解是 $x=(2.5,2.5,2.5)$——算完可以直接对答案，不必再另想办法验证。这是设计这个例子的全部用意：把「算对没有」变成一个可以一眼看出来的问题。
+
+\textbf{第一趟：前向消元。}
+
+\begin{stepbox}{1}{初始化：把第一个方程写成 $x_0=dp_0-cp_0x_1$（代码第 148 行和第 149 行）}
+第一个方程是 $2x_0-x_1=2.5$，里面有两个未知量，先解出 $x_0$。两边同除以 $b_0=2$：
 \begin{equation}
-cp_1=\frac{a_1}{m}=\frac{-1}{1.5}=-\frac23\approx-0.666667,\qquad
-dp_1=\frac{d_1-c_1dp_0}{m}=\frac{0-(-1)\times1.25}{1.5}=\frac{1.25}{1.5}=\frac56\approx0.833333 .
+x_0=\frac{2.5}{2}+\frac{1}{2}x_1=1.25+0.5x_1 .
+\label{eq:p5-ex1}
+\end{equation}
+（写成加法是因为移项：$-x_1$ 移到右边变成 $+x_1$，再除以 $2$。）把它对照代码用的形式 $x_0=dp_0-cp_0x_1$，逐项对上：
+\begin{equation}
+dp_0=\frac{d_0}{b_0}=\frac{2.5}{2}=1.25,\qquad
+cp_0=\frac{a_0}{b_0}=\frac{-1}{2}=-0.5 .
+\label{eq:p5-ex1v}
 \end{equation}
 
-\textbf{算 $i=2$：}$m=b_2-c_2cp_1=2-(-1)\times\left(-\frac23\right)=2-\frac23=\frac43\approx1.333333$，$cp_2=\frac{a_2}{m}=\frac{0}{4/3}=0$（预料之中，因为最后一行没有上对角元素），
+注意 $cp_0$ 是负数。这不影响后面的任何推理，但它提醒我们：$cp_i$ 可以为负，所以后面证明里必须用绝对值，不能直接说「$cp_i$ 小于 $1$」。
+
+这一步的分母是 $b_0=2$，前向消元里第一次除法的除数就是它。
+\end{stepbox}
+
+\begin{stepbox}{2}{用第一个关系式消去 $x_0$（代码第 150 行到第 153 行，$i=1$）}
+第二个方程是 $-x_0+2x_1-x_2=0$，里面还带着 $x_0$，要把它消掉。把上一步得到的 $x_0=1.25+0.5x_1$ 整个代进去：
 \begin{equation}
-dp_2=\frac{d_2-c_2dp_1}{m}
-=\frac{2.5-(-1)\times\frac56}{\frac43}
-=\frac{2.5+\frac56}{\frac43}
-=\frac{\frac{15}{6}+\frac{5}{6}}{\frac43}
-=\frac{\frac{20}{6}}{\frac43}
-=\frac{10}{3}\times\frac34=2.5 .
+-\left(1.25+0.5x_1\right)+2x_1-x_2=0
+\;\Longrightarrow\;
+-1.25-0.5x_1+2x_1-x_2=0
+\;\Longrightarrow\;
+1.5x_1-x_2=1.25 .
+\label{eq:p5-ex2}
+\end{equation}
+$x_0$ 不见了，第二个方程现在只含 $x_1$ 与 $x_2$——这正是前向消元要达到的效果：每消一次，就少一个未知量。
+
+接着把 $1.5x_1-x_2=1.25$ 也整理成 $x_1=dp_1-cp_1x_2$ 的形式。移项得 $1.5x_1=1.25+x_2$，两边除以 $1.5$：
+\begin{equation}
+x_1=\frac{1.25}{1.5}+\frac{1}{1.5}x_2=\frac56+\frac23x_2 .
+\label{eq:p5-ex2v}
+\end{equation}
+对照 $x_1=dp_1-cp_1x_2$，得 $dp_1=\dfrac{1.25}{1.5}=\dfrac56\approx0.833333$、$cp_1=-\dfrac{1}{1.5}=-\dfrac23\approx-0.666667$。
+
+用递推公式算一遍，结果应当相同。式 \eqref{eq:p5-recursion} 给出的是 $cp_i=\dfrac{a_i}{b_i-c_icp_{i-1}}$、$dp_i=\dfrac{d_i-c_idp_{i-1}}{b_i-c_icp_{i-1}}$。先算分母：
+\begin{equation}
+m=b_1-c_1cp_0=2-(-1)\times(-0.5)=2-0.5=1.5 .
+\label{eq:p5-ex2m}
 \end{equation}
 
-前向消元得到 $cp=\left(-0.5,\,-0.666667,\,0\right)$、$dp=\left(1.25,\,0.833333,\,2.5\right)$。\textbf{后向回代：}按代码第 121 行先取 $x_2=dp_2=2.5$，再按第 123 行倒着算
+这里的符号要小心：$c_1=-1$、$cp_0=-0.5$，两个负数相乘得 $+0.5$，所以是 $2$ 减 $0.5$。然后
 \begin{equation}
-x_1=dp_1-cp_1x_2=0.833333-(-0.666667)\times2.5=0.833333+1.666667=2.5,
-\qquad
-x_0=dp_0-cp_0x_1=1.25-(-0.5)\times2.5=1.25+1.25=2.5 .
+cp_1=\frac{a_1}{m}=\frac{-1}{1.5}=-\frac23,\qquad
+dp_1=\frac{d_1-c_1dp_0}{m}=\frac{0-(-1)\times1.25}{1.5}=\frac{1.25}{1.5}=\frac56 .
 \end{equation}
 
-三个未知量都等于 $2.5$，与预先知道的精确解一致。\textbf{代回核对：}$2x_0-x_1=5-2.5=2.5$、$-x_0+2x_1-x_2=-2.5+5-2.5=0$、$-x_1+2x_2=-2.5+5=2.5$，三行都等于各自的右端，追赶法结果正确。
-\why{追赶法为什么不需要选主元}
-选主元是高斯消元里为避开小分母做的行交换。本题矩阵是\textbf{严格对角占优}的，即每行对角线元素的绝对值都大于该行其他元素绝对值之和：程序里主对角是 $1+cp_i+cm_i$、两个非对角元素是 $-cp_i$ 与 $-cm_i$，对角线与其余元素之和的差正好是 $1$。由此可用归纳法证明前向消元得到的 $cp_i$ 始终满足 $|cp_i|<1$：假设 $|cp_{i-1}|\le1$，由绝对值不等式
-$|m|=\left|b_i-c_icp_{i-1}\right|\ge|b_i|-|c_i|\,|cp_{i-1}|\ge|b_i|-|c_i|>|a_i|$，最后一步用了严格对角占优 $|b_i|>|a_i|+|c_i|$，于是 $|cp_i|=|a_i|/|m|<1$；起点 $|cp_0|=|a_0|/|b_0|<1$，归纳成立，分子始终小于分母，除法不会放大误差。
+两种算法给出同一个数，说明「代数代入」与「递推公式」确实是同一件事，只是递推公式把同样的事情写成了可以循环的形式。
+\end{stepbox}
 
-\subsection{清单：时间循环与采样}
+\begin{stepbox}{3}{用第二个关系式消去 $x_1$（$i=2$）}
+第三个方程是 $-x_1+2x_2=2.5$。把 $x_1=\dfrac56+\dfrac23x_2$ 代进去：
+\begin{equation}
+-\left(\frac56+\frac23x_2\right)+2x_2=2.5
+\;\Longrightarrow\;
+-\frac56+\left(2-\frac23\right)x_2=2.5
+\;\Longrightarrow\;
+-\frac56+\frac43x_2=2.5 .
+\label{eq:p5-ex3}
+\end{equation}
+然后移项得 $\dfrac43x_2=2.5+\dfrac56$。把右边的两个数通分：
+\begin{equation}
+2.5+\frac56=\frac{15}{6}+\frac56=\frac{20}{6}=\frac{10}{3},
+\label{eq:p5-ex3v}
+\end{equation}
+所以
+\begin{equation}
+dp_2=\frac{d_2-c_2dp_1}{m}=\frac{\dfrac{10}{3}}{\dfrac43}=\frac{10}{3}\times\frac34=2.5 .
+\end{equation}
 
-文件第 37 行到第 46 行，以及第 102 行到第 106 行：
+这里的分母同样可以对照着看：$m=b_2-c_2cp_1=2-(-1)\times\left(-\dfrac23\right)=2-\dfrac23=\dfrac43$。它与上面代数代入得到的系数 $\left(2-\dfrac23\right)$ 完全一致。$cp_1$ 是负数这件事在这里起了作用：$-c_2cp_1$ 里的两个负号相消，所以是 $2$ 减正数 $\dfrac23$，而不是 $2$ 加 $\dfrac23$。
 
-\begin{lstlisting}[language=Python]
-    for n in range(1, nstep + 1):
-        t_new = n * dt
-        t_old = (n - 1) * dt
-        R = R_of(t_new)
-        Cair = float(cm.C_air(t_new))
-        Tair = float(cm.T_air(t_new))
+最后一行没有上对角元素（$a_2=0$），于是
+\begin{equation}
+cp_2=\frac{a_2}{m}=\frac{0}{4/3}=0 .
+\label{eq:p5-ex3c}
+\end{equation}
 
-        Cnew, Tnew = C.copy(), T.copy()
-        for _ in range(n_picard):
-            rho, cp, k, D = cm.props(prob, Cnew, Tnew)
-\end{lstlisting}
+这个零是预料之中的，而且很重要：正因为 $cp_2=0$，回代才能从 $x_2=dp_2$ 起步。如果最后一步的 $cp_2$ 不是零，回代就没有起点。
+\end{stepbox}
 
-\begin{lstlisting}[language=Python]
-        C, T = Cnew, Tnew
-        if n in idx:
-            Ctab[idx[n]] = C
-            Ttab[idx[n]] = T
-    return xi, Ctab, Ttab
-\end{lstlisting}
+前向消元的结果汇总如下。
 
-第 37 行的循环从第 $1$ 步走到第 \texttt{nstep} 步，第 $0$ 步就是初值不需要算。第 38 行算新时刻，用 $n\cdot\Delta t$ 直接乘而不是每步累加，这样时刻没有累加误差；第 39 行算出的 \texttt{t\_old} 在文件后面没有被用到，因为后向欧拉的右端只需要旧时刻的解向量 \texttt{C}，不需要旧时刻的数值本身。第 40 行到第 42 行取这一时刻的半径与环境值，
-与 \texttt{fv\_theta.py} 不同的是这里统一取新时刻的值，两种取法都是一阶的。第 44 行把迭代初值设成旧时刻的解，这是 Picard 迭代标准的起手式；第 46 行在每轮迭代开始时重算物性，两个方程都用这一轮开头的物性：先解水分得到 \texttt{Cnew}，再解温度时并没有用刚更新的 \texttt{Cnew}，下一轮才会用上。第 102 行把最终结果写回 \texttt{C} 和 \texttt{T}；第 103 行判断当前步数是否在报告时刻字典里，
-在的话把这一行解复制进表格；第 106 行返回节点数组与两个表格。
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$i$ & 分母 $m=b_i-c_icp_{i-1}$ & $cp_i$ & $dp_i$ \\
+\midrule
+$0$ & ——（无需消元） & $-0.5$ & $1.25$ \\
+$1$ & $1.5$ & $-\dfrac23\approx-0.666667$ & $\dfrac56\approx0.833333$ \\
+$2$ & $\dfrac43\approx1.333333$ & $0$ & $2.5$ \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-文件第 127 行到第 129 行的采样函数：
+\textbf{第二趟：后向回代。}
+
+\begin{stepbox}{4}{从最后一个未知量往回逐个解出（代码第 155 行到第 157 行）}
+回代的起点是最后一个方程。因为 $cp_2=0$，第三个关系式已经写成 $x_2=dp_2$，于是
+\begin{equation}
+x_2=dp_2=2.5 .
+\label{eq:p5-ex4a}
+\end{equation}
+
+有了 $x_2$，代回第二个关系式 $x_1=dp_1-cp_1x_2$：
+\begin{equation}
+x_1=\frac56-\left(-\frac23\right)\times2.5
+=\frac56+\frac23\times2.5
+=\frac56+\frac53
+=\frac56+\frac{10}{6}
+=\frac{15}{6}=2.5 .
+\label{eq:p5-ex4b}
+\end{equation}
+
+注意中间那一步：$cp_1$ 是负的，所以「减 $cp_1x_2$」变成「加」。这是回代时最容易写错符号的地方，手算时可以特意停一下检查。
+
+有了 $x_1$，再代回第一个关系式 $x_0=dp_0-cp_0x_1$：
+\begin{equation}
+x_0=1.25-(-0.5)\times2.5=1.25+1.25=2.5 .
+\label{eq:p5-ex4c}
+\end{equation}
+
+同样地，$cp_0$ 也是负的，两个负号相消。到这里三个未知量都求出来了。
+\end{stepbox}
+
+\textbf{核对。}三个未知量都是 $2.5$，与事先知道的精确解一致。再代回原方程组逐行核对一遍：
+\begin{equation}
+\begin{aligned}
+2x_0-x_1&=5-2.5=2.5 &&\text{等于第一行右端},\\
+-x_0+2x_1-x_2&=-2.5+5-2.5=0 &&\text{等于第二行右端},\\
+-x_1+2x_2&=-2.5+5=2.5 &&\text{等于第三行右端}.
+\end{aligned}
+\label{eq:p5-ex5}
+\end{equation}
+三行都成立，追赶法的结果正确。
+
+\keypoint
+这个例子可以拿计算器逐步复核。要留意三点：一是 $cp_0$ 与 $cp_1$ 都是负数，代回时是「减负数等于加」，符号不要弄错；二是 $cp_2$ 恰好为零，这是三对角结构的必然结果，也是回代能起步的原因；三是 $3\times3$ 的方程组手算两遍不过一分钟，但程序里 $N=400$ 时未知量有 $401$ 个，靠的就是把上面这套动作重复 $401$ 次。
+
+\subsection{追赶法为什么不需要选主元}
+
+\textbf{选主元是什么，一般为什么要做。}高斯消元在消元过程中要做一连串除法，除数是当时的主对角元素。如果某个除数很小、甚至接近零，那么前面累积的一点点舍入误差会被这个除法放大很多倍，最后算出来的解可能与真实解相差很远。避免的办法叫\textbf{选主元}：在消到某一列时，先在该列里挑一个绝对值最大的元素，把它所在的行换到当前行，再继续消元。代价是每一步都要比较与交换，程序会复杂一些。
+
+那本题为什么可以不做这件事？因为本题的矩阵有一个很强的性质，它保证除数永远不可能接近零。下面把这个性质说清楚，并且把它到底「保证了多少」证明出来。
+
+\textbf{矩阵的具体形状。}程序里水分场的矩阵是这样的（温度场结构完全相同，只是系数换成 $k$ 与 $\rho c_p$）：
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+位置 & 元素 \\
+\midrule
+主对角 & $1+cp_i+cm_i$ \\
+上对角 & $-cp_i$ \\
+下对角 & $-cm_i$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+其中的两个系数是
+\begin{equation}
+cp_i=\frac{\Delta t\,gf_p}{R^2\kappa_ivol_i},\qquad
+cm_i=\frac{\Delta t\,gf_m}{R^2\kappa_ivol_i}.
+\label{eq:p5-cpcm}
+\end{equation}
+
+分子上的 $gf_p$、$gf_m$ 是面系数，等于 $\xi_{i\pm1/2}$ 乘上两侧物性的算术平均再除以 $h$。扩散系数、导热系数、半径、体积测度都是正数，时间步长也是正数，所以分母的三个因子 $R^2$、$\kappa_i$、$vol_i$ 全为正，于是 $cp_i>0$、$cm_i>0$，而且 $gf_p$、$gf_m$ 也大于零。
+
+这样每一行的三个元素就是：一个正的主对角，加上两个负的次对角。这个符号结构是后面一切结论的出发点。
+
+\textbf{严格对角占优。}\textbf{定义。}一个矩阵叫\textbf{严格对角占优}，是指每一行主对角元素的绝对值，都严格大于该行其余元素绝对值之和。
+
+本题每一行「其余元素绝对值之和」是
+\begin{equation}
+\left|-cp_i\right|+\left|-cm_i\right|=cp_i+cm_i ,
+\label{eq:p5-offsum}
+\end{equation}
+用主对角减去它：
+\begin{equation}
+\left(1+cp_i+cm_i\right)-\left(cp_i+cm_i\right)=1>0 .
+\label{eq:p5-margin}
+\end{equation}
+
+差恰好等于 $1$。这个结果值得多看一眼：它不依赖 $i$、不依赖时间步长 $\Delta t$、不依赖节点数 $N$、也不依赖物性的大小，是一个恒等于 $1$ 的常数。也就是说，本题的矩阵不但严格对角占优，而且占优的余量有一个与所有参数无关的正下界。这一点后面会直接用到。
+
+顺带说明那个 $1$ 是哪里来的：它来自隐式格式左边 $\phi_i^{n+1}$ 的系数，也就是「这一步的值由上一步的值加上增量决定」里那个恒为 $1$ 的部分。扩散项无论多强，都只是在这个 $1$ 上面加正数，不会把占优性破坏掉。
+
+\textbf{要证的命题。}用式 \eqref{eq:p5-recursion} 做前向消元时，对所有的 $i$ 都有 $|cp_i|<1$，因而每一步的分母 $m=b_i-c_icp_{i-1}$ 都不为零。
+
+先说明这个命题为什么正是我们需要的。程序里每一步除法用的除数就是 $m$。若 $|cp_i|<1$ 恒成立，就等于说除数永远比它要消掉的那个系数大，于是既不会出现除以零，也不会出现「除以一个很小的数」把误差放大。同时，回代的递推式 $x_i=dp_i-cp_ix_{i+1}$ 里，$x_{i+1}$ 的误差传到 $x_i$ 上要乘一个因子 $|cp_i|<1$，误差往回传的时候是缩小的而不是放大的，这正是「不需要选主元」的真正含义。
+
+\textbf{证明。}用数学归纳法。记原矩阵的主对角为 $b_i$、上对角为 $a_i$、下对角为 $c_i$，它们满足严格对角占优
+\begin{equation}
+\left|b_i\right|>\left|a_i\right|+\left|c_i\right| .
+\label{eq:p5-dom}
+\end{equation}
+本题里 $b_i=1+cp_i+cm_i>0$、$a_i=-cp_i<0$、$c_i=-cm_i<0$，但下面的推理只用式 \eqref{eq:p5-dom}，对一般情形也成立。
+
+\textbf{第一步：起点。}最后一个方程没有上对角元，即 $a_{n-1}=0$，这一点先记下；起点从第 $0$ 行开始。由 $c_0=0$，第一个方程只有两项：$b_0x_0+a_0x_1=d_0$。两边除以 $b_0$ 得 $cp_0=a_0/b_0$。在式 \eqref{eq:p5-dom} 里取 $i=0$ 并注意 $c_0=0$：
+\begin{equation}
+\left|b_0\right|>\left|a_0\right|+\left|c_0\right|=\left|a_0\right| .
+\label{eq:p5-start}
+\end{equation}
+于是
+\begin{equation}
+\left|cp_0\right|=\frac{\left|a_0\right|}{\left|b_0\right|}<1 .
+\label{eq:p5-startcp}
+\end{equation}
+起点成立。用一句话说清楚这一步的意思：第一个方程的除数 $b_0$ 比它要消掉的那个系数 $a_0$ 大，所以第一次除法是安全的。
+
+\textbf{第二步：归纳假设。}假设第 $i-1$ 步已经满足
+\begin{equation}
+\left|cp_{i-1}\right|\le1 .
+\label{eq:p5-hyp}
+\end{equation}
+这里用 $\le1$ 而不是 $<1$ 是有意的：归纳步骤里只需要这个弱一些的条件，用弱条件证明更干净，而结论仍然可以加强到严格小于。
+
+\textbf{第三步：估计第 $i$ 步的分母。}第 $i$ 步的分母是
+\begin{equation}
+m=b_i-c_icp_{i-1} .
+\label{eq:p5-mdef}
+\end{equation}
+要证 $|m|>|a_i|$，这样才有 $|cp_i|=|a_i|/|m|<1$。分三小步做。
+
+（i）用绝对值不等式拆开。对任意两个数 $u$、$v$ 都有 $|u-v|\ge|u|-|v|$。取 $u=b_i$、$v=c_icp_{i-1}$，得
+\begin{equation}
+\left|m\right|=\left|b_i-c_icp_{i-1}\right|\ge\left|b_i\right|-\left|c_icp_{i-1}\right| .
+\label{eq:p5-ineq1}
+\end{equation}
+
+（ii）把乘积的绝对值拆成绝对值的乘积。因为 $|uv|=|u|\,|v|$，所以 $|c_icp_{i-1}|=|c_i|\,|cp_{i-1}|$，代入上式：
+\begin{equation}
+\left|m\right|\ge\left|b_i\right|-\left|c_i\right|\left|cp_{i-1}\right| .
+\label{eq:p5-ineq2}
+\end{equation}
+
+（iii）用归纳假设把减去的量放大。由 $|cp_{i-1}|\le1$ 得 $|c_i|\,|cp_{i-1}|\le|c_i|$。这一步的方向要看清：我们把被减去的那个量变大了，所以差只会变小，不等式仍然成立（估计下界时的标准手法）。于是
+\begin{equation}
+\left|m\right|\ge\left|b_i\right|-\left|c_i\right|\left|cp_{i-1}\right|\ge\left|b_i\right|-\left|c_i\right| .
+\label{eq:p5-ineq3}
+\end{equation}
+
+\textbf{第四步：用严格对角占优收口。}由式 \eqref{eq:p5-dom} 有 $|b_i|>|a_i|+|c_i|$，即
+\begin{equation}
+\left|b_i\right|-\left|c_i\right|>\left|a_i\right| .
+\label{eq:p5-close}
+\end{equation}
+把第三步与这一步接起来：
+\begin{equation}
+\left|m\right|\ge\left|b_i\right|-\left|c_i\right|>\left|a_i\right| .
+\label{eq:p5-chain}
+\end{equation}
+于是
+\begin{equation}
+\left|cp_i\right|=\frac{\left|a_i\right|}{\left|m\right|}<1 .
+\label{eq:p5-cplt1}
+\end{equation}
+归纳步骤完成。由起点与归纳步骤，对所有 $i$ 都有 $|cp_i|<1$，命题得证。$\square$
+
+\textbf{拿手算例子对照。}前面那个 $3\times3$ 方程组里，三个 $cp$ 分别是 $|cp_0|=0.5<1$、$|cp_1|=\dfrac23\approx0.667<1$、$|cp_2|=0<1$，三个数都落在单位区间内，与命题的结论一致；而且每一步真正算出来的分母 $1.5$ 与 $\dfrac43$ 都大于该步的分子 $|-1|$，除法确实没有放大任何东西。
+
+这里要把话说准：这个手算例子的中间一行是 $|b_1|=2$、$|a_1|+|c_1|=1+1=2$，只满足弱对角占优，不满足式 \eqref{eq:p5-dom} 的严格不等号。所以在这一行上，式 \eqref{eq:p5-close} 给出的下界恰好是 $|m|\ge2-1=1$，只能保证 $|m|\ge|a_1|$，套不进严格小于的结论。真正算出来的 $m=1.5$ 比这个下界大，结论 $|cp_1|=\dfrac23<1$ 仍然成立。这正好说明式 \eqref{eq:p5-ineq3} 是一个最坏情况的估计：它保证的是「无论物性、步长、节点数怎么变都不会出事」，而不是每一步的真实值都恰好贴着这个界。程序里的矩阵则每一行都满足严格不等号，因为主对角上那个 $1$ 让式 \eqref{eq:p5-margin} 的余量恒为 $1$。
+
+\why{严格对角占优在这里到底起了什么作用}
+它保证的是占优性在消元过程中不会丢失。对一般的矩阵，消元几次之后主对角可能被磨得很小，所以必须选主元；而严格对角占优的矩阵每消一次，剩下的子矩阵仍然严格对角占优（这本身也是一个小一号的归纳法），所以上面的归纳假设可以一直用下去，不会到某一步失效。本题因为占优余量恒等于 $1$（式 \eqref{eq:p5-margin}），这个性质尤其干净：与节点数、步长、物性都无关，所以结论在整条时间推进过程中一直有效。
+
+\subsection{顺带看清误差是怎么往回传的}
+
+命题证完之后，还可以把「误差不放大」这件事说得更具体。回代递推式是
+\begin{equation}
+x_i=dp_i-cp_ix_{i+1} .
+\label{eq:p5-backsub}
+\end{equation}
+设 $x_{i+1}$ 上带着一个误差 $\varepsilon$（来自更早的浮点舍入），把它代进去，$x_i$ 上就多出 $cp_i\varepsilon$ 这一项。取绝对值：
+\begin{equation}
+\left|cp_i\varepsilon\right|=\left|cp_i\right|\left|\varepsilon\right|<\left|\varepsilon\right| .
+\label{eq:p5-errdecay}
+\end{equation}
+也就是说，误差每往回传一步就乘一个小于 $1$ 的因子，越往前越小，不会越滚越大。这正是「不用选主元」的实践含义：不是说不存在舍入误差，而是说这些误差在回代过程中被自然地压下去了。
+
+前面的手算例子也是这样，三个 $cp$ 值给出的衰减倍数是具体的：$cp_2=0$ 意味着 $x_2$ 上的误差完全不会传到 $x_1$，也就是衰减到 $0$ 倍；$|cp_1|=\dfrac23$ 意味着传到 $x_1$ 时只剩三分之二；$|cp_0|=0.5$ 意味着再传到 $x_0$ 时只剩一半。从最后一个未知量一路传到第一个未知量，误差被乘上
+\begin{equation}
+\left|cp_{n-2}\right|\cdot\left|cp_{n-3}\right|\cdots\left|cp_0\right|<\frac23\times0.5=\frac13 ,
+\end{equation}
+也就是说，$x_2$ 上的半点误差传到 $x_0$ 时已经不到六分之一。程序里 $n=401$，这个连乘只会更小。
+
+\keypoint
+严格对角占优 $\Rightarrow$ 前向消元的分母始终大于分子 $\Rightarrow$ $|cp_i|<1$ $\Rightarrow$ 既没有零主元、误差也不会被放大 $\Rightarrow$ 不需要选主元。本题的占优余量恒等于 $1$，所以这条结论与节点数、步长、物性都无关。
+
+\subsection{采样与报告}
+
+文件第 161 行到第 166 行：
 
 \begin{lstlisting}[language=Python]
 def sample_xi(xi, vals, x_target):
-    """线性插值到 ξ 目标位置。"""
+    """把节点值 vals 线性插值到目标位置 x_target（无量纲坐标 i/N）。
+
+    x_target 可为标量或数组，返回同形状结果；超出 xi 范围时取端点值（np.interp 默认）。
+    """
     return np.interp(np.asarray(x_target, float), xi, vals)
 \end{lstlisting}
 
 \texttt{np.interp} 是 numpy 的线性插值函数，三个参数依次是目标位置、已知点的横坐标、已知点的纵坐标，在已知点之间用直线连接、在之外取端点值，并且是在 $\xi$ 坐标上插值。\texttt{run\_all.py} 用它取表面处的值，传进去的目标位置是 $0.02/0.02=1$，正好落在最后一个节点上，取到的就是表面节点本身的值。
 
+把节点上的值线性插值到目标位置，有限体积用线性插值就够了，因为格式本身只有二阶精度，用更高阶的插值没有意义。这与主求解器那边用重心插值形成对比——那边是谱精度，插值也必须匹配。
+
 \keypoint
-\texttt{fv\_uniform.py} 用的是与主求解器完全不同的三层离散：均匀 $\xi$ 网格、守恒型有限体积、等步长后向欧拉；非线性靠 Picard 迭代 3 次处理，线性方程组靠手写追赶法求解。它与 \texttt{fv\_theta.py} 共用空间离散，差别在时间格式、非线性处理与线性求解器。
+\texttt{fv\_uniform.py} 的关键词是「从零自己写」：自己组装三对角矩阵、自己写 Picard 迭代、自己写追赶法。它与 \texttt{fv\_theta.py} 共用有限体积的思想，但时间格式与非线性处理完全不同，因此两者与主求解器构成三族互证。
 
 % =====================================================================
 \section{结果文件：make\_results.py 逐段解释}
 
 \subsection{题目要求的表格与文件格式}
 
-题目在问题 1 里要求：按表 1 和表 2 的格式分别给出$100$、$300$、$600$、$900$、$1200$、$1500$、$1800$ 秒，以及到药材中心距离$0$、$0.5$、$1$、$1.5$、$2$ 厘米处的结果，并将 $1800$ 秒内每隔 $1$ 秒、距离每隔 $0.1$ 厘米的完整结果保存到 \texttt{result1.xlsx}，所有结果保留四位小数，下同。
+题目在问题 1 里要求：按表 1 和表 2 的格式分别给出 $100$、$300$、$600$、$900$、$1200$、$1500$、$1800$ 秒，以及到药材中心距离 $0$、$0.5$、$1$、$1.5$、$2$ 厘米处的结果，并将 $1800$ 秒内每隔 $1$ 秒、距离每隔 $0.1$ 厘米的完整结果保存到 \texttt{result1.xlsx}，所有结果保留四位小数，下同。
 问题 2 要求 $3$ 小时内每隔 $1$ 秒、距离每隔 $0.1$ 厘米的结果存进 \texttt{result2.xlsx}；问题 3 要求水分浓度每隔 $60$ 秒、距离每隔 $0.1$ 厘米的结果存进 \texttt{result3.xlsx}；问题 4 要求每隔 $60$ 秒、距离每隔 $0.1$ 厘米的结果存进 \texttt{result4.xlsx}。题目附录 3 说明了编排方式：附件 3 是结果文件夹、包括这四个文件；
 \texttt{result1.xlsx} 在温度与水分浓度两个工作表中分别保存，\texttt{A} 列为时间（单位秒）、第 $1$ 行为到药材中心的距离（单位厘米）；\texttt{result2.xlsx} 的编排相同；\texttt{result3.xlsx} 与 \texttt{result4.xlsx} 只保存水分浓度，编排方式也相同。要注意两件事：论文里的表 1 到表 6 每张只列 $5$ 个位置（$0$、$0.5$、$1$、$1.5$、$2$ 厘米，
 表 6 的最后一列换成药材表面），而文件里要列全 $21$ 个距离；表 5 和表 6 的最后一行是烘干结束时间，所以文件最后一行的时间不是等间隔网格上的点。
 
-\subsection{清单：文件头与常量}
-
-文件第 11 行到第 24 行：
+文件第 44 行到第 47 行是这张表格的四个常量：
 
 \begin{lstlisting}[language=Python]
-import os
-import numpy as np
-import openpyxl
-import common as cm
-from spectral import HerbSolver
-
-OUTDIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                      "..", "结果"))
-os.makedirs(OUTDIR, exist_ok=True)
-
 RCOLS = np.round(np.arange(0.0, 2.0001, 0.1), 10)      # 0.0 .. 2.0 cm
 RC = RCOLS * 1e-2                                       # m
 CRIT = 0.15
 N = 64
 \end{lstlisting}
 
-第 13 行导入 \texttt{openpyxl}。\textbf{openpyxl} 是 Python 读写 xlsx 文件的库，它把文件看成一个工作簿对象，工作簿里有若干工作表，工作表里有若干单元格。第 15 行从主求解器取出 \texttt{HerbSolver}，所以这个脚本会重新求解四个问题、不读已有表格。第 17 行和第 18 行算出输出目录：\texttt{\_\_file\_\_} 是当前文件自己的路径，
-取两次 \texttt{os.path.dirname} 得到包的根目录，再拼上结果两个字；这样算出的路径与在哪里运行命令无关，整个文件夹搬走也能正确输出。第 19 行的 \texttt{os.makedirs(OUTDIR, exist\_ok=True)} 创建目录，第二个参数表示已存在时不报错。第 21 行构造距离列：\texttt{np.arange(0.0, 2.0001, 0.1)} 从 $0$ 起每次加 $0.1$、
-到不超过 $2.0001$ 为止，得到 $21$ 个数；终点写 $2.0001$ 而不是 $2.0$，是因为浮点累加可能让最后一个值变成 $1.9999999999999998$，写 $2.0$ 会把它排除掉、少一列；外面的 \texttt{np.round(..., 10)} 保留 $10$ 位小数、用来消掉浮点表示误差，否则 $0.1+0.1+0.1$ 会得到 $0.30000000000000004$，表头就不好看了。
-第 22 行把厘米换算成米，因为求解器与插值用的都是米；表头用厘米、计算用米，中间差 $100$ 倍，这两行最容易搞错。第 23 行是判据 $0.15$，第 24 行是谱节点数 $64$。
+第 44 行生成 $0.0$ 到 $2.0$ 厘米、步长 $0.1$ 厘米的 $21$ 个距离，这就是题目要求的表格列。
+\texttt{np.arange(0.0, 2.0001, 0.1)} 从 $0$ 起每次加 $0.1$、到不超过 $2.0001$ 为止；
+终点写 $2.0001$ 而不是 $2.0$，是因为浮点累加可能让最后一个值变成 $1.9999999999999998$，写 $2.0$ 会把它排除掉、少一列。
+外面的 \texttt{np.round(..., 10)} 保留 $10$ 位小数、用来消掉浮点表示误差，否则 $0.1+0.1+0.1$ 会得到 $0.30000000000000004$，表头就不好看了。
+第 45 行把厘米换算成米，因为求解器里的长度单位是米；表头用厘米、计算用米，中间差 $100$ 倍，这两行最容易搞错。第 46 行是烘干判据阈值，第 47 行是生产网格的节点数，与论文所有表格同一口径。
 
-\subsection{清单：写表函数逐行说明}
+文件第 40 行到第 42 行算输出目录：
 
-文件第 27 行到第 43 行，函数 \texttt{write\_sheet} 的全部内容：
+\begin{lstlisting}[language=Python]
+OUTDIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                      "..", "result"))
+os.makedirs(OUTDIR, exist_ok=True)
+\end{lstlisting}
+
+\texttt{\_\_file\_\_} 是当前文件自己的路径，取两次 \texttt{os.path.dirname} 得到包的根目录，再拼上 \texttt{result} 两个字；这样算出的路径与在哪里运行命令无关，整个文件夹搬走也能正确输出。\texttt{os.makedirs(OUTDIR, exist\_ok=True)} 创建目录，第二个参数表示已存在时不报错。
+
+文件开头还有一道防护，也就是第 27 行到第 30 行：
+
+\begin{lstlisting}[language=Python]
+if __name__ != "__main__":
+    raise RuntimeError(
+        "make_results 的生成逻辑在模块顶层，import 会直接覆盖 result/*.xlsx。"
+        "请用 `python make_results.py` 运行；确实需要 import 时，请先把生成逻辑移入 main()。")
+\end{lstlisting}
+
+因为这个脚本会直接覆盖已经交付的结果文件，所以拦一道，防止别人误 import 把结果冲掉。
+
+\subsection{写表函数逐行说明}
+
+文件第 50 行到第 73 行，函数 \texttt{write\_sheet} 的全部内容：
 
 \begin{lstlisting}[language=Python]
 def write_sheet(ws, times, values, header_last=None):
+    """把一个（时刻 × 半径）的数值矩阵写成一张工作表。
+
+    第 1 行是表头：A1 为模板规定的交叉标题，B1 起依次是 21 个距离 [cm]；
+    A 列是各报告时刻 [s]；表体是 values[i, j]，四舍五入到 4 位小数。
+    values 为 None 或非有限值时该单元格留空（问题 4 里已收缩掉的半径即如此处理）；
+    header_last 不为 None 时，另用它在最后一列加一列表头与数值，如 result4 的"药材表面"。
+    """
     ws.cell(row=1, column=1, value="时间\\到药材中心的距离")
     for j, rc in enumerate(RCOLS):
         ws.cell(row=1, column=2 + j, value=float(rc))
@@ -676,18 +1055,35 @@ def write_sheet(ws, times, values, header_last=None):
                 ws.cell(row=2 + i, column=2 + len(RCOLS), value=round(float(v), 4))
 \end{lstlisting}
 
-第 27 行的四个参数是工作表对象、时间数组、数值数组和可选的最后一列表头，行号与列号都从 $1$ 开始数。第 28 行写第一行第一格的文字：括号里是两个反斜杠，在 Python 里转义成一个反斜杠字符，所以单元格里存的是时间、一个反斜杠、到药材中心的距离，这一个单元格同时充当行标题与列标题的分隔。第 29 行和第 30 行写距离表头，\texttt{enumerate} 同时给出下标与元素，
-第 $j$ 个距离写到第 $2+j$ 列，所以第一个距离在 \texttt{B} 列、\texttt{A} 列留给时间；\texttt{float(rc)} 把数值转成浮点数再写，单元格里是数字而不是文字，表格软件可以直接计算。第 31 行和第 32 行处理 \texttt{result4} 多出来的那一列：传了 \texttt{header\_last} 就写到第 $2+21=23$ 列，
-\texttt{result1} 到 \texttt{result3} 不传，走不进这个分支，表头只有 $22$ 列。第 33 行到第 38 行写数据区：外层循环走行，第 $i$ 个时刻写到第 $2+i$ 行（第 $1$ 行是表头），第 34 行写时间列，第 35 行到第 38 行写这一行的 $21$ 个数值。第 37 行是留空的关键：只有当值不是空、也不是 \texttt{nan} 时才写，
-\texttt{np.isfinite} 判断一个数是不是有限数，\texttt{nan} 和无穷大都会返回假；条件不成立时这一格什么都不写。新工作簿里没被赋值过的单元格本来就是空的，所以留空的实现方式就是根本不碰它，而不是写一个空字符串进去，两者有区别：空字符串会让单元格看起来非空。第 38 行把数值四舍五入到 $4$ 位小数再写。\texttt{round} 是 Python 内置函数，第二个参数是保留的小数位数；
-它是在二进制浮点数上做的四舍五入，如果某个数正好落在第 $5$ 位小数的中点上、而它在二进制里表示不出来，结果可能比十进制四舍五入少一个最低位；本题的解都是带十几位有效数字的浮点数，恰好落在中点上的情形没有出现，程序也没有为这种情形做特殊处理。写进去的是四舍五入后的数本身而不是显示格式，所以读回来也是四位小数。第 39 行到第 43 行写最后一列，逻辑与数据区相同，只是列号换成 $2+21=23$。
+这个函数把一个「时刻乘半径」的数值矩阵写成一张工作表。
+第 50 行的四个参数是工作表对象、时间数组、数值数组和可选的最后一列表头，行号与列号都从 $1$ 开始数。
 
-\subsection{清单：采样函数与坐标换算}
+第 58 行写第一行第一格的文字：括号里是两个反斜杠，在 Python 里转义成一个反斜杠字符，所以单元格里存的是时间、一个反斜杠、到药材中心的距离，这一个单元格同时充当行标题与列标题的分隔。
+第 59 行和第 60 行写距离表头，\texttt{enumerate} 同时给出下标与元素，第 $j$ 个距离写到第 $2+j$ 列，所以第一个距离在 \texttt{B} 列、\texttt{A} 列留给时间；\texttt{float(rc)} 把数值转成浮点数再写，单元格里是数字而不是文字，表格软件可以直接计算。
+第 61 行和第 62 行处理 \texttt{result4} 多出来的那一列：传了 \texttt{header\_last} 就写到第 $2+21=23$ 列，\texttt{result1} 到 \texttt{result3} 不传，走不进这个分支，表头只有 $22$ 列。
 
-文件第 46 行到第 51 行：
+第 63 行到第 68 行写数据区：外层循环走行，第 $i$ 个时刻写到第 $2+i$ 行（第 $1$ 行是表头），第 64 行写时间列，第 65 行到第 68 行写这一行的 $21$ 个数值。
+第 67 行是留空的关键：只有当值不是空、也不是 \texttt{nan} 时才写，
+\texttt{np.isfinite} 判断一个数是不是有限数，\texttt{nan} 和无穷大都会返回假；条件不成立时这一格什么都不写。新工作簿里没被赋值过的单元格本来就是空的，所以留空的实现方式就是根本不碰它，而不是写一个空字符串进去，两者有区别：空字符串会让单元格看起来非空。
+第 68 行把数值四舍五入到 $4$ 位小数再写，这是题目要求的精度。\texttt{round} 是 Python 内置函数，第二个参数是保留的小数位数；它是在二进制浮点数上做的四舍五入，如果某个数正好落在第 $5$ 位小数的中点上、而它在二进制里表示不出来，结果可能比十进制四舍五入少一个最低位；本题的解都是带十几位有效数字的浮点数，恰好落在中点上的情形没有出现，程序也没有为这种情形做特殊处理。写进去的是四舍五入后的数本身而不是显示格式，所以读回来也是四位小数。
+第 69 行到第 73 行写最后一列，逻辑与数据区相同，只是列号换成 $2+21=23$。
+
+\why{问题 4 里收缩掉的半径是怎么留空的}
+就是靠第 67 行那个判断。调用方在 \texttt{result4} 里对已经收缩掉的半径填的是 \texttt{nan}，\texttt{nan} 不是有限数，会被自动跳过。这样「物理上不存在的位置」在表里就是一个真正的空格，而不是被填上某个近似的数。
+
+\subsection{采样函数与坐标换算}
+
+文件第 76 行到第 88 行：
 
 \begin{lstlisting}[language=Python]
 def sample(s, sol, u_targets, which):
+    """把解采样成矩阵，返回形状 (报告时刻数, 采样点数)。
+
+    s         求解器实例（用它的 interp_u 做插值）；
+    sol       solve_ivp 的解对象，sol.y 的各列依次对应各报告时刻；
+    u_targets 目标归一化半径 u = (r/R)^2（无量纲，故与半径用什么单位无关）；
+    which     "T" 取温度 [degC]，取其它值则取干基含水率 [kg/kg]。
+    """
     out = np.empty((sol.y.shape[1], len(u_targets)))
     for i in range(sol.y.shape[1]):
         C, T = s.interp_u(sol.y[:, i], u_targets)
@@ -695,25 +1091,26 @@ def sample(s, sol, u_targets, which):
     return out
 \end{lstlisting}
 
-第 46 行的四个参数是求解器对象、解对象、目标 $u$ 位置、要取哪个场。第 47 行建立空数组：\texttt{sol.y} 是积分器返回的解矩阵，形状是（状态维数，输出时刻数），状态维数是 $2(N+1)$，所以 \texttt{sol.y.shape[1]} 就是输出时刻个数，新数组形状是（时刻数，目标点个数）。第 48 行到第 50 行逐时刻插值：\texttt{s.interp\_u} 是第三部分讲过的重心插值，
-它按 $u$ 变量插值并一次返回含水率与温度两组值；第 50 行按参数 \texttt{which} 决定存哪一组，传进来的是 \texttt{"T"} 就存温度，否则存含水率。
+遍历每一个报告时刻，把该时刻的解插值到目标坐标上。
+第 84 行建立空数组：\texttt{sol.y} 是积分器返回的解矩阵，形状是（状态维数，输出时刻数），状态维数是 $2(N+1)$，所以 \texttt{sol.y.shape[1]} 就是输出时刻个数，新数组形状是（时刻数，目标点个数）。第 85 行到第 87 行逐时刻插值：\texttt{s.interp\_u} 是第三部分讲过的重心插值，它按 $u$ 变量插值并一次返回含水率与温度两组值；第 87 行按参数 \texttt{which} 决定存哪一组。
 
-本小节的中心问题是：为什么要把 $u$ 坐标的解换算成当前物理半径处的值。求解器里的未知量是 $C(u,t)$，其中 $u=\xi^2$、$\xi=r/R(t)$ 是材料坐标，也就是材料点的标签；一个固定的 $u$ 对应的是一批固定的材料点，它们跟着药材一起收缩，物理半径 $r=\xi R(t)$ 随时间变小。而表格的列标是固定的物理距离，比如 $1.0$ 厘米；烘干后期原本在 $1.0$ 厘米处的材料已经缩到 $1.0$ 厘米以内，
-现在位于物理半径 $1.0$ 厘米处的是另一批材料点。要给出这一列的值，就得先问现在位于该处的是哪一批材料，它的标签是
-\begin{equation}
-\xi=\frac{r}{R(t)},\qquad u=\xi^2=\left(\frac{r}{R(t)}\right)^2 ,
-\label{eq:p5-umap}
-\end{equation}
-
-这正是第二部分第九章的式 \eqref{eq:outputmap}：分子是固定的物理距离，分母是当前半径、随时间变化。代码里对应第 60 行和第 119 行的 \texttt{U = (RC / cm.R0) ** 2} 与 \texttt{(r / Rt) ** 2}；问题一到问题三不收缩、分母恒为 $R_0$，问题四的分母是当前的 $R(t)$。换算错了会怎样，用实际数字说明：在 $t=6$ 小时半径是 $1.374$ 厘米，
-要查 $r=1.0$ 厘米处的含水率，正确算法是 $u=(1.0/1.374)^2=0.5297$，从已有的 \texttt{result4.xlsx} 回读这一格、值是 $1.0215$，与复跑报告第 10 节表 6 中 $6$ 小时那一行相同；如果误用初始半径算成 $u=(1.0/2.0)^2=0.25$，读到的就是另一个材料点、值是 $1.3782$，相对误差约百分之三十五。这个对比在报告第 5.6 节里也写了。
-
-\subsection{清单：result1 与 result2}
-
-文件第 54 行到第 66 行，生成 \texttt{result1.xlsx}：
+注意目标坐标是 $u$ 而不是 $r$，调用处是这么算的：
 
 \begin{lstlisting}[language=Python]
-# ================= result1 =================
+U = (RC / cm.R0) ** 2
+\end{lstlisting}
+
+插值必须在求解坐标系里做，所以先把物理距离换算成 $u=(r/R_0)^2$。\texttt{which == "T"} 取温度，否则取含水率，两个场共用同一个采样函数。
+
+\why{为什么不在 r 坐标上插值}
+因为谱解本身是 $u$ 的多项式。
+在 $u$ 上插值才是谱精度的；若先在 $r$ 上均匀取点再插值，等于对多项式做了非最优采样，精度会掉。
+
+\subsection{result1 与 result2}
+
+文件第 94 行到第 105 行，生成 \texttt{result1.xlsx}：
+
+\begin{lstlisting}[language=Python]
 print("result1 ...")
 s = HerbSolver(N, prob=1)
 tt = np.arange(1.0, 1801.0, 1.0)
@@ -728,36 +1125,32 @@ write_sheet(ws2, tt, sample(s, sol, U, "C"))
 wb.save(os.path.join(OUTDIR, "result1.xlsx"))
 \end{lstlisting}
 
-第 55 行在屏幕上打印进度，因为这一步要算几分钟。第 56 行建立问题 1 的求解器，默认 $N=64$。第 57 行构造时间列：从 $1$ 秒到 $1800$ 秒、间隔 $1$ 秒，共 $1800$ 个时刻、单位是秒；论文的表 1 只列 $7$ 个时刻，而文件里每 $1$ 秒给一个值，两者长度差很多。第 58 行构造容差向量：\texttt{np.concatenate} 把两段拼起来，
-前一段长度 $N+1$ 对应含水率、绝对容差 $10^{-13}$，后一段同样长度对应温度、绝对容差 $10^{-11}$；顺序必须与状态向量的排列一致，也就是含水率在前、温度在后。第 59 行调用求解器，\texttt{rtol} 是相对容差、\texttt{t\_eval} 指定只在这些时刻输出。第 60 行算出目标 $u$ 数组：\texttt{RC} 是米制距离、\texttt{cm.R0} 是 $0.02$ 米，相除得 $0$ 到 $1$、平方后仍是 $0$ 到 $1$；
-两端正好落在节点上，重心插值在 $u=0$ 和 $u=1$ 处直接取节点值。第 61 行建立新工作簿，新工作簿默认带一个工作表、用 \texttt{wb.active} 拿到。第 62 行把默认工作表改名为温度，分号把两条语句写在一行、作用与分两行相同；工作表名必须是题目附录 3 里写的温度与水分浓度，因为阅卷时要按名字找。第 63 行把温度写进这个工作表，\texttt{sample} 的第四个参数是 \texttt{"T"}。
-第 64 行用 \texttt{wb.create\_sheet} 追加第二个工作表并命名为水分浓度；第 65 行把含水率写进去、参数是 \texttt{"C"}。第 66 行保存文件，落在 \texttt{<包根>/结果/result1.xlsx}。
+第 94 行在屏幕上打印进度，因为这一步要算几分钟。第 95 行建立问题 1 的求解器，\texttt{N} 就是上面那个 $64$，物性用 \texttt{prob=1} 的常数物性。第 96 行构造时间列：从 $1$ 秒到 $1800$ 秒、间隔 $1$ 秒，共 $1800$ 个时刻、单位是秒；论文的表 1 只列 $7$ 个时刻，而文件里每 $1$ 秒给一个值，两者长度差很多。
+第 97 行构造容差向量：\texttt{np.concatenate} 把两段拼起来，前一段长度 $N+1$ 对应含水率、绝对容差 $10^{-13}$，后一段同样长度对应温度、绝对容差 $10^{-11}$；顺序必须与状态向量的排列一致，也就是含水率在前、温度在后。第 98 行调用求解器，\texttt{rtol} 是相对容差、\texttt{t\_eval} 指定只在这些时刻输出。
+第 99 行算出目标 $u$ 数组：\texttt{RC} 是米制距离、\texttt{cm.R0} 是 $0.02$ 米，相除得 $0$ 到 $1$、平方后仍是 $0$ 到 $1$；两端正好落在节点上，重心插值在 $u=0$ 和 $u=1$ 处直接取节点值。
+第 100 行建立新工作簿，新工作簿默认带一个工作表、用 \texttt{wb.active} 拿到。第 101 行把默认工作表改名为温度，分号把两条语句写在一行、作用与分两行相同；工作表名必须是题目附录 3 里写的温度与水分浓度，因为阅卷时要按名字找。第 102 行把温度写进这个工作表，\texttt{sample} 的第四个参数是 \texttt{"T"}。
+第 103 行用 \texttt{wb.create\_sheet} 追加第二个工作表并命名为水分浓度；第 104 行把含水率写进去、参数是 \texttt{"C"}。第 105 行保存文件，落在 \texttt{<包根>/result/result1.xlsx}。两张表共用同一个解对象 \texttt{sol}，只是取不同的物理量。
 
-文件第 68 行到第 79 行，生成 \texttt{result2.xlsx}：
+\texttt{result2} 的结构完全相同，也就是文件第 107 行到第 119 行，
+只把 \texttt{prob} 换成 $2$、时间延长到 $10800$ 秒；
+第 112 行的容差放宽到 $10^{-12}$ 与 $10^{-10}$、比 \texttt{result1} 宽一个数量级；
+第 116 行和第 118 行复用上一段算出的 \texttt{U}，因为问题 2 也不收缩。
+一个文件里放两个工作表而不是两个文件，是因为题目附录 3 就是这么规定的。
 
-\begin{lstlisting}[language=Python]
-# ================= result2 =================
-print("result2 ...")
-s2 = HerbSolver(N, prob=2)
-tt2 = np.arange(1.0, 10801.0, 1.0)
-at2 = np.concatenate([np.full(s2.Np, 1e-12), np.full(s2.Np, 1e-10)])
-sol2 = s2.solve(10800.0, t_eval=tt2, rtol=1e-11, atol=at2)
-wb = openpyxl.Workbook()
-ws = wb.active; ws.title = "温度"
-write_sheet(ws, tt2, sample(s2, sol2, U, "T"))
-ws2 = wb.create_sheet("水分浓度")
-write_sheet(ws2, tt2, sample(s2, sol2, U, "C"))
-wb.save(os.path.join(OUTDIR, "result2.xlsx"))
-\end{lstlisting}
+\subsection{烘干时间与事件函数}
 
-这一段与上一段逐行对应，只有四处不同：第 70 行换成问题 2；第 71 行的时间列到 $10800$ 秒、也就是 $3$ 小时；第 72 行的容差放宽到 $10^{-12}$ 与 $10^{-10}$、比 \texttt{result1} 宽一个数量级；第 76 行和第 78 行复用上一段算出的 \texttt{U}，因为问题 2 也不收缩。一个文件里放两个工作表而不是两个文件，是因为题目附录 3 就是这么规定的。
-
-\subsection{清单：烘干时间与事件函数}
-
-文件第 82 行到第 90 行：
+文件第 122 行到第 138 行：
 
 \begin{lstlisting}[language=Python]
 def dry(s, shrink=False, rtol=1e-11):
+    """求烘干时长 t_dry [s]，事件口径与 run_all.dry_time 相同。
+
+    事件函数取状态中水分那段的最大值减 CRIT：含水率沿半径由中心向外递减，最大值在轴心
+    u=0（表面先干、中心最后达标），故它穿过 0 的时刻就是"处处不高于 0.15 kg/kg"的首达
+    时刻；terminal 配 direction=-1 表示只在下降方向触发。rtol 是积分的相对容差。
+    shrink 在本函数体内并不使用：是否含收缩由构造求解器 s 时决定，保留它只是让调用处
+    一眼看出这一路是问题 4。
+    """
     at = np.concatenate([np.full(s.Np, 1e-13), np.full(s.Np, 1e-11)])
 
     def ev(t, y):
@@ -768,16 +1161,20 @@ def dry(s, shrink=False, rtol=1e-11):
     return float(e.t_events[0][0])
 \end{lstlisting}
 
-第 82 行的 \texttt{s} 是求解器对象、\texttt{rtol} 是相对容差；\texttt{shrink} 在函数体内没有被用到，因为是否收缩由求解器对象自己记着（问题四建立对象时传了 \texttt{shrink=True}），传这个参数只是让调用处读起来清楚。第 85 行到第 87 行定义\textbf{事件函数}：求解器在每个时间步计算它的值，当值穿过零时记录下这个时刻；
-本函数返回全场最大值与判据之差 $e(t)=\max_{0\le j\le N}C_j(t)-0.15$，还没干时 $e>0$、干了时 $e<0$，所以零点是烘干时刻，这与第二部分第八章的判据式 \eqref{eq:tdry} 是同一件事。第 87 行 \texttt{ev.terminal = True} 表示事件发生后停止积分；第 88 行 \texttt{ev.direction = -1} 表示只在函数值下降穿过零时触发，干燥过程中最大值整体是下降的，
-加了这个条件以后触发更明确。第 89 行求解，时间上限给 $300000$ 秒、远大于预计的烘干时间，好处是不用事先知道答案，代价是万一事件没触发程序要跑满 $300000$ 秒才停，所以复跑报告第 9 节专门列了不同积分器与容差下的结果，确认事件稳定触发、四种配置的极差只有 $0.007$ 秒。第 90 行取出事件时刻：\texttt{t\_events} 是列表、每个事件对应一个数组，可能有多个触发点，\texttt{[0][0]} 取第一个事件的第一个时刻。
+这个函数求烘干时长，判据就是第二部分的式 \eqref{eq:tdry}。
 
-\subsection{清单：result3 与 result4}
+第 122 行的 \texttt{s} 是求解器对象、\texttt{rtol} 是相对容差；\texttt{shrink} 在函数体内没有被用到，因为是否收缩由求解器对象自己记着（问题四建立对象时传了 \texttt{shrink=True}），传这个参数只是让调用处读起来清楚。
 
-文件第 93 行到第 104 行，生成 \texttt{result3.xlsx}：
+第 133 行到第 135 行定义\textbf{事件函数}：求解器在每个时间步计算它的值，当值穿过零时记录下这个时刻；本函数返回全场最大值与判据之差 $e(t)=\max_{0\le j\le N}C_j(t)-0.15$，还没干时 $e>0$、干了时 $e<0$，所以零点是烘干时刻。第 135 行 \texttt{ev.terminal = True} 表示事件发生后停止积分，不必白算到 $300000$ 秒；
+第 136 行 \texttt{ev.direction = -1} 表示只在函数值下降穿过零时触发，干燥过程中最大值整体是下降的，加了这个条件以后触发更明确，而且初值是 $2.55$、远高于阈值 $0.15$，本来不会误触发，把方向写明确是一个好习惯。
+
+第 137 行求解，时间上限给 $300000$ 秒。这个数是这样定的：问题三的实际答案是 $205574$ 秒，问题四更快，所以 $300000$ 秒一定够；而事件是终止事件，达标即停，不会真的算那么久。好处是不用事先知道答案，代价是万一事件没触发程序要跑满 $300000$ 秒才停。第 138 行取出事件时刻：\texttt{t\_events} 是列表、每个事件对应一个数组，可能有多个触发点，\texttt{[0][0]} 取第一个事件的第一个时刻。
+
+\subsection{result3 与 result4}
+
+文件第 144 行到第 154 行，生成 \texttt{result3.xlsx}：
 
 \begin{lstlisting}[language=Python]
-# ================= result3 =================
 print("result3 ...")
 s3 = HerbSolver(N, prob=3)
 td3 = dry(s3)
@@ -791,15 +1188,13 @@ write_sheet(ws, tt3, sample(s3, sol3, U3, "C"))
 wb.save(os.path.join(OUTDIR, "result3.xlsx"))
 \end{lstlisting}
 
-第 96 行先求一次烘干时间，因为要先知道表格写到哪里。第 97 行构造时间列需要拆开看：\texttt{np.floor(td3 / 60.0) * 60.0} 是找出不超过烘干时间的、$60$ 的最大整数倍，\texttt{np.floor} 是向下取整函数。以已有 \texttt{result3.xlsx} 的回读值为例，烘干时间是 $205574.518545157$ 秒，除以 $60$ 得 $3426.24$、向下取整是 $3426$、乘回 $60$ 得 $205560$；
-于是 \texttt{np.arange} 从 $60$ 起每次加 $60$ 直到不超过 $205561$，得到 $60,120,\dots,205560$ 共 $3426$ 个数；终点后加 $1.0$ 是为了让 $205560$ 被包含进来，否则浮点误差可能把它排除掉。第 98 行用 \texttt{np.append} 把精确的烘干时间接到时间列末尾：题目表 5 的最后一行是烘干结束时间、不是 $6$ 小时的整数倍，所以最后一行的时间是一个带很多位小数的数；
-回读 \texttt{result3.xlsx}，最后一行的时间是 $205574.518545157$ 秒，与复跑报告第 9 节打印的 $205574.519$ 秒一致。第 99 行构造容差向量、与 \texttt{result1} 相同。第 100 行求解，终止时刻就是烘干时间，\texttt{t\_eval} 用 \texttt{list(tt3)} 转成列表，
-最后一个元素正好等于终止时刻。第 101 行算目标 $u$ 数组，与第 60 行表达式相同、只是换了变量名 \texttt{U3}。第 102 行建立工作簿并把工作表命名为 \texttt{Sheet1}，题目没有规定这两个文件的工作表名，所以直接用默认名。第 103 行只写含水率、参数是 \texttt{"C"}；没有传 \texttt{header\_last}，表头是 $22$ 列。
+第 146 行先求一次烘干时间，因为要先知道表格写到哪里。第 147 行构造时间列需要拆开看：\texttt{np.floor(td3 / 60.0) * 60.0} 是找出不超过烘干时间的、$60$ 的最大整数倍，\texttt{np.floor} 是向下取整函数。以交付的结果文件回读值为例，烘干时间是 $205574.5185452786$ 秒，除以 $60$ 得 $3426.24$、向下取整是 $3426$、乘回 $60$ 得 $205560$；
+于是 \texttt{np.arange} 从 $60$ 起每次加 $60$ 直到不超过 $205561$，得到 $60,120,\dots,205560$ 共 $3426$ 个数；终点后加 $1.0$ 是为了让 $205560$ 被包含进来，否则浮点误差可能把它排除掉。第 148 行用 \texttt{np.append} 把精确的烘干时间接到时间列末尾：题目表 5 的最后一行是烘干结束时间、不是 $60$ 秒的整数倍，所以最后一行的时间是一个带很多位小数的数。
+第 149 行构造容差向量、与 \texttt{result1} 相同。第 150 行求解，终止时刻就是烘干时间，\texttt{t\_eval} 用 \texttt{list(tt3)} 转成列表，最后一个元素正好等于终止时刻。第 151 行算目标 $u$ 数组，与第 99 行表达式相同、只是换了变量名 \texttt{U3}。第 152 行建立工作簿并把工作表命名为 \texttt{Sheet1}，题目没有规定这两个文件的工作表名，所以直接用默认名。第 153 行只写含水率、参数是 \texttt{"C"}；没有传 \texttt{header\_last}，表头是 $22$ 列。
 
-文件第 106 行到第 124 行，生成 \texttt{result4.xlsx}：
+文件第 159 行到第 176 行，生成 \texttt{result4.xlsx}：
 
 \begin{lstlisting}[language=Python]
-# ================= result4 =================
 print("result4 ...")
 s4 = HerbSolver(N, prob=4, shrink=True)
 td4 = dry(s4, shrink=True)
@@ -820,19 +1215,31 @@ write_sheet(ws, tt4, vals, header_last="药材表面")
 wb.save(os.path.join(OUTDIR, "result4.xlsx"))
 \end{lstlisting}
 
-第 108 行建立问题 4 的求解器、多传一个 \texttt{shrink=True}，这样求解器每一步按附件 2 的半径历史取当前半径；第 109 行求烘干时间；第 110 行和第 111 行构造时间列，做法与 \texttt{result3} 完全相同。以已有文件回读，问题 4 的烘干时间是 $182778.2814853711$ 秒，等于 $3046\times60$ 加 $18.28$ 秒，
-所以均匀部分到 $182760$ 秒共 $3046$ 个数，追加烘干时间以后是 $3047$ 行。第 114 行建立结果数组，形状是（时刻数，$22$）、初始值全是 \texttt{nan}；比距离列的 $21$ 多一列、多出来的一列放表面值；先全部填 \texttt{nan}，后面把能算的格子算出来，剩下的 \texttt{nan} 在写表时被跳过、成为空格。
-第 115 行按时刻循环，第 116 行取这一时刻的半径，\texttt{s4.R\_of} 在 \texttt{shrink} 为真时调用附件 2 的插值函数。第 117 行到第 120 行按距离循环、逐个判断这个物理位置还在不在。第 118 行的条件是 $r$ 不超过当前半径，多出来的 $10^{-12}$ 米是容差、用来处理 $r$ 与 $R(t)$ 相等时的浮点误差：
-典型情形是 $t=0$ 附近 $r=2.0$ 厘米正好等于初始半径，$r/R(t)$ 因为舍入可能算成 $1.0000000000000002$，插值会跑到区间外面去，加上容差就把它留在区间内。第 119 行做坐标换算与插值，换算关系就是式 \eqref{eq:p5-umap}、分母是当前半径 \texttt{Rt}；\texttt{s4.interp\_u} 返回两个值、这里只要含水率，所以第二个用下划线接住；
-插值结果是长度为 $1$ 的数组，所以第 120 行取 \texttt{Cn[0]}。第 121 行单独算表面值，\texttt{sol4.y[s4.N, i]} 直接取第 $N$ 个节点也就是 $u=1$ 处的含水率、不需要插值，这一列对应题目表 6 的药材表面。
+第 160 行建立问题 4 的求解器、多传一个 \texttt{shrink=True}，这样求解器每一步按附件 2 的半径历史取当前半径；第 161 行求烘干时间；第 162 行和第 163 行构造时间列，做法与 \texttt{result3} 完全相同。以交付的结果文件回读，问题 4 的烘干时间是 $182778.2814815244$ 秒，等于 $3046\times60$ 加 $18.28$ 秒，所以均匀部分到 $182760$ 秒共 $3046$ 个数，追加烘干时间以后是 $3047$ 行。
+第 166 行建立结果数组，形状是（时刻数，$22$）、初始值全是 \texttt{nan}；比距离列的 $21$ 多一列、多出来的一列放表面值；先全部填 \texttt{nan}，后面把能算的格子算出来，剩下的 \texttt{nan} 在写表时被跳过、成为空格。
+
+\textbf{这是一个必须逐时刻做的换算。}求解器工作在物质坐标 $u=\xi^2$ 上，而表格的列名是当前物理距离 $r$。两者的关系是 $r=\xi R(t)$，所以对每个时刻、每个目标半径，要先算
+\begin{equation}
+u_j=\left(\frac{r_j}{R(t_i)}\right)^2
+\label{eq:p5-umap}
+\end{equation}
+再去插值，这正是第二部分第九章的式 \eqref{eq:outputmap}：分子是固定的物理距离，分母是当前半径、随时间变化。
+
+第 167 行按时刻循环，第 168 行取这一时刻的半径，\texttt{s4.R\_of} 在 \texttt{shrink} 为真时调用附件 2 的插值函数。第 169 行到第 172 行按距离循环、逐个判断这个物理位置还在不在。第 170 行的条件是 $r$ 不超过当前半径，多出来的 $10^{-12}$ 米是容差、用来处理 $r$ 与 $R(t)$ 相等时的浮点误差：典型情形是 $t=0$ 附近 $r=2.0$ 厘米正好等于初始半径，$r/R(t)$ 因为舍入可能算成 $1.0000000000000002$，插值会跑到区间外面去，加上容差就把它留在区间内。
+第 171 行做坐标换算与插值，换算关系就是式 \eqref{eq:p5-umap}、分母是当前半径 \texttt{Rt}；\texttt{s4.interp\_u} 返回两个值、这里只要含水率，所以第二个用下划线接住；插值结果是长度为 $1$ 的数组，所以第 172 行取 \texttt{Cn[0]}。
+第 173 行单独算表面值，\texttt{sol4.y[s4.N, i]} 直接取第 $N$ 个节点也就是 $u=1$ 处的含水率、不需要插值，不论半径怎么变，表面永远是 $u=1$ 那个节点。这一列对应题目表 6 的药材表面。
+
 \why{物理位置消失以后为什么必须留空，不能填外推值}
 因为那个位置已经不在药材里面了：半径缩到 $1.374$ 厘米时，$r=1.5$ 厘米处是空气，没有含水率这个量，填任何一个数都是凭空造出来的。更严重的是，如果按固定 $u$ 去取值，取到的是另一个材料点的含水率，数值看起来完全正常却对应错误的位置，这种错误无法从表格本身发现；所以判断条件写在插值之前，不满足条件就跳过，让这一格保持 \texttt{nan}。用已有文件回读的数字说明留空的实际范围：$r=1.5$ 厘米这一列有值的最晚一行是 $t=13140$ 秒、
 从 $t=13200$ 秒起为空，这与附件 2 的数据一致：半径在 $t=12600$ 秒时是 $1.510$ 厘米、在 $t=14400$ 秒时是 $1.477$ 厘米，按分段线性插值在 $t=13145.5$ 秒降到 $1.5$ 厘米，所以 $13140$ 秒这一行还有值、$13200$ 秒这一行就没有了。其余各列最后一个有值行是：$r=1.3$ 厘米在 $t=30420$ 秒、$r=1.4$ 厘米在 $t=19560$ 秒、
 $r=1.6$ 厘米在 $t=8400$ 秒、$r=1.7$ 厘米在 $t=5460$ 秒、$r=1.8$ 厘米在 $t=3420$ 秒、$r=1.9$ 厘米在 $t=1380$ 秒；$r=2.0$ 厘米整列为空，因为从第一行 $t=60$ 秒起半径就已经小于 $2.0$ 厘米；而 $r=0$ 到 $r=1.2$ 厘米这几列在全表 $3047$ 行上都有值，因为半径在整个烘干过程中始终不小于 $1.2$ 厘米（复跑报告第 10 节记录烘干结束时刻 $R=1.2000$ 厘米）。
 
-\subsection{清单：收尾统计与回读校验}
+\why{输出坐标搞错的后果有多大}
+论文里举了一个具体例子：以 $t=6$ 小时、$r=1.0$ 厘米为例。当时半径是 $1.374$ 厘米，正确算法是 $u=(1.0/1.374)^2=0.5297$。如果误以为「物理距离等于初始坐标乘初始半径」，即用 $u=(1.0/2.0)^2=0.25$，那就把 $t=0$ 时刻位于半径 $1.0$ 厘米处的那个物质点，当成了现在的 $1.0$ 厘米处，而这个点其实已经跑到了 $0.687$ 厘米处。两种算法给出的含水率分别是 $1.0215$ 与 $1.3782$，相差百分之三十五。这个对比在报告第 5.6 节里也写了。
 
-文件第 126 行到第 130 行：
+\subsection{收尾统计与回读校验}
+
+文件第 178 行到第 182 行：
 
 \begin{lstlisting}[language=Python]
 print("result1: %d 行 x %d 列" % (len(tt), len(RCOLS) + 1))
@@ -842,7 +1249,9 @@ print("result4: %d 行, tdry=%.3f s" % (len(tt4), td4))
 print("已写入:", OUTDIR)
 \end{lstlisting}
 
-这五行把四个文件的行数与两个烘干时间打印到屏幕、方便与题目要求核对；打印的是数据行数、不含表头，表格文件里的实际行数要再加一。用 \texttt{openpyxl} 把这四个文件读回来，得到的结果是：
+跑完以后把每个文件的行数与烘干时刻打出来，方便跟论文里的数字对位。这是一个很小的习惯，但交付时很省事：不用打开 Excel 去数行数。打印的是数据行数、不含表头，表格文件里的实际行数要再加一。
+
+用 \texttt{openpyxl} 把这四个文件读回来，得到的结果是：
 \begin{center}
 \begin{tabular}{@{}llccc@{}}
 \toprule
@@ -850,120 +1259,474 @@ print("已写入:", OUTDIR)
 \midrule
 \texttt{result1.xlsx} & 温度、水分浓度 & 1801 & 22 & 1 与 1800 \\
 \texttt{result2.xlsx} & 温度、水分浓度 & 10801 & 22 & 1 与 10800 \\
-\texttt{result3.xlsx} & Sheet1 & 3428 & 22 & 60 与 205574.518545157 \\
-\texttt{result4.xlsx} & Sheet1 & 3048 & 23 & 60 与 182778.2814853711 \\
+\texttt{result3.xlsx} & Sheet1 & 3428 & 22 & 60 与 205574.5185452786 \\
+\texttt{result4.xlsx} & Sheet1 & 3048 & 23 & 60 与 182778.2814815244 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 总行数等于表头一行加数据行数，所以四个文件的数据行数分别是 $1800$、$10800$、$3427$、$3047$：\texttt{result1} 每 $1$ 秒一行覆盖 $1800$ 秒、\texttt{result2} 每 $1$ 秒一行覆盖 $3$ 小时、\texttt{result3} 与 \texttt{result4} 每 $60$ 秒一行、最后再加烘干时间那一行。四个文件的表头第一格都是时间、一个反斜杠、到药材中心的距离，
 第 $2$ 列到第 $22$ 列是 $0$ 到 $2.0$ 厘米共 $21$ 个距离，\texttt{result4} 的第 $23$ 列是药材表面。这些数还与复跑报告里打印的表对得上：回读 \texttt{result2.xlsx} 的最后一行，$r=0$ 处温度是 $49.9051$ 摄氏度，与报告第 7 节表 3 中 $3.0$ 小时那一行相同；同一行的水分浓度在 $r=0$ 与 $r=2.0$ 厘米处是 $1.7673$ 与 $1.0083$，与表 4 中 $3.0$ 小时那一行相同；
-回读 \texttt{result3.xlsx} 中 $t=21600$ 秒那一行，$r=0$ 到 $r=2.0$ 厘米五个位置是$1.0150$、$0.9863$、$0.9003$、$0.7548$、$0.5342$，与报告第 9 节表 5 中 $6$ 小时那一行完全相同；回读 \texttt{result4.xlsx} 中 $6$ 小时那一行，表面值是 $0.4228$，与报告第 10 节表 6 相同。
+回读 \texttt{result3.xlsx} 中 $t=21600$ 秒那一行，$r=0$ 到 $r=2.0$ 厘米五个位置是 $1.0150$、$0.9863$、$0.9003$、$0.7548$、$0.5342$，与报告第 9 节表 5 中 $6$ 小时那一行完全相同；回读 \texttt{result4.xlsx} 中 $6$ 小时那一行，表面值是 $0.4228$，与报告第 10 节表 6 相同。
 
 \keypoint
 \texttt{make\_results.py} 做四件事：按题目给的距离网格构造表头，用当前半径把物理距离换算成 $u$ 再做插值，把位置不存在的地方留空，把数值四舍五入到 $4$ 位小数写进 xlsx；四个文件的位置、工作表名与列名都按题目附录 3 编排。
 
 % =====================================================================
-\section{插图脚本：make\_figs.py 与 make\_fig3.py}
+\section{插图体系：fig\_core.py 与 make\_figures.py}
 
-\subsection{两个脚本各画什么}
+\subsection{为什么要分成两个文件}
 
-\texttt{make\_figs.py} 画两张图，每张有两个子图。\texttt{fig1\_p1\_profiles.png} 画问题 1 的剖面演化：左边是温度随距离的分布、右边是水分浓度随距离的分布，每条曲线对应一个时刻，取 $100$、$600$、$1200$、$1800$ 秒四个时刻，横轴是到药材中心的距离、单位厘米。\texttt{fig2\_p3\_drying.png} 画问题 3 的干燥曲线：左边用半对数坐标画五个半径处的水分浓度随时间的变化，
-横轴是小时、纵轴是对数刻度，并画出判据 $0.15$ 的水平线与烘干时刻的竖直线；右边把 $50$ 到 $60$ 小时这一段放大，对比中心与表面两条曲线并标出交点。\texttt{make\_fig3.py} 画一张 \texttt{fig3\_tdry\_conv.png}，也有两个子图：左边是时间收敛，横轴是时间步长、纵轴是烘干时间的误差，两轴都取对数，另画一条斜率为 $1$ 的参考线；右边是空间收敛，横轴是节点数、纵轴也是误差，同样双对数，
-画经典有限体积与本文谱解两族数据，另画一条斜率为 $-2$ 的参考线。三张图都放在 \texttt{<包根>/报告/fig/} 目录下。
+\texttt{fig\_core.py} 管三件事：设定中文字体与字号、提供唯一的出图入口、缓存四个问题的解。\texttt{make\_figures.py} 只管一张一张画。
 
-\subsection{中文字体是怎么设置的}
-
-两个脚本的字体设置相同，以 \texttt{make\_figs.py} 第 13 行到第 19 行为例：
+这样分工的好处是样式只写一遍。文件第 63 行到第 73 行就是那个唯一的入口：
 
 \begin{lstlisting}[language=Python]
-FP = r"C:\Windows\Fonts\msyh.ttc"
-fm.fontManager.addfont(FP)
-plt.rcParams["font.sans-serif"] = ["Microsoft YaHei"]
-plt.rcParams["axes.unicode_minus"] = False
-plt.rcParams["font.size"] = 10.5
-plt.rcParams["savefig.dpi"] = 220
-plt.rcParams["figure.dpi"] = 220
+def save(fig, name):
+    """把画布 fig 存成 figure/<name>，关闭画布并打印一行日志；返回写出的绝对路径。
+
+    所有插图都收敛到这一个入口，是为了把分辨率和紧裁剪钉死在一处——逐图手写
+    savefig 很容易漏掉 dpi。注意本函数会 close(fig)，调用方不得再复用该画布。
+    """
+    p = os.path.join(FIGDIR, name)
+    fig.savefig(p, dpi=DPI)
+    plt.close(fig)
+    print("  [fig] %s" % name)
+    return p
 \end{lstlisting}
 
-第 13 行给出字体文件路径，前面那个 \texttt{r} 表示原始字符串、里面的反斜杠不当作转义字符，这样 Windows 路径可以直接写；\texttt{msyh.ttc} 是微软雅黑的字体文件。第 14 行把字体文件注册到 matplotlib 的字体管理器里（\texttt{fm} 是第 8 行导入的模块）；不注册的话，即使系统里装了字体，matplotlib 的字体列表里也可能没有这个名字。
-第 15 行把无衬线字体的首选设为微软雅黑；\texttt{plt.rcParams} 是全局配置字典、改一次对后面所有图都生效，\texttt{font.sans-serif} 是首选字体列表、按顺序找第一个能用的。第 16 行把负号改用 ASCII 的连字符，因为很多中文字体没有 U+2212 这个数学减号字形，不改的话坐标轴上的负刻度会显示成方框。第 17 行把全局字号设为 $10.5$ 磅；
-第 18 行和第 19 行把保存分辨率与图形分辨率设为 $220$ dpi（dpi 是每英寸点数，本题论文是 A4 纸，$220$ dpi 打印足够清楚）。\texttt{make\_fig3.py} 也设了 \texttt{savefig.dpi} 与 \texttt{font.size}，但没有设 \texttt{figure.dpi}，两个脚本在这上面不完全一致。
+所有插图都必须经过这个函数。如果让每张图自己写 \texttt{savefig}，那么二十几张图里漏写分辨率参数是迟早的事，结果是同一篇论文里插图的像素密度不一致。注意这个函数会 \texttt{close(fig)}，调用方不能再复用那块画布。
 
-\subsection{为什么用 Agg 后端}
+第 27 行到第 32 行算好目录并在导入时就建好：
 
-\texttt{make\_figs.py} 第 5 行到第 8 行：
+\begin{lstlisting}[language=Python]
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(HERE, ".."))
+FIGDIR = os.path.join(ROOT, "figure")
+DATADIR = os.path.join(ROOT, "中间数据")
+os.makedirs(FIGDIR, exist_ok=True)
+os.makedirs(DATADIR, exist_ok=True)
+\end{lstlisting}
+
+\texttt{FIGDIR} 是出图目录、\texttt{DATADIR} 是中间数据目录，两个都相对交付包的根目录算出来，所以整个包搬走也能正确输出。
+
+\subsection{中文字体与出图分辨率}
+
+文件第 38 行到第 54 行是字体与全局样式：
+
+\begin{lstlisting}[language=Python]
+for _fp in [r"C:\Windows\Fonts\msyh.ttc", r"C:\Windows\Fonts\simhei.ttf"]:
+    if os.path.exists(_fp):
+        fm.fontManager.addfont(_fp)
+plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
+plt.rcParams["font.size"] = 10.5
+plt.rcParams["axes.titlesize"] = 11
+plt.rcParams["axes.labelsize"] = 10.5
+plt.rcParams["legend.fontsize"] = 9
+plt.rcParams["xtick.labelsize"] = 9.5
+plt.rcParams["ytick.labelsize"] = 9.5
+plt.rcParams["figure.dpi"] = 200
+plt.rcParams["savefig.dpi"] = 240
+plt.rcParams["savefig.bbox"] = "tight"
+plt.rcParams["axes.grid"] = True
+plt.rcParams["grid.alpha"] = 0.3
+plt.rcParams["grid.linewidth"] = 0.6
+\end{lstlisting}
+
+第 38 行到第 40 行两件事，都是踩过坑才知道的。
+
+\textbf{第一，中文字体必须手动注册。}第 38 行给出字体文件的路径，前面那个 \texttt{r} 表示原始字符串、里面的反斜杠不当作转义字符，这样 Windows 路径可以直接写；\texttt{msyh.ttc} 是微软雅黑、\texttt{simhei.ttf} 是黑体。第 40 行把存在的字体文件注册到 matplotlib 的字体管理器里（\texttt{fm} 是第 25 行导入的模块）；不注册的话，即使系统里装了字体，matplotlib 自带的字体表里也没有中文字体，所有中文标签会渲染成一片方框。这里写成「两个候选、存在才注册」，是为了在只装了其中一个字体的机器上也能跑。
+
+第 41 行把无衬线字体的首选设为微软雅黑，后面两个是备选；\texttt{plt.rcParams} 是全局配置字典、改一次对后面所有图都生效，\texttt{font.sans-serif} 是首选字体列表、按顺序找第一个能用的。
+
+\textbf{第二，负号也要单独处理。}第 42 行把负号改用 ASCII 的连字符，因为中文字体里缺少 U+2212（真正的数学减号）这个字形，不改的话坐标轴上的负刻度会显示成方框。
+
+第 43 行到第 48 行是字号：正文 $10.5$ 磅、标题 $11$ 磅、图例 $9$ 磅、刻度 $9.5$ 磅。第 49 行到第 51 行是分辨率与紧裁剪：\texttt{figure.dpi} 是屏幕上预览用的、\texttt{savefig.dpi} 是存盘用的、\texttt{savefig.bbox="tight"} 让存盘时自动裁掉四周空白。第 52 行到第 54 行把网格打开并统一网格的深浅与线宽。
+
+文件第 60 行给出出图分辨率：
+
+\begin{lstlisting}[language=Python]
+DPI = 240
+\end{lstlisting}
+
+这个数是算出来的，不是随手定的。文件第 56 行到第 59 行的注释里给了完整的算术：插图按版心宽度排版后会被缩到 $6.30$ 英寸，缩放系数约 $0.76$；按 $200$ dpi 渲染，印到纸上的有效密度只剩约 $260$ ppi，$240$ dpi 才有 $310$ ppi 以上。这是一个「从成品倒推参数」的例子：先确定成品要多清楚，再反推中间该用什么参数。注意 dpi 只决定像素密度，不改变图内字号的磅值，所以提高 dpi 不会动到任何一张图的版面。
+
+文件第 22 行和第 23 行把绘图后端切成 Agg：
 
 \begin{lstlisting}[language=Python]
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from matplotlib import font_manager as fm
 \end{lstlisting}
 
-\textbf{后端}是 matplotlib 里负责把图形真正画出来的那一层，不同的后端对应不同的输出方式：有的把图送到屏幕上弹出窗口，有的只把图画到内存缓冲区里再存成文件；\texttt{Agg} 是后一种，只生成像素图、不打开窗口。第 6 行必须写在第 7 行之前，因为 \texttt{matplotlib.pyplot} 一被导入就会选择并初始化后端，之后再换可能不生效或者报错；\texttt{make\_fig3.py} 第 5 行和第 6 行是同样的写法。
-指定 Agg 有三个原因：第一，这两个脚本只做保存图片这一件事、从来不调用显示窗口的函数，用交互后端是多余的开销；第二，交互后端依赖图形界面，在没有桌面的机器上、在批处理脚本里、在远程终端启动 Python 时都可能报错或者卡住，Agg 不依赖图形界面；第三，Agg 的输出是确定的，同样的数据在同样的版本下画出的文件内容一致，方便反复生成同一批插图。
+\textbf{后端}是 matplotlib 里负责把图形真正画出来的那一层，不同的后端对应不同的输出方式：有的把图送到屏幕上弹出窗口，有的只把图画到内存缓冲区里再存成文件；\texttt{Agg} 是后一种，只生成像素图、不打开窗口。第 23 行必须写在 \texttt{matplotlib.pyplot} 被导入之前（本文件里 \texttt{pyplot} 是第 24 行导入的），因为 \texttt{pyplot} 一被导入就会选择并初始化后端，之后再换可能不生效或者报错。
 
-\subsection{画图脚本里的数据从哪来}
+指定 Agg 有两个原因：第一，这些脚本只做保存图片这一件事、从来不调用显示窗口的函数，用交互后端是多余的开销；第二，交互后端依赖图形界面，在没有桌面的机器上、在批处理脚本里、在远程终端启动 Python 时都可能报错或者卡住，Agg 不依赖图形界面。
 
-\texttt{make\_figs.py} 自己调用求解器算数据、不读四个结果文件：第 28 行建立问题 1 的求解器，第 29 行到第 34 行求解并插值到五个位置，第 51 行到第 65 行对问题 3 做同样的事，用到的节点数分别是 $64$ 与 $48$。还有一处差别要注意：图 2 里的烘干时间是用 \texttt{rtol=1e-10} 单独求的（第 58 行），
-而 \texttt{make\_results.py} 里用的是 \texttt{rtol=1e-11}，两个值不会完全一样；复跑报告第 9 节列了四种积分器与容差下的结果、极差只有 $0.007$ 秒，对图形没有影响。\texttt{make\_fig3.py} 不调用任何求解器，它把数字直接写在文件里，第 20 行到第 36 行是一批常数：
+\subsection{解缓存与源码指纹}
 
-\begin{lstlisting}[language=Python]
-LIM = 205575.5            # 连续极限（谱解，四种积分器一致）
-L_FV_N1600 = 205568.8     # 经典 FV+θ 格式，N=1600，Δt->0
+\texttt{make\_figures.py} 不出图前先算解，而是读缓存。缓存文件是 \texttt{中间数据/solutions.npz}，键名与内容如下：
 
-dt = np.array([40., 20., 10., 5., 2., 1., 0.5, 0.25])
-td = np.array([205508.7, 205538.8, 205553.9, 205561.5, 205566.0,
-               205567.5, 205568.15, 205568.48])
-err_dt = L_FV_N1600 - td                       # 纯时间误差
-
-N_fv = np.array([800., 1600., 3200., 6400.])
-td_fv = np.array([205550.98, 205567.49, 205572.43, 205573.77])
-td_fv_corr = td_fv + 1.32                      # 扣掉 Δt=1s 的一阶时间误差
-err_N_fv = LIM - td_fv_corr
-
-N_sp = np.array([24., 32., 48., 64., 96., 128.])
-td_sp = np.array([205557.892, 205565.227, 205572.341, 205574.519,
-                  205575.435, 205575.540])
-err_N_sp = np.maximum(LIM - td_sp, 0.01)   # N=128 已越过参考线，取对数下限
-\end{lstlisting}
-
-第 20 行的 \texttt{LIM} 是连续极限、取 $205575.5$ 秒，这个数取自谱解在 $N=96$ 与 $N=128$ 时的结果，复跑报告第 9 节记录的两个值是 $205575.435$ 与 $205575.540$。第 21 行的 \texttt{L\_FV\_N1600} 是经典有限体积格式在 $N=1600$ 下把步长外推到零的极限，
-复跑报告第 11 节给出的最细步长 $0.5$ 秒下的值是 $205568.10$ 秒，再按一阶趋势往前推一点就是 $205568.8$ 秒。第 23 行和第 24 行是问题 3 在不同步长下的烘干时间；第 26 行算纯时间误差，也就是把空间已经足够细的格式极限减去各个步长下的值。第 28 行到第 31 行是有限体积格式在不同节点数下的结果，第 30 行加 $1.32$ 秒、扣掉 $\Delta t=1$ 秒带来的一阶时间误差，
-这个 $1.32$ 来自对这批数据做一阶拟合得到的斜率，报告正文里写的也是用 $t(\Delta t)=L-c\Delta t$ 拟合得到 $c\approx1.32$。第 33 行和第 34 行是谱解在不同节点数下的结果，与复跑报告第 9 节的收敛性表逐项相同。第 36 行把负的误差截到 $0.01$，因为 $N=128$ 的 $205575.540$ 已经超过参考值 $205575.5$、误差是负的，而对数坐标画不出负数。
-要说明一点：这些数组是写死的常数、注释说是取自 \texttt{run\_all.py} 的收敛性输出；把同一批步长的数与复跑报告第 11 节打印的数对比，会发现小数第一位上略有差别，例如步长 $10$ 秒时这里是 $205553.9$、复跑报告里是 $205553.80$ 秒，说明这组数不是本次复跑的直接读数、而是另一次运行的结果；要重新生成这张图，应当先跑 \texttt{run\_all.py}，再用它打印出的数替换这些常数。
-
-\keypoint
-两个画图脚本都设了 Agg 后端与微软雅黑字体，都在保存图片之前不打开任何窗口；\texttt{make\_figs.py} 自己求解并画出剖面与干燥曲线，\texttt{make\_fig3.py} 用文件里写死的数画收敛性图，后者的数需要跟着复跑结果更新。
-
-% =====================================================================
-\section{结果文件的生成链条}
-\textbf{第一步，运行 \texttt{python run\_all.py}。}这一步做第四部分讲的全部验证：烘房环境标定、与闭式解比较、网格加密、两种对照格式互证、时间步长敏感性。它不产生任何 xlsx 文件与图片，只把全部输出写进 \texttt{复跑报告.txt}；\texttt{run\_all.py} 最后一行用的是相对路径，所以这个文件写在运行命令所在的目录里，在 \texttt{代码} 目录下运行就落在 \texttt{代码} 目录里。复跑报告记录的总耗时是 $266.9$ 秒，文件开头的说明写的是约 $10$ 到 $20$ 分钟、是留了余量的估计。
-
-\textbf{第二步，运行 \texttt{python make\_results.py}。}这一步重新求解问题 1 到问题 4 并写出四个结果文件，落在 \texttt{<包根>/结果/} 目录下，文件名是 \texttt{result1.xlsx} 到 \texttt{result4.xlsx}，同时在屏幕上打印四个文件的行数与两个烘干时间。这一步是最费时的，因为问题 3 要积到 $205574$ 秒、问题 4 要积到 $182778$ 秒；它的运行时间没有记录在复跑报告里。
-
-\textbf{第三步，运行 \texttt{python make\_figs.py}。}这一步求解问题 1 与问题 3 并画出两张图，落在 \texttt{<包根>/报告/fig/} 目录下，文件名是 \texttt{fig1\_p1\_profiles.png} 与 \texttt{fig2\_p3\_drying.png}，运行结束打印一行提示。
-
-\textbf{第四步，运行 \texttt{python make\_fig3.py}。}这一步不求解，直接用文件里写死的数画第三张图，落在同一个目录下、文件名是 \texttt{fig3\_tdry\_conv.png}，运行结束打印三行误差数组。四步列成表：
 \begin{center}
-\begin{tabular}{@{}clp{7.2cm}@{}}
+\begin{tabular}{@{}ll@{}}
 \toprule
-步骤 & 命令 & 产出文件 \\
+键 & 内容 \\
 \midrule
-一 & \texttt{python run\_all.py} & \texttt{复跑报告.txt} \\
-二 & \texttt{python make\_results.py} & \texttt{结果/result1.xlsx} 到 \texttt{result4.xlsx} \\
-三 & \texttt{python make\_figs.py} & \texttt{报告/fig/fig1\_p1\_profiles.png} 与 \texttt{fig2\_p3\_drying.png} \\
-四 & \texttt{python make\_fig3.py} & \texttt{报告/fig/fig3\_tdry\_conv.png} \\
+\texttt{p1\_t}, \texttt{p1\_y} & 问题一：$0\sim1800$ s，报告点间隔 $10$ s \\
+\texttt{p2\_t}, \texttt{p2\_y} & 问题二：$0\sim10800$ s，报告点间隔 $60$ s \\
+\texttt{p3\_t}, \texttt{p3\_y}, \texttt{p3\_tdry} & 问题三：$0\sim t_{\mathrm{dry}}$ 均匀 $1400$ 点，外加烘干时刻本身 \\
+\texttt{p4\_t}, \texttt{p4\_y}, \texttt{p4\_tdry} & 问题四：含收缩，结构同问题三 \\
+\texttt{version} & 缓存版本号字符串 \\
+\texttt{fingerprint} & 求解相关源文件的 SHA-256 前 $16$ 位 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-四步之间的依赖关系有三条。第一条是顺序上的：\texttt{run\_all.py} 必须放在最前面，它的作用是验证、只有验证通过，后面两步算出的表和图才有意义；如果先出表再验证，一旦程序里有错，表格里的数字是全错的、而错误要到最后一刻才发现。第二条是数据上的：\texttt{make\_fig3.py} 的数据来自 \texttt{run\_all.py} 打印的收敛性输出，所以它必须在 \texttt{run\_all.py} 之后才能保持同步；
-\texttt{make\_results.py} 与 \texttt{make\_figs.py} 不依赖前面的产出、它们各自独立求解。第三条是路径上的：附件位置由 \texttt{common.py} 按自己的文件位置向上搜索，输出目录由 \texttt{make\_results.py} 与两个画图脚本按自己的文件位置推算，所以整个文件夹搬到别处仍然能跑；需要留意的是 \texttt{run\_all.py} 写 \texttt{复跑报告.txt} 用的是相对路径，
-文件会落在运行命令所在的那个目录、而不是代码目录。四个脚本都以模块名导入 \texttt{common} 与 \texttt{spectral}，而 Python 会把脚本所在目录放进模块搜索路径，所以只要按路径运行脚本、导入都能成功。运行完这四步就得到全部交付物：一份记录了所有验证过程的文本报告、四个按题目模板排好的结果文件、三张论文用的插图；论文里的表 1 到表 6 每张只取 $5$ 个位置和若干时刻，这些位置上的值在结果文件里都有、两边取的是同一个解，
-上面已经核对过四处，数值在小数点后四位完全一致。
+文件第 79 行是版本号：
+
+\begin{lstlisting}[language=Python]
+CACHE_VERSION = "2026-09-13.N64.rtol1e-11"
+\end{lstlisting}
+
+注释里写明了纪律：任何改变解的内容的改动（物理模型、参数、离散、容差）都必须同时递增此号，否则旧的 \texttt{solutions.npz} 会被静默沿用，图上画的是旧解。
+
+除了版本号，还有一个源码指纹，也就是文件第 84 行到第 100 行：
+
+\begin{lstlisting}[language=Python]
+def _code_fingerprint():
+    """对求解相关源文件（common.py、spectral.py、fig_core.py）整体取 SHA-256，
+    返回前 16 位十六进制字符串。
+
+    把它随解一起落盘，下次启动时对比即可发现"改了代码但缓存没重算"；只靠版本号
+    字符串要靠人记得手工递增，漏改一次就会画出旧解。
+    """
+    h = hashlib.sha256()
+    for name in ("common.py", "spectral.py", "fig_core.py"):
+        p = os.path.join(HERE, name)
+        if os.path.exists(p):
+            with open(p, "rb") as fh:
+                h.update(fh.read())
+    return h.hexdigest()[:16]
+
+
+CACHE_FINGERPRINT = _code_fingerprint()
+\end{lstlisting}
+
+它把三个求解相关文件的全部内容读进来算一个哈希值，随解一起写进缓存文件。下次启动时对比哈希值，只要改动了物理模型、参数或离散方式，缓存就会自动失效重算。
+
+\why{为什么版本号之外还要指纹}
+因为版本号是字符串，靠人记得手工递增。
+改代码时忘了改版本号，旧的解缓存就会被静默沿用，
+图上画的是旧解，而正文引用的是新数——这种错误极难发现。
+指纹是自动算的，改一个字符都会变。
+它让「改了代码却忘了改版本号」这件事在下次启动时立刻暴露出来。
+
+文件第 103 行到第 140 行是缓存的判定逻辑：
+
+\begin{lstlisting}[language=Python]
+def build_cache(force=False):
+    ...
+    cache = os.path.join(DATADIR, "solutions.npz")
+    if os.environ.get("A_FORCE_CACHE") == "1":
+        force = True
+    if os.path.exists(cache) and not force:
+        try:
+            z = np.load(cache)
+            ver = str(z["version"]) if "version" in z else "<无版本号>"
+            fp = str(z["fingerprint"]) if "fingerprint" in z else "<无指纹>"
+        except Exception as exc:                      # 缓存损坏：重算而不是崩溃
+            print("[cache] 缓存无法读取（%s），改为重算" % exc)
+        else:
+            if ver == CACHE_VERSION and fp == CACHE_FINGERPRINT:
+                print("[cache] 命中：%s（版本 %s）" % (cache, ver))
+                return
+\end{lstlisting}
+
+三种情形分开处理：版本号与指纹都对，直接用缓存返回；读不出来（文件损坏），打印原因并重算，而不是让整个出图流程崩掉；读得出来但对不上，把「缓存版本对当前版本」「缓存指纹对当前指纹」两行都打出来，再重算。环境变量 \texttt{A\_FORCE\_CACHE=1} 可以强制重算。第 141 行往后是真正求解四个问题的部分：问题一与问题二按固定间隔出点，问题三与问题四先由事件求出 $t_{\mathrm{dry}}$，再按 $1400$ 个均匀点回放，这样画出来的干燥曲线是光滑的。
+
+\why{为什么要缓存而不是每次现算}
+因为四问解加起来要几分钟，而画一张图只改动版面、不改数据。
+把解与它的「身份证明」（版本号加指纹）一起落盘，
+既省时间，又不至于让人画出一张基于旧解的图。
+注意缓存里连 \texttt{p3\_tdry} 都存了，因为好几张图的标注要用到烘干时刻，
+如果每次重算这个时刻，图上标的数就可能与别处对不上。
+
+\subsection{画图前的强制对账}
+
+文件第 36 行到第 38 行是导入：
+
+\begin{lstlisting}[language=Python]
+from fig_core import (save, load_cache, build_cache, FIGDIR, DATADIR, DPI)
+import fig_core as FC
+import verify_data as VD
+\end{lstlisting}
+
+\texttt{make\_figures.py} 会 import \texttt{verify\_data}，但只用它的读取与校验函数。文件第 927 行和第 928 行是画第 24、25 张收敛性图之前的对账：
+
+\begin{lstlisting}[language=Python]
+    vd = VD.load()
+    VD.check_consistency(vd, tdry_cached=td3)
+\end{lstlisting}
+
+先拿验证数据文件里的烘干时刻与刚算出的解对账，不一致就直接报错、不画图。
+
+\texttt{VD.load()} 里还有一道版本校验，也就是 \texttt{verify\_data.py} 第 164 行到第 168 行：
+
+\begin{lstlisting}[language=Python]
+    if data.get("version") != DATA_VERSION:
+        raise RuntimeError(
+            "验证数据文件版本不符（文件 %r / 期望 %r）：%s\n"
+            "  请重新生成： python verify_data.py --recompute"
+            % (data.get("version"), DATA_VERSION, DATA_PATH))
+\end{lstlisting}
+
+报错信息里直接给出重新生成的命令。这样即使过了几个月，看到报错的人也知道该做什么。同理，数据文件根本不存在时 \texttt{load()} 也会抛错并给出那条命令——不画图也比画一张来源不明的图好。
+
+\subsection{25 张图画的是什么}
+
+\texttt{make\_figures.py} 的 \texttt{main()} 函数按论文出现顺序分成七组。每一段代码上方的注释都写明了：这幅图画的是哪个物理量、横纵轴是什么、数据取自哪个键、各子图分别是什么。
+
+\begin{center}
+\begin{tabular}{@{}clp{8.2cm}@{}}
+\toprule
+组 & 图 & 内容 \\
+\midrule
+一 & $1\sim4$ & 附件 1 的环境序列与一阶惯性拟合、拟合残差诊断、附件 2 的半径历史 \\
+二 & $5\sim6$ & 无量纲分析、坐标变换的节点分布示意 \\
+三 & $7\sim11$ & 问题一的剖面与云图、表面通量核对、Bessel 系数衰减、谱收敛验证 \\
+四 & $12\sim14$ & 问题二的剖面与云图、表面传质通量的降速特征 \\
+五 & $15\sim17$ & 问题三的干燥曲线、终点放大、速率衰减拟合 \\
+六 & $18\sim20$ & 问题四的剖面与收缩、受控对照的效应分解 \\
+七 & $21\sim25$ & 三族互证、收敛性、积分器稳定性、残差统计、技术路线图 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+其中有一张图是刻意不用的。\texttt{fig20\_p4\_vs\_p3.png} 把问题三与问题四的烘干时刻直接相减，但这两个问题同时改变了物性关系与几何，差值 $-11.1\%$ 是二者共同作用的净结果，把它当作「收缩效应」属于错误归因。论文改用同一物性下只改半径的受控对照，所以这张备用图不进入正文。代码里保留了它，注释也写明了原因。
+
+\textbf{受控对照图不在这个文件里。}第六组的 \texttt{fig20\_p4\_controlled.png} 由下一个脚本 \texttt{make\_controlled\_comparison.py} 单独生成。另外这个文件在末尾还会多画一张 \texttt{fig26\_model\_schematic.png}（物理模型与坐标系示意图，无数据、纯示意），它排在第七组之后、不参与上面的分组；这张图用到的 $0.60$ 是附件 2 实测的收缩终值比例（半径由 $2.00$ 厘米降到 $1.20$ 厘米），不是拟合或外推出来的。所以 \texttt{figure/} 目录里一共 $27$ 个 PNG：这个脚本画的 $26$ 张、受控对照的 $1$ 张，其中未被正文引用的只有备用图 \texttt{fig20\_p4\_vs\_p3.png}。
+
+\textbf{全篇共用一套颜色语义。}文件第 43 行到第 53 行定义了一张语义色表：同一种颜色在任何一页上永远指同一种东西，温度是暖红、水分浓度是冷蓝、判据阈值线是深靛点线、阶段分界与环境设定值是赭黄虚线、实测散点是中灰。这份表只作用于 \texttt{make\_figures.py}；\texttt{make\_controlled\_comparison.py} 独立运行、不 import 本模块，那里另有一份同值的副本，改动时必须同步，否则同一含义在两个脚本出的图里会是两种颜色。
+
+第 56 行到第 65 行的 \texttt{\_glow} 函数是这套样式的具体手法：先铺一层同色、宽而淡的底线，再压一条实线，返回实线的句柄。目的是让主结论曲线在一堆陪衬线里第一眼就跳出来，而不必把线加粗到失真；底层用透明度而不是预混浅色，是为了在深浅两种底色上都保持同一个色相。要注意两层线都进图例时会出现重复条目，所以主线的标签只挂在实线上。
+
+\subsection{采样细节：域外的点必须留空}
+
+文件第 83 行到第 107 行，函数 \texttt{\_samples}：
+
+\begin{lstlisting}[language=Python]
+def _samples(s, sol, t_idx=None, rcols=RCOLS):
+    """把解按 u=(r/R)^2 插值到 rcols 给出的物理半径上，返回 (C, T) 两个 (nt, nr) 数组。
+
+    C 为干基含水率 [kg/kg]、T 为温度 [degC]；nt 为取样时刻数、nr = len(rcols)。
+    t_idx 给出要取的时刻下标（默认全部）；s 需提供 R_of、interp_u 与 Np 属性，
+    形状取自传入的 sol（sol.y 的第 1 维是时刻、第 2 维是状态）。
+
+    问题 4 的半径随收缩变小，固定的物理距离 r_j 可能在某个时刻已落到药材之外
+    （r_j > R(t_i)）。该位置此时不存在——按论文 S7.4 与 make_results.py 的约定填
+    NaN，而不能把 u_t=(r_j/R(t))^2 > 1 送去插值：那是对求解域之外的做外推，浮点下
+    还会因重心插值分母抵消到 0 而返回 inf。
+    """
+    idx = range(sol.y.shape[1]) if t_idx is None else t_idx
+    idx = list(idx)
+    C = np.full((len(idx), len(rcols)), np.nan)
+    T = np.full((len(idx), len(rcols)), np.nan)
+    for k, i in enumerate(idx):
+        Rt = s.R_of(sol.t[i])
+        inside = rcols <= Rt + 1e-12
+        if not np.any(inside):
+            continue
+        Cn, Tn = s.interp_u(sol.y[:, i], (rcols[inside] / Rt) ** 2)
+        C[k, inside] = Cn
+        T[k, inside] = Tn
+    return C, T
+\end{lstlisting}
+
+\texttt{inside} 是一个布尔数组，标记哪些目标半径在当时的药材之内。只有这些位置送去插值，其余保持 \texttt{nan}：\texttt{C} 和 \texttt{T} 在第 97 行和第 98 行就全部填成了 \texttt{nan}，第 105 行和第 106 行用的是布尔下标赋值，只覆盖 \texttt{inside} 为真的那些列，其余列不动。
+
+注释里写明了两个不能外推的理由：一是物理上那个位置不存在；二是浮点下重心插值的分母会抵消到零、返回无穷大。这与 \texttt{make\_results.py} 里 \texttt{result4} 的处理是同一个约定，两处保持一致，图和表才不会打架。
+
+第 100 行取该时刻的半径用的是 \texttt{s.R\_of(sol.t[i])}，第 104 行的换算与式 \eqref{eq:p5-umap} 完全相同。第 102 行那个「一个都不在里面」的提前跳出只是为了省时间，因为 \texttt{np.any} 为假时后面的插值什么也不会改。
+
+\subsection{求交而不是取点}
+
+文件第 68 行到第 80 行，函数 \texttt{\_cross\_time}：
+
+\begin{lstlisting}[language=Python]
+def _cross_time(t, v, crit):
+    """求 v 由大变小、首次跌破 crit 的时刻 [s]，返回 float；始终大于 crit 则返回 nan。
+
+    用相邻两点线性求交，而不是直接取第一个低于阈值的采样点：采样间隔在问题 3 里是
+    百秒量级，直接取点会把达标时刻系统性地推迟若干步，图上的标注与正文就对不上了。
+    """
+    idx = np.where(np.asarray(v) <= crit)[0]
+    if idx.size == 0:
+        return np.nan
+    k = int(idx[0])
+    if k == 0:
+        return float(t[0])
+    return float(t[k - 1] + (v[k - 1] - crit) / (v[k - 1] - v[k]) * (t[k] - t[k - 1]))
+\end{lstlisting}
+
+这就是 \texttt{fv\_theta.py} 里用过的线性求交，公式与式 \eqref{eq:p5-cross} 相同，只是搬到了绘图脚本里。图上要标注的「截面平均达标」这类数字，如果直接取第一个低于阈值的采样点，标注出来的时刻会与正文对不上。第 74 行到第 76 行处理退化情形：一直没跌破就返回 \texttt{nan}；第一个点就已经低于阈值，说明阈值在起点之前就被穿过了，返回第一个时刻。
 
 \keypoint
-链条的顺序是：先复跑验证并留下文本记录，再出四个结果文件，最后出三张插图；前一步的产出是后一步可信的前提，所以顺序不能颠倒。
+插图体系的两个原则：样式与数据来源各只有一个入口（\texttt{save()} 与解缓存），图上的每一个数字都由代码现场求出、不写死。
 
+% =====================================================================
+\section{受控对照：make\_controlled\_comparison.py}
+
+\subsection{这个脚本要解决什么问题}
+
+从问题三到问题四，物性关系与几何同时改变了：物性从附录 3 换成附录 4，半径从固定变成实测收缩。两者直接相减只能得到「净差异」，无法归因到任何单独一项。
+
+这个脚本补算一个受控算例：物性仍取附录 4，但半径固定不收缩。这样一来就有了三个算例：
+
+\begin{center}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+算例 & 物性关系 & 半径 & $t_{\mathrm{dry}}$ / s \\
+\midrule
+A & 附录 3 & 固定 $R_0$ & 205575.5 \\
+B & 附录 4 & 固定 $R_0$ & 464120.2 \\
+C & 附录 4 & 实测收缩 & 182778.3 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+于是总差异被拆成两段纯效应：A 到 B 只换物性、半径都固定，是纯物性效应 $+125.8\%$；B 到 C 只加收缩、物性都用附录 4，是纯收缩效应 $-60.6\%$；A 到 C 是两问的净差异 $-11.1\%$。两者方向相反，这正是不能直接相减的原因。
+
+这两个百分数就写在文件里，也就是第 112 行：
+
+\begin{lstlisting}[language=Python]
+    effects = np.array([125.8, -60.6, -11.1])
+\end{lstlisting}
+
+\subsection{受控算例是怎么算的}
+
+文件第 38 行到第 64 行：
+
+\begin{lstlisting}[language=Python]
+def fixed_radius_time(n=64):
+    """补算"固定半径 + 附录 4 物性"这个受控算例，返回烘干时刻 t_dry [s]。
+
+    只把 HerbSolver 的 shrink 置 False（半径恒为 R_0 = 2 cm），物性仍取 prob=4 的附录 4
+    关系，于是它与问题 3 的差别就只剩物性一项。事件定义、容差与积分器（BDF）都与其余
+    脚本一致，故算出的差值不是求解设置造成的。
+    """
+    solver = HerbSolver(n, prob=4, shrink=False)
+    # atol 按状态分块：前 Np 个是水分浓度 C [kg/kg]（量级 1），后 Np 个是温度 T [degC]
+    # （量级 3e2）。两块量级不同，同一个绝对容差对两者并不等价。
+    atol = np.concatenate(
+        [np.full(solver.Np, 1.0e-13), np.full(solver.Np, 1.0e-11)]
+    )
+
+    def event(t, y):
+        """事件函数：y 前半段是水分浓度场 [kg/kg]，取其最大值（干燥最慢的中心）减判据。"""
+        return np.max(y[: solver.Np]) - CRIT
+
+    event.terminal = True       # 命中阈值立即停止积分，不必白算到 600000 s
+    event.direction = -1        # 只认由大变小穿越，避免初值恰好等于阈值时误判
+    # 600000 s（约 167 h）是足够宽的上界，事件必定在此之前触发
+    sol = solver.solve(
+        600000.0, rtol=1.0e-10, atol=atol, events=event, method="BDF"
+    )
+    if not sol.t_events[0].size:
+        raise RuntimeError("Drying threshold was not reached.")
+    return float(sol.t_events[0][0])
+\end{lstlisting}
+
+\textbf{只改了一个开关：}把 \texttt{shrink} 置为 \texttt{False}。物性仍是 \texttt{prob=4}，容差与积分器都与其余脚本一致。
+
+注释里专门写明了这一点：「事件定义、容差与积分器（BDF）都与其余脚本一致，故算出的差值不是求解设置造成的」。这就是受控实验的全部要点——只改一个变量。
+
+第 45 行的 \texttt{HerbSolver(n, prob=4, shrink=False)} 与问题四只差一个 \texttt{shrink}；
+第 48 行到第 50 行的绝对容差按状态分块给，
+与第三部分讲过的理由相同（水分量级 $1$、温度量级 $300$）。
+第 52 行到第 54 行的事件函数与 \texttt{make\_results.py} 里的 \texttt{ev} 完全同形。
+第 56 行和第 57 行让积分在命中阈值时立刻停止，第 59 行到第 61 行求解，
+积分上限放宽到 $600000$ 秒，因为这个算例比问题三慢得多（表里的 B 行是 $464120$ 秒）；
+第 62 行和第 63 行是一个必要的检查：万一事件没触发，宁可抛出错误，
+也不要返回一个空数组里的元素。
+
+\why{为什么必须补算这一个算例，而不是直接相减}
+因为直接相减得到的是一个复合的差异，它把「物性变差让干燥变慢」与「半径变小让路径变短、干燥变快」两种相反的效应混在一起。补算一个只改物性的算例，就把这两件事分开了：A 到 B 只有物性在变，B 到 C 只有几何在变。这也是论文里把那 $11.1\%$ 的净差异拆成 $+125.8\%$ 与 $-60.6\%$ 两段的依据。
+
+\subsection{两档网格的自查}
+
+文件第 155 行到第 169 行：
+
+\begin{lstlisting}[language=Python]
+def main():
+    """跑两档网格的固定半径算例、画出受控对照图，并把三个数值打到屏幕上。
+
+    两档网格只用来检查空间离散够不够细：rel_gap 应远小于要归因的那几个百分点，
+    出图用 N=64 的结果。
+    """
+    td48 = fixed_radius_time(48)
+    td64 = fixed_radius_time(64)
+    rel_gap = abs(td64 - td48) / td64
+    out = Path(__file__).resolve().parents[1] / "figure" / "fig20_p4_controlled.png"
+    draw(out, td64)
+    print(f"N=48 fixed-R Appendix-4: {td48:.3f} s")
+    print(f"N=64 fixed-R Appendix-4: {td64:.3f} s")
+    print(f"relative grid gap: {rel_gap:.3e}")
+    print(f"figure: {out}")
+\end{lstlisting}
+
+跑两档网格，算出相对差 \texttt{rel\_gap}，用来说明空间离散够不够细：相对差应当远小于要归因的那几个百分点。出图用 $N=64$ 的结果，与其余脚本的生产网格一致。
+
+第 164 行用 \texttt{Path(\_\_file\_\_).resolve().parents[1]} 从本文件往上退一级得到交付包根目录，再拼上 \texttt{figure} 与文件名，写出的是受控对照图 \texttt{fig20\_p4\_controlled.png}；这个脚本不经过 \texttt{fig\_core.save()}，所以它自己在 \texttt{draw()} 里设好了 240 dpi 与中文字体。
+
+\textbf{有一处可以说明的地方。}三个算例里，A 与 C 两行的时长是写成模块常量的，也就是文件第 34 行和第 35 行：
+
+\begin{lstlisting}[language=Python]
+TD_PROBLEM3 = 205575.5      # s   问题 3：附录 3 物性、半径固定不收缩
+TD_PROBLEM4_SHRINK = 182778.3   # s  问题 4：附录 4 物性、含实测收缩 R(t)
+\end{lstlisting}
+
+只有中间的 B 行是现场算的。这意味着如果以后改了模型参数，重跑这个脚本时 B 行会变，而 A、C 两行不会变，图上就会出现「三段效应不自洽」。更稳妥的做法是把 A、C 也改成从解缓存（\texttt{中间数据/solutions.npz} 里的 \texttt{p3\_tdry} 与 \texttt{p4\_tdry}）里读，和 B 行一样来自现场计算，三者才在同一口径上相减。这一点如实记在这里，是因为图上那三根柱子的高度直接取决于这三个数。
+
+\keypoint
+受控对照的价值在于「只改一个变量」：同一个求解器、同一套容差、同一个积分器，只把半径开关关掉，于是算出来的差值只能归因到物性这一项。
+
+% =====================================================================
+\section{整条产出链}
+
+把这一部分与第三部分合起来看，从零到交付的完整顺序如下。下面的命令都在 \texttt{code/} 目录下用 \texttt{python} 运行：
+
+\begin{center}
+\begin{tabular}{@{}clp{8.6cm}@{}}
+\toprule
+步 & 命令 & 作用 \\
+\midrule
+一 & \texttt{verify\_data.py --recompute} & 四类扫描，生成 \texttt{verification.json}（约 $22$ 分钟） \\
+二 & \texttt{run\_all.py} & 全部结果与验证，写出复跑报告（文件头注释记实测约 $6.5$ 分钟） \\
+三 & \texttt{make\_results.py} & 生成 \texttt{result1} 到 \texttt{result4.xlsx} \\
+四 & \texttt{make\_controlled\_comparison.py} & 受控算例与效应分解图 \\
+五 & \texttt{make\_figures.py} & 生成其余 $25$ 张插图 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{第一步，运行 \texttt{python verify\_data.py --recompute}。}这一步做四类扫描：谱解网格扫描、定步长格式的时间步扫描、经典有限体积的空间扫描、积分器与容差的组合，把结果写进 \texttt{中间数据/verification.json}。它最耗时，但它产出的数据文件是第五步画图的前提：如果跳过它，\texttt{make\_figures.py} 在画收敛性与积分器稳定性那两张图时会直接报错并提示重新生成，而不是画出一张没有数据来源的图。不带 \texttt{--recompute} 参数时它只做校验，是秒级的，\texttt{run\_all.py} 与 \texttt{make\_figures.py} 内部就是这么调它的。
+
+\textbf{第二步，运行 \texttt{python run\_all.py}。}这一步做第四部分讲的全部验证：烘房环境标定、与闭式解比较、网格加密、两种对照格式互证、时间步长敏感性，分 $12$ 节写进 \texttt{复跑报告.txt}。它不产生任何 xlsx 文件与图片；报告用的是相对路径，所以写在运行命令所在的目录里，在 \texttt{code/} 目录下运行就落在 \texttt{code/} 目录里。报告里还有一行对账结果：验证数据文件里 $N=64$ 项的烘干时刻必须与本次算出的生产值相符，不符就把原因打印出来，让人一眼看出是数据过期还是这次算错了。
+
+\textbf{第三步，运行 \texttt{python make\_results.py}。}这一步重新求解问题 1 到问题 4 并写出四个结果文件，落在 \texttt{<包根>/result/} 目录下，同时在屏幕上打印四个文件的行数与两个烘干时间。这一步是最费时的，因为问题 3 要积到 $205574$ 秒、问题 4 要积到 $182778$ 秒。
+
+\textbf{第四步，运行 \texttt{python make\_controlled\_comparison.py}。}这一步跑两档网格的固定半径算例，画出受控对照图 \texttt{figure/fig20\_p4\_controlled.png}，并把 $N=48$、$N=64$ 两个烘干时刻与相对网格差打在屏幕上。它不依赖前面的产出，自己调用求解器。
+
+\textbf{第五步，运行 \texttt{python make\_figures.py}。}这一步先调 \texttt{build\_cache()} 取得四问解（缓存命中就直接用，否则重算并写 \texttt{中间数据/solutions.npz}），再按七组顺序逐张画图，落在 \texttt{<包根>/figure/} 目录下，全部 $240$ dpi。画收敛性与积分器稳定性那两张图之前，它会先用 \texttt{verify\_data} 做一次强制对账。
+
+五步之间的依赖关系有三条。
+
+第一条是顺序上的：验证必须放在出表出图之前，只有验证通过，后面算出的表和图才有意义；如果先出表再验证，一旦程序里有错，表格里的数字是全错的、而错误要到最后一刻才发现。第二步与第三步的顺序可以互换，但第一步必须在第五步之前。
+
+第二条是数据上的：\texttt{make\_figures.py} 的收敛性数据来自第一步的 \texttt{verification.json}，受控对照图的数据由第四步自己现算，\texttt{make\_results.py} 与 \texttt{make\_figures.py} 各自独立求解。三条出口（xlsx、解缓存、文本报告）共用同一份解的定义，所以论文里的数、结果文件里的数、图上的数只有一个来源。
+
+第三条是路径上的：附件位置由 \texttt{common.py} 按自己的文件位置向上搜索，输出目录由各个脚本按自己的文件位置推算，所以整个文件夹搬到别处仍然能跑；需要留意的是 \texttt{run\_all.py} 写 \texttt{复跑报告.txt} 用的是相对路径，文件会落在运行命令所在的那个目录、而不是代码目录。所有脚本都以模块名导入 \texttt{common} 与 \texttt{spectral}，而 Python 会把脚本所在目录放进模块搜索路径，所以只要按路径运行脚本、导入都能成功。
+
+\keypoint
+这一部分涉及的六个文件，外加第三部分讲过的 \texttt{verify\_data.py}，
+可以按「它会不会改变结果」分成两组。\texttt{fv\_theta.py}、\texttt{fv\_uniform.py}、\texttt{make\_controlled\_comparison.py} 与 \texttt{verify\_data.py} 是验证组，它们只负责提供旁证；\texttt{make\_results.py}、\texttt{fig\_core.py}、\texttt{make\_figures.py} 是产出组，它们决定最终交出去的表和图长什么样。两组都建立在第三部分那份唯一的解之上。

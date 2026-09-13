@@ -6,48 +6,62 @@
 前两部分讲清了原理。这一部分把原理和代码对应起来，
 逐段说明每一行在做什么，以及为什么必须这么写。
 
-阅读这一部分之前，建议先打开代码文件对照着看。
+阅读这一部分之前，建议先打开交付包里的 \texttt{code/} 目录，对照着看。
+本部分涉及的代码行数都按最终交付版本标注。
 
 % =====================================================================
 \section{代码总览}
 
 \subsection{文件分工}
 
-整套代码分成两类。一类是求解器，负责算出结果；
-另一类是驱动脚本，负责调用求解器、输出表格和图。
+整套代码一共 $13$ 个 Python 文件，分成三类。
+求解器负责算出结果；对照格式负责用完全不同的方法再算一遍；
+驱动脚本负责调用它们、输出表格和图。
 
 \begin{center}
 \begin{tabular}{@{}llp{7.4cm}@{}}
 \toprule
 文件 & 类型 & 职责 \\
 \midrule
-\texttt{common.py} & 基础 & 存放全部参数、物性公式、附件读取、环境标定 \\
-\texttt{spectral.py} & 求解器 & 主求解器，实现第二部分讲的全部方法 \\
-\texttt{analytic\_p1.py} & 求解器 & 问题一的闭式解，用来验证主求解器 \\
-\texttt{fv\_theta.py} & 求解器 & 对照格式一：节点中心有限体积加定步长 $\theta$ 法（Crank--Nicolson，前 4 步用 $\theta=1$ 做 Rannacher 启动，物性冻结在上一时间步） \\
-\texttt{fv\_uniform.py} & 求解器 & 对照格式二：守恒型有限体积加等步长后向欧拉加 Picard 迭代（迭代 3 次） \\
-\texttt{run\_all.py} & 驱动 & 一键跑出全部结果与验证 \\
-\texttt{make\_results.py} & 驱动 & 生成四个结果文件 \\
-\texttt{make\_figs.py} & 驱动 & 生成剖面与干燥曲线插图 \\
-\texttt{make\_fig3.py} & 驱动 & 生成收敛性插图 \\
-\texttt{sensitivity.py} & 驱动 & 参数扰动灵敏度分析 \\
-\texttt{env\_compare.py} & 驱动 & 烘房环境两种口径对比 \\
-\texttt{figs.py} & 驱动 & 生成本文档的七张教学插图 \\
+\texttt{common.py} & 基础 & 全部参数、四套物性公式、附件读取、环境标定、Bessel 特征根 \\
+\texttt{console\_utf8.py} & 基础 & 把控制台输出切成 UTF-8，否则中文进度是乱码 \\
+\texttt{spectral.py} & 求解器 & 主求解器：$u=\xi^2$ 谱配置加自适应隐式 BDF，四个问题共用 \\
+\texttt{analytic\_p1.py} & 求解器 & 问题一温度场的闭式解，用来给主求解器当标尺 \\
+\texttt{fv\_theta.py} & 求解器 & 对照格式一：节点中心有限体积加定步长 $\theta$ 法 \\
+\texttt{fv\_uniform.py} & 求解器 & 对照格式二：守恒型有限体积加后向欧拉加 Picard 迭代 \\
+\texttt{run\_all.py} & 驱动 & 一键复跑全部结果与验证，写出复跑报告 \\
+\texttt{make\_results.py} & 驱动 & 生成四个结果文件 \texttt{result1} 到 \texttt{result4.xlsx} \\
+\texttt{sensitivity.py} & 驱动 & $12$ 组参数扰动，外加环境口径的分叉对比 \\
+\texttt{verify\_data.py} & 驱动 & 四类扫描，写 \texttt{verification.json}，并做一致性校验 \\
+\texttt{fig\_core.py} & 驱动 & 统一绘图样式与出图入口，缓存四个问题的解 \\
+\texttt{make\_figures.py} & 驱动 & 生成论文的 $25$ 张插图 \\
+\texttt{make\_controlled\_comparison.py} & 驱动 & 补算受控算例，画物性与收缩的效应分解图 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-两套对照格式都用均匀网格加有限体积，共同点是局部守恒、离散矩阵三对角。
-区别在时间推进与物性处理这两处。
-对照格式一是节点中心有限体积配定步长的 $\theta$ 法：
-取 $\theta=\dfrac{1}{2}$ 就是 Crank--Nicolson，时间上二阶精度；
-前 4 步改用 $\theta=1$，也就是后向欧拉，这叫 Rannacher 启动，
-目的是压掉初值不光滑引起的振荡；
-物性在整个时间步内冻结在上一时间步的值上，不再更新。
-对照格式二是守恒型有限体积配等步长后向欧拉，时间上一阶精度；
+先解释这张表里最容易让人困惑的一点：为什么画图要两个文件。
+\texttt{fig\_core.py} 负责三件事：设定中文字体与字号、
+把出图分辨率钉死在一个入口、缓存四个问题的解；
+\texttt{make\_figures.py} 才是真正一张一张画图的地方。
+把样式和解缓存抽出来，是为了让每一张图都走同一个入口，
+不会出现某些图忘了设分辨率、某些图字体不对的情况。
+
+为什么用三套求解器。\texttt{spectral.py} 是主力，
+另外两套用完全不同的方法算同一个问题。
+它们的价值不在于更快或更准，而在于当三套方法给出一致结果时，
+说明它们解的是同一个方程，而不是三份代码犯了同一个错误。
+
+\texttt{fv\_theta.py} 用节点中心有限体积配定步长 $\theta$ 法：
+取 $\theta=\dfrac{1}{2}$ 是 Crank--Nicolson，时间二阶；
+前 $4$ 步改用 $\theta=1$ 即后向欧拉，这叫 Rannacher 启动，
+用来压掉初值不光滑引起的振荡；
+物性在整个时间步内冻结在步首，不再更新。
+\texttt{fv\_uniform.py} 用守恒型有限体积配等步长后向欧拉，时间一阶；
 非线性物性用 Picard 迭代处理，每个时间步里把物性按新解重算并重新组装，
-一共迭代 3 次。这样两套格式除了都用均匀网格和有限体积之外，
-离散族、时间格式、非线性处理全都不同。
+一共迭代 $3$ 次。
+于是三套方法在坐标、空间离散、时间格式、非线性处理四个维度上全都不同，
+这正是交叉验证需要的。
 
 \why{为什么要写三个求解器}
 因为要判断结果对不对。一个程序跑出来的数字，
@@ -63,8 +77,60 @@
 把所有参数集中在 \texttt{common.py} 里，
 其他脚本都从这里取，就避免了这个问题。
 
+具体到本题，\texttt{common.py} 里集中了这些东西：
+药材初始半径与长度、对流换热与传质系数、初值温度与含水率、
+烘房环境的一阶惯性拟合结果、四套物性经验式、
+附件 1 与附件 2 的读取函数、Bessel 特征根的求解函数。
+
+其中附件路径的查找尤其能说明「集中」的好处。
+代码不写死路径，而是在四个候选目录里按文件名搜索：
+
+\begin{lstlisting}[language=Python]
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_CANDIDATES = [
+    os.path.join(_HERE, "..", "题目"),
+    os.path.join(_HERE, ".."),
+    os.path.join(_HERE, "..", ".."),
+    _HERE,
+]
+\end{lstlisting}
+
+上面这六行是 \texttt{common.py} 的第 38 行到第 44 行。
+\texttt{\_\_file\_\_} 是 Python 的一个内置变量，
+表示当前这个文件自己的路径。\texttt{os.path.abspath} 把它变成绝对路径，
+\texttt{os.path.dirname} 取出所在目录。
+\texttt{os.path.join(\_HERE, "..", "题目")} 表示从当前目录往上退一级，
+再进入题目目录。\texttt{..} 在路径里的含义就是上一级。
+四个候选依次是「包根的题目目录」「包根」「上一级」「本目录」，
+覆盖了压缩包原样解压与只取 \texttt{code/} 单独运行两种用法。
+
+这样做之后，整个交付包可以随便移动位置、随便改名，
+只要内部的相对结构不变就能直接跑。写死绝对路径的代码，换一台电脑就废了。
+
+\subsection{数据是怎样从附件走到论文表格的}
+
+把整条链条走一遍，后面每一段代码在看的时候就都有位置了。
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+\item \texttt{common.\_load\_env()} 读附件 1 的 $241$ 行实测数据，
+  用最小二乘拟合成一阶惯性式，
+  得到烘房温度与含湿量随时间的两条曲线。
+\item \texttt{common.props(prob, C, T)} 按 \texttt{prob} 的值
+  从四套物性经验式里选一套，
+  返回密度、比热、导热系数、扩散系数四个数组。
+\item \texttt{spectral.HerbSolver} 把温度场与水分场拼成
+  一个长度为 $2(N+1)$ 的向量交给积分器，
+  解出每个节点上两个场随时间的演化。
+\item \texttt{interp\_u()} 把节点上的解插值到任意目标坐标；
+  \texttt{area\_weights()} 给出截面平均的积分权重。
+\item 三条出口：\texttt{make\_results.py} 写成 xlsx；
+  \texttt{fig\_core.build\_cache()} 写成解缓存供出图；
+  \texttt{run\_all.py} 写成文本报告供人工核对。
+\end{enumerate}
+
 \keypoint
 代码组织的原则是：参数集中存放，求解器与驱动分离，关键结果用多个独立方法验证。
+三条出口共用同一份解，所以论文里的数、结果文件里的数、图上的数只有一个来源。
 
 % =====================================================================
 \section{主求解器 spectral.py 逐段解释}
@@ -73,30 +139,29 @@
 
 \begin{lstlisting}[language=Python]
 # -*- coding: utf-8 -*-
-"""主求解器：坐标 u=(r/R)^2 下的 Chebyshev 谱配置 + 自适应隐式时间积分。
-
-方法要点：
-  * 坐标：取 u=(r/R)^2 为自变量
-  ...（docstring 的其余各行在这里省略，内容见下文）
-"""
+# ==============================================================================
+# spectral.py —— 主求解器：u=(r/R)^2 坐标下的 Chebyshev 谱配置 + 自适应隐式时间积分
+# ==============================================================================
+# 做什么：在"径向坐标平方" u=(r/R)^2 上同时求解水分浓度 C 与温度 T 两个耦合场，四问共用。
+...（docstring 的其余各行在这里省略，内容见下文）
 import numpy as np
 from scipy.integrate import solve_ivp
 import common as cm
 \end{lstlisting}
 
-这个文件的前 18 行分成三段。第 1 行是编码声明，
-第 2 到 15 行是模块的 docstring，
-第 16 到 18 行是三个 import 语句。
-
-第一行是编码声明，告诉 Python 这个文件用 UTF-8 编码，
+开头三段。第 1 行是编码声明，告诉 Python 这个文件用 UTF-8，
 这样文件里的中文注释才不会乱码。
-
-第 2 到 15 行是 docstring，一共 14 行。
-docstring 是 Python 里写在文件开头或者函数开头的一段说明文字，
-外层用三个连续的双引号字符括起来。
+第 2 行到第 21 行是模块的 docstring，
+也就是一段说明文字，外层用三个连续的双引号括起来。
 它在程序运行时只是一段字符串，不参与任何计算，
-但可以用 help 命令打印出来，也可以被文档工具自动收集。
-这个 docstring 写的是本文件的方法要点，一共四条。
+但可以被文档工具自动收集。
+最后三行是 import：numpy 提供数组，
+\texttt{solve\_ivp} 是 SciPy 的自适应变阶积分器，
+\texttt{common} 是我们自己写的参数文件，
+起个别名 \texttt{cm}，后面写 \texttt{cm.R0} 就能取到半径。
+
+清单里的省略号代表 docstring 里被省掉的十几行，
+它们按「做什么、输入、输出、关键变量」四段写，这里逐条说清。
 
 \begin{itemize}[leftmargin=1.8em,itemsep=2pt]
 \item 坐标：取 $u=(r/R)^2$ 为自变量，
@@ -114,45 +179,34 @@ docstring 是 Python 里写在文件开头或者函数开头的一段说明文�
   因此边界条件以物理通量的身份精确进入离散方程。
 \end{itemize}
 
-第 16 行导入 numpy。numpy 是 Python 的科学计算库，
-它提供了数组这种数据结构。数组和普通列表的区别是：
-数组支持整体的加减乘除，不需要写循环。
-
-举例说明这个区别。如果要把十个数的每个都乘以二，
-用列表要写
-
-\begin{lstlisting}[language=Python]
-result = []
-for v in my_list:
-    result.append(v * 2)
-\end{lstlisting}
-
-用数组只要写
-
-\begin{lstlisting}[language=Python]
-result = my_array * 2
-\end{lstlisting}
-
-代码短很多，运行也快很多。本题里到处都要对整条半径上的量做运算，
-用数组是必须的。
-
-第 17 行导入 scipy 的求解器 \texttt{solve\_ivp}。
-它负责解法 \eqref{eq:semi} 那样的常微分方程组，
-也就是说，第二部分第七章讲的自适应变阶 BDF 方法，
-我们不需要自己写，直接调用它。
-
-第 18 行导入我们自己写的 \texttt{common.py}，并给它起个别名 \texttt{cm}。
-这样后面写 \texttt{cm.R0} 就能取到半径这个参数。
+\why{docstring 里为什么要把参数和单位写全}
+因为这份 docstring 按「做什么、输入、输出、关键变量」四段写，
+里面每一条都带单位，例如 \texttt{rtol} 是相对容差、
+\texttt{atol} 是绝对容差，以及 $C$ 的单位 kg/kg 与 $T$ 的单位摄氏度
+量纲不同这件事。这些约定如果不写下来，
+过几天再回来看代码就得重新推一遍。
+特别是 \texttt{atol} 要按状态分组传数组这件事，
+不写清楚就会有人把两个场用同一个容差，白白浪费计算量。
 
 \subsection{函数 cheb\_matrices：构造微分矩阵}
 
+文件第 27 行到第 42 行，函数 \texttt{cheb\_matrices} 的全部内容：
+
 \begin{lstlisting}[language=Python]
 def cheb_matrices(N):
+    """构造 CGL 节点 x_j = cos(j*pi/N)（自 1 降到 -1）上的 Chebyshev 微分矩阵。
+
+    N 为多项式阶数（节点共 N+1 个）；返回 (D, D@D, x)：D 为一阶微分矩阵，
+    二阶直接取 D@D——在 CGL 节点上用一阶矩阵平方仍给出精确的谱微分矩阵，
+    不必另推二阶系数（二阶矩阵随结果一并给出，当前只用一阶）。
+    """
     x = np.cos(np.pi * np.arange(N + 1) / N)
     c = np.hstack([2.0, np.ones(N - 1), 2.0]) * ((-1.0) ** np.arange(N + 1))
     X = np.tile(x, (N + 1, 1)).T
     dX = X - X.T
     D = np.outer(c, 1.0 / c) / (dX + np.eye(N + 1))
+    # 上面的公式在 i=j 处是 0/0，对角元改用"本行其余元素之和取负"：
+    # 这样 D 作用在常向量上严格得到 0（常数的导数为零），不吃浮点残差。
     D -= np.diag(D.sum(axis=1))
     return D, D @ D, x
 \end{lstlisting}
@@ -160,7 +214,7 @@ def cheb_matrices(N):
 这个函数实现第二部分第六章里的式 \eqref{eq:chebnode}、
 式 \eqref{eq:dij} 和式 \eqref{eq:dii}。逐行说明。
 
-第一行
+第 34 行
 
 \begin{lstlisting}[language=Python]
 x = np.cos(np.pi * np.arange(N + 1) / N)
@@ -168,13 +222,12 @@ x = np.cos(np.pi * np.arange(N + 1) / N)
 
 \texttt{np.arange(N+1)} 生成数组 $[0,1,2,\dots,N]$。
 乘以 $\pi$ 再除以 $N$，得到 $[0,\pi/N,2\pi/N,\dots,\pi]$。
-最后取余弦，得到 $x_j=\cos(j\pi/N)$，
+最后取余弦得到 $x_j=\cos(j\pi/N)$，
 这正是式 \eqref{eq:chebnode} 的定义。
-
 注意这个数组是从 $1$ 递减到 $-1$ 的，
 因为 $\cos0=1$，$\cos\pi=-1$。
 
-第二行
+第 35 行
 
 \begin{lstlisting}[language=Python]
 c = np.hstack([2.0, np.ones(N - 1), 2.0]) * ((-1.0) ** np.arange(N + 1))
@@ -182,81 +235,50 @@ c = np.hstack([2.0, np.ones(N - 1), 2.0]) * ((-1.0) ** np.arange(N + 1))
 
 \texttt{np.ones(N-1)} 生成 $N-1$ 个 $1$。
 \texttt{np.hstack} 把三部分横向拼起来，得到
-$[2,1,1,\dots,1,2]$，长度是 $N+1$。
-这对应式 \eqref{eq:dij} 里定义的 $c_0=c_N=2$，中间的都是 $1$。
-
-后面乘上 $(-1)^j$，得到带符号的系数，记作 $c_j$。
-这样做的目的是把式 \eqref{eq:dij} 分子上的 $(-1)^{i+j}$ 收进系数 $c$ 里：
-$c_i$ 里含 $(-1)^i$，$c_j$ 里含 $(-1)^j$，
+$[2,1,1,\dots,1,2]$，长度是 $N+1$，
+对应微分矩阵公式里 $c_0=c_N=2$、中间都是 $1$ 的规定。
+后面乘上 $(-1)^j$ 得到带符号的系数。
+这样做是为了把公式分子上的 $(-1)^{i+j}$ 收进系数里：
+$c_i$ 含 $(-1)^i$，$c_j$ 含 $(-1)^j$，
 又因为 $1/(-1)^j$ 等于 $(-1)^j$，
-所以下一步算出的商 $c_i/c_j$ 正好给出 $(-1)^{i+j}$。
-符号在这里一次到位，代码里不存在需要事后纠正的符号问题。
+所以下一步算出的商 $c_i/c_j$ 正好给出 $(-1)^{i+j}$，符号一次到位。
 
-第三行
+第 36 行到第 38 行
 
 \begin{lstlisting}[language=Python]
 X = np.tile(x, (N + 1, 1)).T
-\end{lstlisting}
-
-这里 $x$ 是长度为 $N+1$ 的一维数组，也就是一个列向量。
-\texttt{np.tile} 把向量 $x$ 复制成 $N+1$ 行，得到一个每一行都等于 $x$ 的矩阵。
-再取转置，得到的矩阵 $X$ 的每一列都等于完整的 $x$。
-所以 $X$ 的第 $i$ 行的所有元素都相等，第 $i$ 行上的公共值就是 $x_i$，
-写成元素形式是
-\begin{equation}
-X_{ij}=x_i .
-\end{equation}
-
-第四行
-
-\begin{lstlisting}[language=Python]
 dX = X - X.T
-\end{lstlisting}
-
-\texttt{X.T} 是 $X$ 的转置，$X$ 的列在转置以后变成行，
-所以 \texttt{X.T} 的第 $i$ 行的所有元素都等于 $x_j$，写成元素形式是
-\begin{equation}
-(X^{\mathrm{T}})_{ij}=x_j .
-\end{equation}
-两者相减，得到 $dX$ 的第 $i$ 行第 $j$ 列等于
-\begin{equation}
-dX_{ij}=x_i-x_j .
-\end{equation}
-
-这正是式 \eqref{eq:dij} 分母里需要的 $x_i-x_j$，符号完全一致，
-所以后面做除法时不需要任何修正。
-
-\why{为什么这里不直接写 x\_i 减 x\_j}
-因为用矩阵运算表达更简洁。用一个转置相减就得到全部两两差值，
-不需要写双重循环。这是 numpy 的广播机制，
-也是科学计算代码的典型写法。
-
-第五行
-
-\begin{lstlisting}[language=Python]
 D = np.outer(c, 1.0 / c) / (dX + np.eye(N + 1))
 \end{lstlisting}
 
-\texttt{np.outer(c, 1.0/c)} 生成矩阵，第 $i$ 行第 $j$ 列等于 $c_i/c_j$。
-这是式 \eqref{eq:dij} 的第一个因子。
-把它按元素除以 $dX$ 加单位矩阵，就得到 $D$。
-当 $i$ 不等于 $j$ 时
+\texttt{np.tile} 把向量 $x$ 复制成 $N+1$ 行，得到矩阵的每一行都等于 $x$，
+再取转置，于是 $X$ 的第 $i$ 行全是 $x_i$，
+写成元素形式是 $X_{ij}=x_i$。
+\texttt{X.T} 是转置，它的第 $i$ 行全是 $x_j$，
+两者相减得到
+\begin{equation}
+dX_{ij}=x_i-x_j .
+\end{equation}
+这正是式 \eqref{eq:dij} 分母里需要的 $x_i-x_j$，符号完全一致。
 
+\texttt{np.outer(c, 1.0/c)} 生成矩阵，第 $i$ 行第 $j$ 列等于 $c_i/c_j$，
+是式 \eqref{eq:dij} 的第一个因子。
+把它按元素除以 $dX$ 加单位矩阵，就得到 $D$：
+当 $i$ 不等于 $j$ 时
 \begin{equation}
 D_{ij}=\frac{c_i/c_j}{x_i-x_j},
 \end{equation}
-
 与式 \eqref{eq:dij} 完全一致。
-也就是说，$D$ 的第 $i$ 行第 $j$ 列等于 $c_i$ 除以 $c_j$，再除以 $x_i$ 减 $x_j$。
 
-\texttt{np.eye(N+1)} 是单位矩阵，对角线上是 $1$，其余是 $0$。
-加上它是为了避免除以零，因为 $dX$ 的对角线上全是零。
-加上单位矩阵以后，对角线上的分母由 $0$ 变成 $1$，
-这一处的值暂时等于 $c_i/c_i$，也就是 $1$，除法不会出错。
+\why{为什么要加 np.eye(N+1)}
+原公式在 $i=j$ 处是 $0/0$，直接算会得到 \texttt{nan}。
+给分母加单位阵，对角位置的分母被强行变成 $1$，
+算出来的对角元素是个无关紧要的值，
+反正下一行会覆盖它，所以除法不会出错。
+用矩阵运算还有一个好处：一个转置相减就得到全部两两差值，
+不需要写双重循环，这是 numpy 的广播机制，也是科学计算代码的典型写法。
 
-至于对角线上的值是否因此变错，下一行会修正。
-
-第六行
+第 41 行
 
 \begin{lstlisting}[language=Python]
 D -= np.diag(D.sum(axis=1))
@@ -264,77 +286,107 @@ D -= np.diag(D.sum(axis=1))
 
 \texttt{D.sum(axis=1)} 把每一行的元素求和，得到一个长度 $N+1$ 的向量。
 此时对角线上的值是 $1$，所以第 $i$ 行的和等于 $1$ 加上该行其余元素之和。
-\texttt{np.diag} 把这个和放到一个对角矩阵的对角线上。
+\texttt{np.diag} 把这个和放到一个对角矩阵的对角线上，
 \texttt{D -=} 表示从 $D$ 中减去这个对角矩阵。
-
-相减以后，对角线上的那个 $1$ 被换成该行其余元素之和的相反数，
-因为
+相减以后，对角线上的那个 $1$ 被换成该行其余元素之和的相反数，因为
 \begin{equation}
 1-\left(1+\sum_{j\ne i}D_{ij}\right)=-\sum_{j\ne i}D_{ij},
 \end{equation}
-而不在对角线上的元素没有变动。
-
-于是第 $i$ 行的和变成
-
+而不在对角线上的元素没有变动。于是第 $i$ 行的和变成
 \begin{equation}
-\sum_{j\ne i}D_{ij}+\left(-\sum_{j\ne i}D_{ij}\right)=0 .
+\sum_{j\ne i}D_{ij}+\left(-\sum_{j\ne i}D_{ij}\right)=0 ,
 \end{equation}
-
 这正是式 \eqref{eq:dii} 要求的行和为零。
-这种写法常被说成把对角线改成负的行和，
-准确地说，是改成该行其余元素之和的相反数，
-也就是式 \eqref{eq:dii} 给出的对角线赋值公式。
+
+对角元素不用公式算，而是取本行其余元素之和的相反数，
+数学上这是标准做法，但代码这么写还有一个额外好处：
+它保证 $D$ 作用在常向量上严格得到 $0$，
+也就是常数的导数为零在浮点意义下也成立。
+如果不这么做，一个常数场会被慢慢「积分」出虚假的梯度。
 
 \why{为什么不直接算出对角线再填进去}
 减对角矩阵这个写法同时完成了修正和清零两件事，
 一行代码解决，而且不需要把对角线元素单独挑出来处理。
 
-第七行返回三个值：一阶微分矩阵 $D$、
-二阶微分矩阵 $D^2$，也就是 $D$ 与自身相乘，以及节点坐标 $x$。
+第 42 行返回三个值：一阶微分矩阵 $D$、它的平方 $D^2$（也就是 $D$ 与自身相乘）、
+以及节点数组 $x$。注意第二个返回值在整个项目里从未被用到——
+这是因为下面要讲的通量形式只需要两次一阶微分，
+永远不需要显式构造二阶矩阵。
+直接写 $D^2$ 的元素量级达到 $O(N^4)$，
+舍入误差比两次一阶应用更大，能不用就不用。
 
-\subsection{类的初始化}
+\subsection{类 HerbSolver 的初始化}
+
+文件第 55 行到第 65 行：
 
 \begin{lstlisting}[language=Python]
-class HerbSolver:
     def __init__(self, N, prob, shrink=False):
         self.N = N
         self.Np = N + 1
         self.prob = prob
         self.shrink = shrink
+        # CGL 节点 x_j = cos(j*pi/N) 自 1 降到 -1，与 u 的换元关系是 x = 1 - 2u，
+        # 故 u 自 u_0 = 0（轴心）升到 u_N = 1（表面），且 d/du = -2 d/dx。
         Dx, D2x, x = cheb_matrices(N)
         self.u = (1.0 - x) / 2.0
         self.Du = -2.0 * Dx
+        self.Np = N + 1
 \end{lstlisting}
 
-类的作用是把数据和方法打包在一起。
-创建对象时传入三个参数：节点数 $N$、问题编号、是否考虑收缩。
+这个类把四个问题需要的东西全部装在一起。
+\texttt{N} 是谱节点数，\texttt{Np} 是节点总数 $N+1$
+（$N$ 表示阶数，节点比它多一个，
+所以专门起个名字避免每次写 $N+1$ 写错），
+\texttt{prob} 决定用哪一套物性，
+\texttt{shrink} 决定半径是否随时间变化，只有问题四才设为真。
 
-\begin{itemize}[leftmargin=1.8em,itemsep=2pt]
-\item \texttt{self.N} 保存节点数。
-\item \texttt{self.Np} 保存节点总数，等于 $N+1$。
-  变量名后面的 \texttt{p} 表示 plus。
-\item \texttt{self.prob} 保存问题编号，取 $1$、$2$、$3$ 或 $4$，
-  用来决定用哪一组物性公式。
-\item \texttt{self.shrink} 是逻辑值，只有问题四才设为真。
-\end{itemize}
-
-\begin{lstlisting}[language=Python]
-self.u = (1.0 - x) / 2.0
-\end{lstlisting}
-
-这一行实现式 \eqref{eq:map01} 的映射，把切比雪夫节点变成 $u$ 坐标的节点。
+后三行是坐标映射。\texttt{cheb\_matrices} 给出的 $x$ 从 $1$ 递减到 $-1$，
+而我们要的是 $u$ 从 $0$ 递增到 $1$，所以取
+\begin{equation}
+u=\frac{1-x}{2},
+\end{equation}
+这就是式 \eqref{eq:map01} 的映射，
 结果满足 $u_0=0$、$u_N=1$，对应圆心和表面。
+两边求导得 $\dfrac{\mathrm{d}u}{\mathrm{d}x}=-\dfrac12$，
+于是 $\dfrac{\mathrm{d}}{\mathrm{d}u}=-2\dfrac{\mathrm{d}}{\mathrm{d}x}$，
+这就是第 64 行 \texttt{self.Du = -2.0 * Dx} 的来历，也就是式 \eqref{eq:du}。
 
-\begin{lstlisting}[language=Python]
-self.Du = -2.0 * Dx
-\end{lstlisting}
-
-这一行实现式 \eqref{eq:du}。因为 $u=\dfrac{1-x}{2}$，
-对 $u$ 求导等于对 $x$ 求导再乘 $-2$。
+\why{为什么用一个类而不是一堆函数}
+因为四个问题共用同一套离散，差别只在物性和几何。
+把这些差异放进构造函数的两个参数里，
+后面的求解、插值、求平均全部复用同一份代码。
+如果用函数，就得把 $N$、\texttt{prob}、\texttt{shrink} 一路当参数传下去，
+每个函数签名都会变长。
 
 \why{为什么把微分矩阵存起来而不是每次重算}
 因为它在整个求解过程中不变，算一次就够了。
 存下来可以节省时间。这叫空间换时间。
+
+\subsection{几何与环境：三个小方法}
+
+文件第 70 行到第 80 行：
+
+\begin{lstlisting}[language=Python]
+    def R_of(self, t):
+        """当前半径 R(t) [m]：shrink=True 时取附件 2 实测半径插值，否则恒为 cm.R0。"""
+        return float(cm.R_of(t)) if self.shrink else cm.R0
+
+    def T_air(self, t):
+        """烘房空气温度 T_air(t) [degC]：t <= 14400 s 用一阶惯性式，其后恒为 Tset。"""
+        return float(cm.T_air(t))
+
+    def C_air(self, t):
+        """烘房空气含湿量 C_air(t) [kg/kg]：分段口径与 T_air 相同（同一 T_END）。"""
+        return float(cm.C_air(t))
+\end{lstlisting}
+
+三个方法都把外部的函数包一层，返回 Python 的浮点数而不是数组。
+\texttt{shrink} 为真时半径取附件 2 的插值，否则恒为初始半径。
+
+\why{为什么要 float() 一下}
+积分器在每一步都会调用右端项，
+如果里面返回的是零维数组，后面和标量混算时形状容易出问题。
+显式转成浮点数可以避免这类隐蔽的错误。
 
 \begin{figure}[H]
 \centering
@@ -345,33 +397,63 @@ self.Du = -2.0 * Dx
 
 \subsection{右端项函数：核心中的核心}
 
+文件第 84 行到第 111 行，函数 \texttt{rhs} 的全部内容：
+
 \begin{lstlisting}[language=Python]
-def rhs(self, t, y):
-    N, Np = self.N, self.Np
-    C = y[:Np]
-    T = y[Np:]
-    R = self.R_of(t)
-    rho, cp, k, D = cm.props(self.prob, C, T)
+    def rhs(self, t, y):
+        """右端项 dy/dt，供 solve_ivp 调用；t [s]，y 为状态向量（含义见类说明）。
+
+        返回与 y 同形状的导数：dC/dt [kg/(kg s)] 与 dT/dt [degC/s]。
+        """
+        N, Np = self.N, self.Np
+        C = y[:Np]
+        T = y[Np:]
+        R = self.R_of(t)
+        rho, cp, k, D = cm.props(self.prob, C, T)
+
+        # 水分：通量形式 g = u*D*dC/du，方程即 dC/dt = (4/R^2) dg/du
+        gC = self.u * D * (self.Du @ C)
+        # 表面节点不取谱微分算出的通量，而由 Robin 条件 -D dC/dr = hm(C_s - C_air)
+        # 除以 dr/du = R/(2 sqrt(u)) 反解：g_N = (R/2)*hm*(C_air - C_N)，
+        # 于是边界条件以物理通量的形式精确进入，不引入谱微分的边界误差。
+        gC[N] = 0.5 * cm.hm * R * (self.C_air(t) - C[N])        # Robin 物理通量
+        dC = (4.0 / R ** 2) * (self.Du @ gC)
+
+        # 温度：同上，只是扩散系数换成 k，且被体积热容 rho*cp 除
+        gT = self.u * k * (self.Du @ T)
+        gT[N] = 0.5 * cm.h * R * (self.T_air(t) - T[N])
+        dT = (4.0 / (R ** 2 * rho * cp)) * (self.Du @ gT)
+
+        out = np.empty_like(y)
+        out[:Np] = dC
+        out[Np:] = dT
+        return out
 \end{lstlisting}
 
-\texttt{rhs} 是 right hand side 的缩写，意思是方程的右端。
-积分器在每一步会反复调用这个函数，
-传入当前时刻 $t$ 和当前状态 $y$，
-要求我们返回状态的导数 $\dfrac{\mathrm{d}y}{\mathrm{d}t}$。
+\texttt{rhs} 是 right hand side 的缩写，意思是方程的右端，
+它做的事情是：给定当前时刻 $t$ 和当前状态 $y$，算出状态的变化率
+$\dfrac{\mathrm{d}y}{\mathrm{d}t}$。
+积分器在每一步会反复调用这个函数。
+这个函数把两个场的方程都写完了，也就是整个求解最核心的部分。
 
-\texttt{y} 是一个长度 $2(N+1)$ 的数组，
-前一半存含水率，后一半存温度。这样打包的原因稍后解释。
+\textbf{状态向量的长相。}第 90 行和第 91 行把 $y$ 切开：
 
-\texttt{y[:Np]} 是切片操作，取出前 $N+1$ 个元素，赋给 $C$。
-\texttt{y[Np:]} 取出从下标 \texttt{Np} 开始到末尾的全部元素，赋给 $T$。
-下标 \texttt{Np} 等于 $N+1$，而 Python 的下标从 $0$ 开始计数，
-所以 $T$ 的第一个元素在数组里排第 $N+2$ 位。
+\begin{lstlisting}[language=Python]
+C = y[:Np]
+T = y[Np:]
+\end{lstlisting}
+
+前 $N+1$ 个分量是水分浓度 $C$，后 $N+1$ 个是温度 $T$，
+两个场共用同一组节点。用切片而不是复制，是为了省内存；
+这里不会修改 $C$ 和 $T$，只读它们。
 
 \why{为什么把两个未知量放进同一个数组}
 因为积分器只能处理一个未知向量。
 把含水量和温度首尾相接拼成一个长向量，
 就能用同一个积分器同时推进两个场，
 而且能自动处理两者之间的耦合。
+
+\textbf{物性每步重算。}第 92 行和第 93 行取当前半径、算四个物性：
 
 \begin{lstlisting}[language=Python]
 R = self.R_of(t)
@@ -380,10 +462,22 @@ rho, cp, k, D = cm.props(self.prob, C, T)
 
 第一行取当前半径。问题一到问题三里它恒等于 $R_0$，
 问题四里它按附件二的数据插值得到。
-
 第二行调用 \texttt{common.py} 里的 \texttt{props} 函数，
-根据当前的含水率和温度算出四个物性。
-注意它一次性返回四个值，这叫元组解包。
+根据当前的含水率和温度算出四个物性，
+一次返回四个值，这叫元组解包。
+
+这一行看起来很普通，却是本题非线性处理的关键：
+物性依赖当前的 $C$ 和 $T$，而 $C$、$T$ 又是未知量，
+所以每调用一次右端项就用当前状态重新算一遍物性，
+而不是冻结在某一步的值上。
+
+\why{为什么不写牛顿迭代}
+因为时间方向用的是隐式 BDF，
+\texttt{solve\_ivp} 内部每一步都要解一个隐式方程，那个过程本身就包含迭代。
+我们只要把右端项写对，非线性它自己会处理。
+对照一下 \texttt{fv\_uniform.py}：那里用后向欧拉，
+就必须自己写 Picard 迭代。
+同样是隐式，不同积分器的「非线性归谁管」是不同的。
 
 \why{物性为什么在每个右端项求值处重新计算}
 因为物性依赖未知量 $C$ 和 $T$。
@@ -393,12 +487,11 @@ rho, cp, k, D = cm.props(self.prob, C, T)
 但积分器在每一步内部本来就会多次调用右端项，
 这样相当于做了隐式迭代，精度更高。
 
-接下来是水分部分。
+\textbf{水分场的通量形式。}第 96 行到第 101 行：
 
 \begin{lstlisting}[language=Python]
-# 水分：g = u*D*dC/du
 gC = self.u * D * (self.Du @ C)
-gC[N] = 0.5 * cm.hm * R * (self.C_air(t) - C[N])
+gC[N] = 0.5 * cm.hm * R * (self.C_air(t) - C[N])        # Robin 物理通量
 dC = (4.0 / R ** 2) * (self.Du @ gC)
 \end{lstlisting}
 
@@ -423,19 +516,17 @@ g(u) = u\,D\,\frac{\partial C}{\partial u},
 第一，在每个节点上算出通量 $g$ 的值；
 第二，对通量再求一次导数。
 
-第一行 \texttt{gC = self.u * D * (self.Du @ C)} 完成第一件事。
-
-\texttt{self.Du @ C} 表示矩阵乘向量，符号 \texttt{@} 是 Python 的矩阵乘法运算符。
-这一步算出所有节点上 $\dfrac{\partial C}{\partial u}$ 的近似值。
+第 96 行 \texttt{gC = self.u * D * (self.Du @ C)} 完成第一件事。
+这一行算的是通量，不是散度。
+\texttt{self.Du @ C} 表示矩阵乘向量，符号 \texttt{@} 是 Python 的矩阵乘法运算符，
+这一步算出所有节点上 $\dfrac{\partial C}{\partial u}$ 的近似值，
 这正是式 \eqref{eq:dmatrix} 的作用。
-
-\texttt{self.u * D * (...)} 是两个逐元素乘法。
-\texttt{self.u} 是节点坐标数组，
-\texttt{D} 是各节点上的扩散系数数组。
+\texttt{self.u * D * (...)} 是两个逐元素乘法：
+\texttt{self.u} 是节点坐标数组，\texttt{D} 是各节点上的扩散系数数组，
 逐元素相乘就是让第 $j$ 个节点上的 $u_j$、$D_j$ 和导数值相乘，
-得到该节点的通量 $g_j$。这正是式 \eqref{eq:fluxdef}。
+得到该节点的通量 $g_j$，这正是式 \eqref{eq:fluxdef}。
 
-第二行 \texttt{gC[N] = ...} 单独修改最后一个节点，也就是表面的通量。
+第 100 行单独修改最后一个节点，也就是表面的通量。
 
 \why{为什么表面的通量不能直接用上面的公式算}
 因为上面的公式算的是插值多项式的导数。
@@ -446,40 +537,65 @@ g_N = D\left.\frac{\partial C}{\partial u}\right|_{u=1}
 = \frac{h_mR}{2}\left(C_{\mathrm{air}}-C_1\right).
 \end{equation}
 
-代码里写的是 \texttt{0.5 * cm.hm * R * (C\_air(t) - C[N])}，
-和上式完全一致。这样写的好处是边界条件以物理量的身份精确进入离散方程，
+推导过程是：在 $u=1$ 处 $\dfrac{\mathrm{d}u}{\mathrm{d}r}=\dfrac{2}{R}$，
+所以 $\dfrac{\mathrm{d}C}{\mathrm{d}u}=\dfrac{R}{2}\dfrac{\mathrm{d}C}{\mathrm{d}r}$；
+Robin 条件说 $-D\dfrac{\mathrm{d}C}{\mathrm{d}r}=h_m(C_s-C_{\mathrm{air}})$。
+两式合起来
+
+\begin{equation}
+g_N=\left.uD\frac{\partial C}{\partial u}\right|_{u=1}
+=1\cdot D\cdot\frac{R}{2}\cdot\left(-\frac{h_m}{D}(C_s-C_{\mathrm{air}})\right)
+=\frac{R}{2}h_m\left(C_{\mathrm{air}}-C_s\right).
+\end{equation}
+
+注意 $D$ 被精确约掉了。这是一个很干净的化简：
+物理通量里含 $D$（由 $\mathrm{d}C/\mathrm{d}r=-h_m(C_s-C_{\mathrm{air}})/D$ 引入），
+而通量的定义里也含一个 $D$，两者相消，
+最终表达式 $\frac12h_mR(C_{\mathrm{air}}-C_s)$ 里根本不出现 $D$。
+这就避免了「在表面取一个代表性的 $D$」这种近似。
+代码里写的是 \texttt{0.5 * cm.hm * R * (C\_air(t) - C[N])}，和上式完全一致。
+这样写的好处是边界条件以物理量的身份精确进入离散方程，
 而不是通过外推近似得到。
+
+第 101 行 \texttt{dC = (4.0 / R ** 2) * (self.Du @ gC)} 完成第二件事。
+再对通量做一次谱微分，就得到散度，乘上前面的系数 $\dfrac{4}{R^2}$
+即得 $\mathrm{d}C/\mathrm{d}t$。这里发生了两件事：
+谱微分矩阵作用在通量上，用的是同一个 \texttt{self.Du}；
+而表面那个被替换过的值也参与这次微分。
+这个替换为什么仍然是谱精度：解收敛时，
+插值多项式的通量本来就等于物理通量，两者之差指数衰减，
+而微分矩阵的放大是多项式量级，指数赢过多项式。
+\texttt{R ** 2} 是 Python 的幂运算，表示 $R^2$。
 
 \why{圆心处要不要也单独处理}
 不需要。因为代码里 \texttt{self.u} 的第一个元素是 $0$，
-所以第一行算出来的 $g_0$ 自动等于零。
+所以第 96 行算出来的 $g_0$ 自动等于零。
 而 $g_0=0$ 正好就是对称条件的含义，正如第二部分第五章最后一节所说。
 
-第三行 \texttt{dC = (4.0 / R ** 2) * (self.Du @ gC)} 完成第二件事。
-把微分矩阵作用在通量数组上，得到 $\dfrac{\partial g}{\partial u}$ 在各节点的近似值，
-再乘以式 \eqref{eq:mass-u} 里的系数 $\dfrac{4}{R^2}$，
-得到含水率的时间导数。
-
-\texttt{R ** 2} 是 Python 的幂运算，表示 $R^2$。
-
-温度部分完全类似。
+\textbf{温度场完全同构。}第 104 行到第 106 行：
 
 \begin{lstlisting}[language=Python]
-# 温度：g = u*k*dT/du
 gT = self.u * k * (self.Du @ T)
 gT[N] = 0.5 * cm.h * R * (self.T_air(t) - T[N])
 dT = (4.0 / (R ** 2 * rho * cp)) * (self.Du @ gT)
 \end{lstlisting}
 
-对应式 \eqref{eq:energy-u}。唯一的区别是左边要除以 $\rho c_p$，
-因为传热方程左边是 $\rho c_p\dfrac{\partial T}{\partial t}$，
-移项以后变成 $\dfrac{\partial T}{\partial t}$ 等于右端除以 $\rho c_p$。
-
+三行与水分那三行逐项对应，对应式 \eqref{eq:energy-u}，
+只换了三处：扩散系数 $D$ 换成导热系数 $k$，
+传质系数 $h_m$ 换成换热系数 $h$，环境值 $C_{\mathrm{air}}$ 换成 $T_{\mathrm{air}}$。
+另外多除以一个体积热容 $\rho c_p$，
+因为能量方程的左边是 $\rho c_p\dfrac{\partial T}{\partial t}$ 而不是
+$\dfrac{\partial T}{\partial t}$，移项以后变成
+$\dfrac{\partial T}{\partial t}$ 等于右端除以 $\rho c_p$。
 表面条件用的是式 \eqref{eq:bcu-T}，
-代码里写成 \texttt{0.5 * cm.h * R * (T\_air(t) - T[N])}，
-和式 \eqref{eq:bcu-T} 完全一致。
+代码里写成 \texttt{0.5 * cm.h * R * (T\_air(t) - T[N])}，和式 \eqref{eq:bcu-T} 完全一致。
 
-最后打包返回。
+这种「同一个算子套两组系数」的写法，使得轴心与表面都不需要任何特判：
+在 $u=0$ 处 $u_0=0$，于是 $g_0$ 自动为零，
+对称性条件被坐标变换自动满足了，一行代码都不用写。
+对比一下第五部分的有限体积格式，那里必须为轴心与表面各写一段分支。
+
+\textbf{打包返回。}第 108 行到第 111 行：
 
 \begin{lstlisting}[language=Python]
 out = np.empty_like(y)
@@ -496,32 +612,52 @@ return out
 对于要在积分过程中被调用成千上万次的函数，
 减少一次内存分配能明显提高速度。
 
+\keypoint
+右端项一共六行有效代码，水分三行、温度三行，结构完全一样。
+核心思想只有一句：把方程写成通量散度形式，
+然后在表面那个节点上把通量换成物理条件。
+
 \subsection{初值与求解}
 
-\begin{lstlisting}[language=Python]
-def y0(self):
-    return np.concatenate([np.full(self.Np, cm.C0), np.full(self.Np, cm.T0)])
-\end{lstlisting}
-
-初值就是式 \eqref{eq:ic}。\texttt{np.full(Np, C0)} 生成 $N+1$ 个 $C_0$。
-\texttt{np.concatenate} 把两个数组首尾拼接，和 \texttt{rhs} 里的拆分方式对应。
+文件第 115 行到第 117 行：
 
 \begin{lstlisting}[language=Python]
-def solve(self, t_end, t_eval=None, rtol=1e-10, atol=1e-13, method="BDF",
-          events=None, max_step=np.inf, first_step=None, dense=False):
-    return solve_ivp(self.rhs, (0.0, t_end), self.y0(), method=method,
-                     rtol=rtol, atol=atol, t_eval=t_eval, events=events,
-                     max_step=max_step, first_step=first_step, dense_output=dense)
+    def y0(self):
+        """初始状态 [C0 ... C0, T0 ... T0]：C0 = 2.55 [kg/kg]、T0 = 28.0 [degC]。"""
+        return np.concatenate([np.full(self.Np, cm.C0), np.full(self.Np, cm.T0)])
 \end{lstlisting}
 
-这个函数是对 \texttt{solve\_ivp} 的包装。各个参数的含义是
+初值就是式 \eqref{eq:ic}：$N+1$ 个 $2.55$ 后面接 $N+1$ 个 $28$。
+\texttt{np.full(n, 值)} 生成 $n$ 个相同的数，
+\texttt{np.concatenate} 把两段首尾拼接，
+和 \texttt{rhs} 里的拆分方式对应。
+
+文件第 122 行到第 131 行：
+
+\begin{lstlisting}[language=Python]
+    def solve(self, t_end, t_eval=None, rtol=1e-10, atol=1e-13, method="BDF",
+              events=None, max_step=np.inf, first_step=None, dense=False):
+        """积分到 t_end [s]，返回 scipy 的 OdeResult（sol.t [s]、sol.y = 状态矩阵）。
+
+        t_eval 指定输出时刻 [s]；rtol/atol 控制时间积分误差；events 用于定位烘干
+        时刻（判据 C_max 下穿 0.15 kg/kg）；method 换积分器做上述交叉验证。
+        """
+        return solve_ivp(self.rhs, (0.0, t_end), self.y0(), method=method,
+                         rtol=rtol, atol=atol, t_eval=t_eval, events=events,
+                         max_step=max_step, first_step=first_step, dense_output=dense)
+\end{lstlisting}
+
+这个方法只做参数透传，把右端项、初值、时间区间和容差交给 \texttt{solve\_ivp}。
+第二部分讲过的半离散方程组 \eqref{eq:semi} 就是它要积分的东西。
+各个参数的含义是
 
 \begin{itemize}[leftmargin=1.8em,itemsep=2pt]
 \item 第一个参数 \texttt{self.rhs} 是右端函数，也就是上一小节那个。
 \item 第二个参数 \texttt{(0.0, t\_end)} 是时间区间。
 \item 第三个参数 \texttt{self.y0()} 是初值。
 \item \texttt{method} 指定积分方法，默认用 BDF。
-  也可以改成 Radau 或 LSODA 做交叉验证。
+  也可以改成 Radau 或 LSODA 做交叉验证，
+  换积分器重算同一个问题是为了考察时间离散误差，不是为了换更快的算法。
 \item \texttt{rtol} 和 \texttt{atol} 是相对和绝对容差，用来控制精度。
 \item \texttt{t\_eval} 指定希望输出结果的时刻，
   不指定的话积分器自己决定在哪些时刻输出。
@@ -533,15 +669,45 @@ def solve(self, t_end, t_eval=None, rtol=1e-10, atol=1e-13, method="BDF",
 调用时只写关心的参数。而且以后要换求解器，
 只要改这一个函数，其他代码不用动。
 
-\subsection{重心插值}
+\why{atol 为什么要传一个数组}
+调用处普遍这么写：
 
 \begin{lstlisting}[language=Python]
-def _bary_weights(self):
-    N = self.N
-    w = (-1.0) ** np.arange(N + 1)
-    w[0] *= 0.5
-    w[N] *= 0.5
-    return w
+at = np.concatenate([np.full(s.Np, 1e-13), np.full(s.Np, 1e-11)])
+\end{lstlisting}
+
+因为 $C$ 的量级是 $1$、$T$ 的量级是 $300$，相差两个数量级。
+绝对容差的意义是「低于此值的变化不予理会」。
+若统一取 $10^{-13}$，对温度来说相当于 $3\times10^{-16}$ 的相对精度，
+低于双精度机器精度，积分器会被迫把步长压到极小却换不来任何精度；
+反过来若统一取 $10^{-11}$，对水分又太松。
+分组给容差，是让每个状态量在自己的尺度上被同等对待。
+
+\subsection{采样之一：物理半径节点与重心插值}
+
+求解器在 $u$ 坐标上工作，但我们最终要的是物理半径上的剖面，
+所以需要一套从 $u$ 回到物理量的工具。
+
+文件第 135 行到第 137 行：
+
+\begin{lstlisting}[language=Python]
+    def r_nodes(self, t):
+        """当前时刻的物理半径节点 r_j = R(t)*sqrt(u_j) [m]，用于把谱解画到 r 坐标上。"""
+        return np.sqrt(self.u) * self.R_of(t)
+\end{lstlisting}
+
+物理半径 $r_j=R(t)\sqrt{u_j}$。一行。
+
+文件第 139 行到第 145 行：
+
+\begin{lstlisting}[language=Python]
+    def _bary_weights(self):
+        """CGL 节点的重心插值权重 w_j（两端点折半），供 _bary 与面积权重共用。"""
+        N = self.N
+        w = (-1.0) ** np.arange(N + 1)
+        w[0] *= 0.5
+        w[N] *= 0.5
+        return w
 \end{lstlisting}
 
 这个函数计算重心插值的权重。式子是
@@ -552,10 +718,10 @@ w_j = (-1)^j\times
 \dfrac{1}{2}, & j=0\ \text{或}\ j=N,\\[4pt]
 1, & \text{其他}.
 \end{cases}
+\label{eq:p3-baryw}
 \end{equation}
 
 代码先算出 $(-1)^j$，再把首尾两个元素各自乘 $\dfrac{1}{2}$。
-
 首尾两个系数为什么要取 $\dfrac{1}{2}$，理由是：
 切比雪夫--高斯--洛巴托节点包含两个端点，
 而端点在插值公式里只贡献半个权，
@@ -575,204 +741,530 @@ w_j = (-1)^j\times
 重心形式的数学结果和它完全相同，但数值上稳定得多，
 计算量也小得多。这是一个已经被广泛采用的改进形式。
 
+文件第 169 行到第 176 行：
+
 \begin{lstlisting}[language=Python]
-def _bary(self, f, u_t):
-    u_t = np.atleast_1d(np.asarray(u_t, dtype=float))
-    w = self._bary_weights()
-    u = self.u
-    out = np.empty(u_t.shape, dtype=float)
-    for k, ut in enumerate(u_t):
-        diff = ut - u
-        hit = np.where(np.abs(diff) < 1e-15)[0]
-        if hit.size:
-            out[k] = f[hit[0]]
-            continue
-        out[k] = np.sum(w * f / diff) / np.sum(w / diff)
-    return out
+    def interp_u(self, y, u_t):
+        """把状态向量按 u 变量重心插值到 u_t（谱精度），返回 (C, T) 两个数组。
+
+        y 为某一时刻的状态向量；u_t 为目标 u 坐标，与物理半径的换算见 r_nodes。
+        """
+        C = y[:self.Np]
+        T = y[self.Np:]
+        return (self._bary(C, u_t), self._bary(T, u_t))
+\end{lstlisting}
+
+把状态向量切开，两个场分别插值到目标坐标 \texttt{u\_t}。
+
+主要的插值函数 \texttt{\_bary} 在第 178 行到第 201 行，
+里面有两处防御性写法，值得单独讲。
+
+\begin{lstlisting}[language=Python]
+    def _bary(self, f, u_t):
+        """单场重心插值：f 为 CGL 节点上的场值，u_t 为目标 u 坐标，返回同形状数组。"""
+        u_t = np.atleast_1d(np.asarray(u_t, dtype=float))
+        w = self._bary_weights()
+        u = self.u
+        out = np.empty(u_t.shape, dtype=float)
+        for k, ut in enumerate(u_t):
+            diff = ut - u
+            # 命中判据用相对容差：绝对容差在 u_t 极接近某节点却不严格相等时会漏判，
+            # 该分支的 1/diff 会把插值结果污染成无意义的巨值。
+            hit = np.where(np.abs(diff) <= 1e-14 * max(1.0, abs(ut)))[0]
+            if hit.size:
+                out[k] = f[hit[0]]
+                continue
+            num = np.sum(w * f / diff)
+            den = np.sum(w / diff)
+            if den == 0.0:
+                # 数学上 den = 1/prod(u_t-u_j) 恒不为零，但 N 较大且 u_t 落在
+                # [0,1] 之外时，交替符号的项会在浮点下抵消到恰好 0，此时 num/den
+                # 变成 inf。兜底取最近节点的值，保证输出有限。
+                out[k] = f[int(np.argmin(np.abs(diff)))]
+            else:
+                out[k] = num / den
+        return out
 \end{lstlisting}
 
 第一行把输入统一转成数组。\texttt{np.atleast\_1d} 保证即使传进来一个数，
-也会被包成长度为一的数组，这样后面的处理逻辑统一。
-
+也会被包成长度为一的数组，这样后面的处理逻辑统一；
 \texttt{np.asarray(..., dtype=float)} 保证元素是浮点数。
 
 然后是循环，对每个目标位置 \texttt{ut} 逐个处理。
-
 \texttt{diff = ut - u} 算出目标位置与全部节点的距离。
 
-\texttt{np.where(np.abs(diff) < 1e-15)} 找出距离接近零的节点。
-如果目标位置正好落在某个节点上，直接用该节点的值，
-避免后面除以零。
+\textbf{第一处防御性写法}是第 188 行与第 189 行：
+目标点恰好落在某个节点上时直接取该节点的值。
+判断用的是相对容差
 
-否则执行最后一行，按重心公式计算
+\begin{equation}
+\left|u_*-u_j\right| \le 10^{-14}\max\left(1,\left|u_*\right|\right),
+\label{eq:p3-hit}
+\end{equation}
+
+而不是一个固定的绝对容差。原因很实际：
+若用绝对容差，当目标点极接近某节点却不严格相等时会漏判，
+而下一行的 $\dfrac{1}{u_*-u_j}$ 会把插值结果污染成没有意义的巨值。
+
+否则执行后面的重心公式计算
 
 \begin{equation}
 C(u_*) = \frac{\sum_j \dfrac{w_j}{u_*-u_j}C_j}{\sum_j \dfrac{w_j}{u_*-u_j}} .
+\label{eq:p3-bary}
 \end{equation}
 
 代码里的 \texttt{np.sum(w * f / diff)} 对应分子，
-\texttt{np.sum(w / diff)} 对应分母。
+\texttt{np.sum(w / diff)} 对应分母，权重 $w_j$ 就是式 \eqref{eq:p3-baryw} 算出来的。
 
-\why{这个公式为什么看起来和拉格朗日公式不一样}
-把式 \eqref{eq:basis} 的基函数做代数变形，
-分母的连乘可以提出去作为公因子，
-分子分母的公因子相消以后就剩下这个简洁的形式。
-数学上两者完全等价，但重心形式每个目标点只需要两次求和，
-而不是 $N$ 次连乘。
+\textbf{第二处防御性写法}是第 194 行到第 200 行。
+数学上分母等于 $1/\prod_j(u_*-u_j)$，恒不为零；
+但当目标点落在 $[0,1]$ 之外、节点数又较多时，
+交替符号的项会在浮点下抵消到恰好为零，此时相除会得到无穷大。
+兜底取最近节点的值 $\texttt{f[int(np.argmin(np.abs(diff)))]}$，
+保证输出是有限数。这与第四部分讲的「域外的点不能外推」是同一件事的两道防线：
+调用方本来就不该把域外的点送进来，万一送进来了，这里也不会返回一个巨大的假数。
+
+\why{为什么不用显式的拉格朗日基函数求和}
+重心形式在数学上与拉格朗日插值多项式完全等价，
+但每求一个点只需要 $O(N)$ 次运算，而且数值上稳定得多。
+显式基函数在节点数稍大时系数会变得巨大，精度损失明显。
+
+\subsection{采样之二：面积平均权重}
+
+文件第 147 行到第 167 行：
+
+\begin{lstlisting}[language=Python]
+    def area_weights(self):
+        """截面面积平均 Cbar = int_0^1 C(u,t) du 在 CGL 节点上的权重（缓存）。
+
+        论文 S11.6 给出的截面平均即此定义（u=(r/R)^2 下 du 已含 2r dr 的测度）。
+        C 在 u 上是 N 次多项式，故用 Gauss--Legendre 求积对 Lagrange 基函数精确
+        积分一次即可得到权重向量；此后任意时刻的平均值都是 weights @ C_nodes，
+        与逐时刻插值求积完全等价但快得多。
+
+        注意：CGL 节点的**等权求和**（或若干物理半径采样点的算术平均）都不是
+        面积平均——端点附近节点最密，等权重会把近表面薄层放大，结果偏低。
+        """
+        if getattr(self, "_area_w", None) is None:
+            nq = 2 * self.N + 2                  # 被积函数为 N 次多项式，留足余量
+            xg, wg = np.polynomial.legendre.leggauss(nq)
+            uq = 0.5 * (xg + 1.0)                # 映射到 [0,1]，节点严格在内部
+            wq = 0.5 * wg
+            w = self._bary_weights()
+            diff = uq[:, None] - self.u[None, :]
+            basis = (w[None, :] / diff) / np.sum(w[None, :] / diff, axis=1, keepdims=True)
+            self._area_w = wq @ basis
+        return self._area_w
+\end{lstlisting}
+
+这个方法算的是截面面积平均
+\begin{equation}
+\bar C=\int_0^1 C(u,t)\,\mathrm{d}u
+\label{eq:p3-area}
+\end{equation}
+的积分权重。
+
+\why{为什么是积分而不是采样点的算术平均}
+坐标变换 $u=(r/R)^2$ 已经把面积测度吸收了：
+$\mathrm{d}u=2r\,\mathrm{d}r/R^2$，所以
+$\int_0^1C\,\mathrm{d}u=\int_0^RC\cdot2r\,\mathrm{d}r/R^2$，
+这正好是截面上的面积加权平均。
+而「CGL 节点等权求和」不是这个量——
+轴心附近节点密集，等权重会把近表面薄层过度放大，结果系统性偏低。
+
+\textbf{实现思路。}每个时刻的 $C(u,t)$ 都是 $u$ 的 $N$ 次多项式，所以
+
+\begin{equation}
+\bar C=\sum_{j=0}^{N}C_j\int_0^1\ell_j(u)\,\mathrm{d}u ,
+\label{eq:p3-areasum}
+\end{equation}
+
+其中 $\ell_j$ 是拉格朗日基函数。
+只要把 $\int_0^1\ell_j\,\mathrm{d}u$ 一次性算成权重向量，
+以后每个时刻的平均值就只是一次内积，与逐时刻重新积分完全等价但快得多。
+
+逐行看代码。第 158 行用 \texttt{getattr} 检查缓存：
+算过一次就存进 \texttt{self.\_area\_w}，下次直接取，不再重复算。
+第 159 行取求积点数 $n_q=2N+2$；
+第 160 行 \texttt{leggauss} 给出标准区间 $[-1,1]$ 上的高斯--勒让德节点与权重；
+第 161 行和第 162 行把它们映射到 $[0,1]$：
+$u_q=\dfrac{1}{2}(x_g+1)$，权重 $w_q=\dfrac{1}{2}w_g$。
+这样取点的精度是无条件够的：
+$2N+2$ 点高斯求积能精确积分 $4N+3$ 次多项式，
+而被积的基函数只有 $N$ 次，余量很大。
+
+第 163 行取上一小节算出的重心权重；
+第 164 行算出求积节点与全部 CGL 节点的两两距离，
+\texttt{uq[:, None] - self.u[None, :]} 用广播把长度 $n_q$ 的向量
+与长度 $N+1$ 的向量变成形状 $(n_q,N+1)$ 的矩阵。
+第 165 行用式 \eqref{eq:p3-bary} 的重心公式
+求出每个求积节点上的拉格朗日基函数值，
+得到一个 $(n_q,N+1)$ 的矩阵；
+第 166 行用求积权重对这组基函数加权求和，
+得到长度 $N+1$ 的权重向量，正是式 \eqref{eq:p3-areasum} 里的那些积分值。
+第 167 行返回它。此后任意时刻的截面平均只要写
+\texttt{area\_weights() @ C\_nodes} 就行。
 
 \keypoint
-主求解器的结构是：一个函数构造微分矩阵，
-一个类把节点、矩阵、物性、右端项打包起来，
-右端项里用通量形式实现两个方程，
-最后用一个包装函数调用现成的积分器。
+从 $u$ 节点回到物理量，一共三件工具：\texttt{r\_nodes} 换算物理半径，
+\texttt{interp\_u} 做重心插值，\texttt{area\_weights} 做面积平均。
+三件工具都不依赖任何采样点数的选取。
 
 % =====================================================================
 \section{参数文件 common.py 逐段解释}
 
 \subsection{文件定位：让程序可以搬动}
 
-\begin{lstlisting}[language=Python]
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_CANDIDATES = [
-    os.path.join(_HERE, "..", "题目"),
-    os.path.join(_HERE, ".."),
-    os.path.join(_HERE, "..", ".."),
-    _HERE,
-]
+这一节的内容在总览里已经出现过，这里补充一个细节，
+也就是文件第 47 行到第 58 行的查找函数：
 
+\begin{lstlisting}[language=Python]
 def _find_attach(name):
+    """在候选目录下查找 附件/<name>，返回绝对路径；全部落空则报错并列出搜索过的目录。
+
+    宁可直接抛 FileNotFoundError 也不要返回 None：附件缺失时后续拟合会静默读到
+    错误数据，报错比出错数好查。
+    """
     for base in _CANDIDATES:
         p = os.path.abspath(os.path.join(base, "附件", name))
         if os.path.isfile(p):
             return p
-    raise FileNotFoundError(...)
+    raise FileNotFoundError(
+        "找不到 附件/%s；已搜索：%s" % (name, [os.path.abspath(b) for b in _CANDIDATES]))
 \end{lstlisting}
 
-这段代码解决的问题是：附件文件在哪个目录。
-
-\why{为什么不直接写死附件路径}
-如果写死一个绝对路径，比如从某台电脑的桌面开始的完整路径，
-那么把整个文件夹复制到别的地方以后，程序就找不到附件了。
-用相对位置去搜索，程序就能跟着文件夹一起搬动。
-
-\texttt{\_\_file\_\_} 是 Python 的一个内置变量，
-表示当前这个文件自己的路径。\texttt{os.path.abspath} 把它变成绝对路径，
-\texttt{os.path.dirname} 取出所在目录。
-
-\texttt{os.path.join(\_HERE, "..", "题目")} 表示从当前目录往上退一级，
-再进入题目目录。\texttt{..} 在路径里的含义就是上一级。
-
-函数逐个尝试候选位置，找到就返回，都找不到才报错。
+搜索失败时直接把搜索过的目录列出来，而不是返回一个空值。
+返回空值的后果是后面的拟合会静默读到错误数据，报错总比出错数好查。
 
 \subsection{烘房环境的标定}
 
+附件 1 给了 $241$ 组实测数据，温度与含湿量都是先上升后稳定的形态。
+代码把它拟合成一阶惯性式。文件第 92 行到第 103 行：
+
 \begin{lstlisting}[language=Python]
+def _fT(t, Tset, tau):
+    """温度惯性式（供 curve_fit 调用）：t [s]，返回烘房温度 [degC]。"""
+    return Tset - (Tset - T_air0) * np.exp(-t / tau)
+
+
+def _fC(t, Cset, tau):
+    """含湿量惯性式（供 curve_fit 调用）：t [s]，返回空气含湿量 [kg/kg]。"""
+    return Cset - (Cset - C_air0) * np.exp(-t / tau)
+
+
 (Tset_fit, tauT_fit), _ = curve_fit(_fT, _t_env, _Ta_env, p0=[50.2, 1800.0])
 (Cset_fit, tauC_fit), _ = curve_fit(_fC, _t_env, _Ca_env, p0=[0.0509, 2800.0])
+\end{lstlisting}
 
-# 标定参数的报告精度：把拟合值按其有效位数保留
+\texttt{curve\_fit} 是 scipy 提供的最小二乘拟合函数，
+实现的就是第一部分第三章讲的 Levenberg--Marquardt 算法。
+它返回两样东西：第一样是拟合出来的参数，第二样是参数的协方差矩阵。
+左边写成 \texttt{(Tset\_fit, tauT\_fit), \_ =}，
+就是把参数接出来，把协方差用下划线忽略掉。
+参数的含义是：第一个是模型函数，第二个是自变量的数据，
+第三个是因变量的数据，第四个是参数的初始猜测值。
+
+注意初值被固定成实测第一点 \texttt{T\_air0}（第 84 行），不作为自由参数。
+所以每个式子只有两个待定参数：稳态值与时间常数。
+
+\why{为什么用乘法形式而不是加法形式}
+一阶惯性式写成 $T_{\mathrm{set}}-(T_{\mathrm{set}}-T_{\mathrm{air}0})e^{-t/\tau}$，
+在 $t=0$ 处自动等于 $T_{\mathrm{air}0}$，也就是实测的初值。
+如果写成「拟合曲线加一个偏移量」的形式，
+扰动设定值时会把初值一起改掉，那就不是「只改设定值」了。
+
+拟合结果按有效位数取用。文件第 108 行到第 116 行：
+
+\begin{lstlisting}[language=Python]
 Tset = 50.212
 tauT = 1877.5
 Cset = 0.050908
 tauC = 2776.3
+VARIANTS = {
+    "reported_precision": dict(Tset=Tset, tauT=tauT, Cset=Cset, tauC=tauC),
+    "full_precision_fit": dict(Tset=Tset_fit, tauT=tauT_fit,
+                               Cset=Cset_fit, tauC=tauC_fit),
+}
 \end{lstlisting}
 
-上面这段是 \texttt{common.py} 的第 67 到 76 行，
-其中第 70 到 72 行的注释压缩成一行印出。
-
-\texttt{curve\_fit} 是 scipy 提供的最小二乘拟合函数，
-实现的就是第一部分第三章讲的 Levenberg--Marquardt 算法。
-它返回两样东西：第一样是拟合出来的参数，
-第二样是参数的协方差矩阵。
-左边写成 \texttt{(Tset\_fit, tauT\_fit), \_ =}，
-就是把参数接出来，把协方差用下划线忽略掉。
-
-参数的含义是：第一个是模型函数，
-第二个是自变量的数据，第三个是因变量的数据，
-第四个是参数的初始猜测值。
-
-拟合的结果保存在 \texttt{Tset\_fit} 与 \texttt{tauT\_fit} 里。
-随后第 70 到 76 行把实际使用的常数直接写出来：
-\texttt{Tset = 50.212}、\texttt{tauT = 1877.5}、
-\texttt{Cset = 0.050908}、\texttt{tauC = 2776.3}。
-这四个数是拟合结果按有效位数截断以后的值，也就是报告口径。
-主程序读的是后面这四个常数，
-拟合出来的原始值留在带 \texttt{\_fit} 的名字里备用，
-第 77 到 81 行还把这两套值一起放进 \texttt{VARIANTS} 字典，供对照使用。
+前四行是报告值，也就是论文里实际用的、按有效位数截断后的数。
+\texttt{VARIANTS} 里同时保留了完全精度的拟合值，
+这样如果以后要做「参数精度的影响」分析，不用重新拟合；
+主程序读的是前四个常数，
+拟合出来的原始值留在带 \texttt{\_fit} 的名字里备用。
 
 \why{为什么要给初始猜测值}
 因为式 \eqref{eq:lsq} 无法直接求解，只能用迭代法，
 而迭代法必须从一个起点开始。
 从零点附近开始可能会收敛到错误的解或者根本不收敛。
 给一个接近真值的起点，收敛又快又稳。
-
 起点 $50.2$ 是看着附件数据的终值给的，
 $1800$ 是看着曲线上升的快慢估的。
 这两个数只要落在正确的量级，迭代就会收敛到同一个最小值，
 所以初值本身不需要很准。
 
-但拟合出来的常数取到几位有效数字，会直接影响结果的第 4 位小数。
-第六部分第十章实测过：把设定值改动 $0.002$ 摄氏度，
-$T(0,1800)$ 就从 $34.04195$ 变到 $34.04304$，
-四舍五入到四位小数以后是 $34.0420$ 与 $34.0430$，第 4 位小数被翻动。
-所以程序把口径固定下来并写清楚：
-生产计算用按有效位数截断的 $50.212$ 与 $1877.5$，
-全精度拟合值 $50.212101$ 与 $1877.4941$ 保留在
-\texttt{Tset\_fit} 与 \texttt{tauT\_fit} 里备用。
-
-\subsection{物性公式}
+\textbf{环境随时间变化的最终形式分两段。}文件第 128 行到第 142 行：
 
 \begin{lstlisting}[language=Python]
+def T_air(t):
+    """烘房温度 [degC]：t<=14400 s 取一阶惯性式，其后取稳态设定值。
+
+    入参 t 可为标量或数组；返回同形状数组（后续用 numpy 广播，标量入参也返回 0 维数组）。
+    """
+    t = np.asarray(t, dtype=float)
+    ramp = Tset - (Tset - T_air0) * np.exp(-t / tauT)
+    return np.where(t <= T_END, ramp, Tset)
+
+
+def C_air(t):
+    """烘房空气含湿量 [kg/kg]：分段口径与 T_air 完全相同（同一时刻同一个 T_END）。"""
+    t = np.asarray(t, dtype=float)
+    ramp = Cset - (Cset - C_air0) * np.exp(-t / tauC)
+    return np.where(t <= T_END, ramp, Cset)
+\end{lstlisting}
+
+\texttt{T\_END} 在第 86 行取附件 1 的采样终点 $14400$ 秒
+（也就是 $4$ 小时，见文件第 25 行的说明）。
+在这之前按惯性式上升，之后直接取设定值。
+\texttt{np.where} 是向量化的条件选择，对数组里每个元素分别判断，不用写循环。
+温度与含湿量用同一个分段时刻，这样两条边界条件的口径完全一致。
+
+\why{这个分段为什么允许不连续}
+因为它是「实测已达稳态、故按稳态取值」这一建模选择的结果。
+文件第 123 行到第 127 行的注释把这件事写清楚了：
+一阶惯性式在 $t=14400$ 秒处与设定值还差
+$T_{\mathrm{air}}$ 约 $1.037\times10^{-2}$ 摄氏度、
+$C_{\mathrm{air}}$ 约 $1.748\times10^{-4}$ kg/kg。
+把这段话写在代码里，是为了让人一眼看到这个跳变有多大、以及它为什么可以接受。
+
+\subsection{两种 RMSE 口径}
+
+\texttt{common.py} 里专门用一段注释记下了一件容易混淆的事，
+也就是文件第 118 行到第 120 行：
+
+\begin{lstlisting}[language=Python]
+# 拟合残差有两种报告口径，看数时别混：论文表 1 与 run_all.py 报的是 RMSE 用
+# ÷n 的 0.336 degC / 8.1e-4 kg/kg（把标定值当作对整段序列的整体描述）；
+# curve_fit 的 pcov 走的是 ÷(n-2) 的自由度口径，只在需要参数标准误时使用。
+\end{lstlisting}
+
+\textbf{RMSE} 是均方根误差，定义是把每个时刻的残差平方求平均再开方。
+两种口径的差别只在「除以几」：
+
+\begin{equation}
+\mathrm{RMSE}_{n}=\sqrt{\frac{1}{n}\sum_{i=1}^{n}r_i^2},
+\qquad
+\mathrm{RMSE}_{n-p}=\sqrt{\frac{1}{n-p}\sum_{i=1}^{n}r_i^2},
+\label{eq:p3-rmse}
+\end{equation}
+
+其中 $r_i$ 是第 $i$ 个时刻实测值与拟合值之差，
+$n=241$ 是数据点数，$p=2$ 是拟合参数的个数，所以后一种要除以 $n-2=239$。
+
+两者回答的是两个不同的问题。
+除以 $n$ 的那种，把标定值当作对整段序列的整体描述，
+问的是「这条曲线整体拟合得好不好」，
+论文表 1 与 \texttt{run\_all.py} 报的就是这个口径，
+温度 $0.336$ 摄氏度、含湿量 $8.1\times10^{-4}$ kg/kg。
+除以 $n-p$ 的那种，是统计学里对总体方差的无偏估计口径，
+问的是「这两个参数本身有多不确定」，
+只在需要参数标准误时才用，
+\texttt{curve\_fit} 内部算协方差矩阵走的就是它。
+
+\why{为什么非要把两种口径写在代码里}
+因为两种口径算出来的数不一样。
+如果不写清楚，同一份数据在不同脚本里报出两个不同的 RMSE，
+看的人会以为哪里算错了。
+而且这两个数的差不是舍入误差，是定义不同，
+除以 $239$ 比除以 $241$ 大约大百分之零点四，
+在温度上就是 $0.336$ 与 $0.337$ 的区别。
+把口径写下来，以后两个脚本报的数对不上时，
+一眼就知道该去查哪一条。
+
+\subsection{物性公式与浓度下限}
+
+文件第 148 行与第 151 行到第 184 行：
+
+\begin{lstlisting}[language=Python]
+C_FLOOR = 1.0e-3
+
+
 def props(prob, C, T):
+    """返回 (rho, cp, k, D)，四个量与入参 C、T 同形状。
+
+    prob 决定用哪套物性（对应题目三个附录）：
+      1 -> 附录 2：常数物性（问题 1 用，温度场与水分场解耦）
+      2、3 -> 附录 3：含 C、T 的强非线性关系（问题 2、3 用）
+      4 -> 附录 4：另一套系数（问题 4 用，配合实测收缩）
+
+    量纲：C 为干基含水率 [kg/kg]；T 为温度 [degC]，仅 Arrhenius 项内部换算成 K。
+    返回：rho [kg/m3]、cp [J/(kg K)]、k [W/(m K)]、D [m2/s]。
+    """
     C = np.asarray(C, dtype=float)
     T = np.asarray(T, dtype=float)
     Cf = np.maximum(C, C_FLOOR)
     TK = T + 273.15
     if prob == 1:
-        ...
+        one = np.ones_like(C)
+        rho = 820.0 * one
+        cp = 2600.0 * one
+        k = 0.36 * one
         D = 7.0e-9 * np.exp(-0.89 / Cf)
     elif prob in (2, 3):
-        ...
+        rho = 650.0 + 128.0 * C
+        cp = 1450.0 + 2736.0 * C / (C + 1.0)
+        k = 0.21 + 0.38 * C / (C + 1.0)
         D = 2.4e-3 * np.exp(-0.45 / Cf) * np.exp(-3850.0 / TK)
+    elif prob == 4:
+        rho = 760.0 + 90.0 * C
+        cp = 1850.0 + 2150.0 * C / (C + 1.0)
+        k = 0.12 + 0.20 * C / (C + 1.0)
+        D = 4.2e-4 * np.exp(-0.30 / Cf) * np.exp(-3850.0 / TK)
+    else:
+        raise ValueError("prob must be 1,2,3,4")
+    return rho, cp, k, D
 \end{lstlisting}
 
-\texttt{Cf = np.maximum(C, C\_FLOOR)} 把含水率的下限设为 $10^{-3}$ kg/kg。
+这个函数按 \texttt{prob} 的值从四套经验式里选一套。
+\texttt{prob=1} 是问题一的常数物性，
+\texttt{prob=2} 与 \texttt{prob=3} 共用附录 3 的关系，
+\texttt{prob=4} 用附录 4 的关系。
+最后那个 \texttt{else} 分支不是多余的：
+如果传进来一个 $5$，与其算出一个莫名其妙的数，不如立刻报错。
 
-\why{为什么需要这个下限}
-因为水分扩散系数里含因子 $\exp(-a/C)$。
+两处必须解释的细节。
+
+\textbf{第一，\texttt{Cf = np.maximum(C, C\_FLOOR)}。}
+扩散系数里含因子 $e^{-a/C}$，当 $C$ 趋于零时这个因子会发散。
 把这个因子对 $C$ 求导，得到 $\dfrac{a}{C^2}\exp(-a/C)$，
-也就是导数里含因子 $1/C^2$。
-当 $C$ 趋向于零时，$1/C^2$ 发散，
-扩散系数对含水率的变化率就变得任意大。
-自适应积分器为了跟上这种陡峭的变化，
-会把步长压缩到极小，甚至直接失败。
-代码取 $C$ 不低于 $0.001$ kg/kg 作为保护，避免走到这一步。
-而烘干判据的阈值是 $0.15$ kg/kg，
-比这个下限大两个数量级，
-所以在真正关心的含水率范围内这个下限根本不起作用，不影响任何结果。
+也就是导数里含因子 $1/C^2$，
+当 $C$ 趋向于零时发散，
+扩散系数对含水率的变化率就变得任意大，
+自适应积分器为了跟上这种陡峭的变化会把步长压缩到极小，甚至直接失败。
+物理上表面含水率确实不会降到零（烘干判据是 $0.15$ kg/kg），
+但数值迭代过程中可能出现极小的值，
+所以把求值用的 $C$ 截断到 $10^{-3}$ kg/kg，
+避免出现无穷大或者非数。
+这个下限比烘干判据 $0.15$ 小两个数量级，
+所以在真正关心的含水率范围内它根本不起作用，不影响任何结果。
 
-\texttt{TK = T + 273.15} 把摄氏度换算成开尔文。
-这一步非常重要。
-
-\why{温度为什么必须换算成开尔文}
-因为阿伦尼乌斯因子 $e^{-3850/T}$ 是从物理化学里来的，
-它描述化学反应速率随温度的变化，
-其中的 $T$ 必须是绝对温度。
-如果误用摄氏度，比如把 $50$ 代进去，
-会得到 $e^{-3850/50}=e^{-77}$，这是一个几乎等于零的数，
-水分扩散系数会变成零，干燥就无法进行。
-可以通过量纲检查发现这个错误：
+\textbf{第二，\texttt{TK = T + 273.15}。}
+Arrhenius 因子 $e^{-3850/TK}$ 里的温度必须用绝对温度。
+这一点如果弄错，把摄氏度 $50$ 直接代进去会得到 $e^{-77}$，
+这是一个几乎等于零的数，水分扩散系数会变成零，干燥就无法进行。
+代码把换算明确写在一行上，就是为了让这个约定显式可见。
+量纲检查也能发现这个错误：
 $3850$ 的量纲是温度，只有和同样量纲的开尔文相除才是无量纲的。
+
+\subsection{附件 2 与半径插值}
+
+文件第 188 行到第 202 行：
+
+\begin{lstlisting}[language=Python]
+def _load_radius():
+    """读附件 2，返回 (时间 [s], 半径 [m])；附件以 cm 记录，此处统一乘 1e-2 换成 m。"""
+    ws = openpyxl.load_workbook(_find_attach("附件2.xlsx"), data_only=True).active
+    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    t = np.array([float(r[0]) for r in rows])
+    R = np.array([float(r[1]) for r in rows]) * 1e-2   # cm -> m
+    return t, R
+
+
+_t_R, _R_hist = _load_radius()
+
+
+def R_of(t):
+    """问题4：半径分段线性插值（t 超出范围则取端点值）。"""
+    return np.interp(t, _t_R, _R_hist)
+\end{lstlisting}
+
+附件 2 的半径列以厘米为单位，读进来时统一乘 $10^{-2}$ 换成米，
+这样后面所有几何量都在同一个单位制里。
+\texttt{data\_only=True} 表示只读单元格的值、不读公式，
+\texttt{min\_row=2} 表示跳过表头行。
+
+\texttt{R\_of} 用分段线性插值。附件 2 每 $1800$ 秒给一个点，
+而求解器需要任意时刻的半径，插值是必须的。
+超出附件范围时 \texttt{np.interp} 默认取端点值，
+本题不会出现这种情况（积分区间比附件短）。
+
+\subsection{Bessel 特征根}
+
+文件第 206 行到第 228 行：
+
+\begin{lstlisting}[language=Python]
+def bessel_roots(Bi, n):
+    """求 beta*J1(beta) = Bi*J0(beta) 的前 n 个正根（升序）。
+
+    Bi = h*R0/k 为传热 Biot 数；递推关系 J0'=-J1 保证该式正是 Robin 边界条件
+    k*dT/dr = -h*T 分离变量后的特征方程。求根用"先用 J1 的零点把实轴分段，
+    再在每段内用 brentq 收缩"的办法——不依赖初值猜测，且不会漏根或串根。
+    """
+    from scipy.special import jnp_zeros
+    z = jnp_zeros(1, n + 2)                    # J1 的正零点
+    roots = []
+    f = lambda b: b * j1(b) - Bi * j0(b)
+    # 第一个根在 (0, z0)
+    lo = 1e-12
+    hi = z[0] - 1e-12
+    if f(lo) * f(hi) < 0:
+        roots.append(brentq(f, lo, hi, xtol=1e-15, rtol=8.9e-16))
+    for i in range(len(z) - 1):
+        lo, hi = z[i] + 1e-12, z[i + 1] - 1e-12
+        if f(lo) * f(hi) < 0:
+            roots.append(brentq(f, lo, hi, xtol=1e-15, rtol=8.9e-16))
+        if len(roots) >= n:
+            break
+    return np.array(roots[:n])
+\end{lstlisting}
+
+这个函数求特征方程
+\begin{equation}
+\beta J_1(\beta)=\mathrm{Bi}\,J_0(\beta)
+\end{equation}
+的前 $n$ 个正根。这个方程没有解析解，只能用数值求根，
+程序调用 scipy 的 \texttt{brentq}，用的是布伦特法。
+
+\why{为什么不能用一般的求根方法}
+因为贝塞尔函数的零点分布需要专门的策略：
+如果随便给一个区间让求根器去找，很可能漏根或者串根。
+布伦特法要求先给出一个两端函数值异号的区间，这样的区间叫括号。
+代码的做法是用 $J_1$ 的零点把实轴分段，
+因为在相邻两个 $J_1$ 零点之间，函数 $f$ 恰好只有一个变号点，
+这样可以保证不漏根、不串根，而且不依赖初值猜测。
+逐行看：第 214 行 \texttt{jnp\_zeros(1, n+2)} 取 $J_1$ 的前 $n+2$ 个正零点，
+多取两个是为了保证区间够用；
+第 216 行定义被求根的函数 $f(\beta)=\beta J_1(\beta)-\mathrm{Bi}J_0(\beta)$。
+第 218 行到第 221 行是特殊处理的第一段：
+第一个根落在 $0$ 到 $J_1$ 的第一个零点 $z_0$ 之间，不在两个零点之间，
+所以要单独给一个区间 $[10^{-12},\,z_0-10^{-12}]$，
+两端各让开一点点是为了避开端点处的零值。
+第 222 行到第 227 行在每两个相邻零点之间检查两端是否异号，异号才调用 \texttt{brentq} 求根；
+第 226 行到第 227 行在凑够 $n$ 个根以后提前跳出。
+第 228 行只返回前 $n$ 个。
+
+\texttt{xtol} 与 \texttt{rtol} 设到浮点极限附近（$10^{-15}$ 与 $8.9\times10^{-16}$），
+是因为特征根要用来做解析解，多一位精度都是好的。
+
+\keypoint
+\texttt{common.py} 是整份代码的单一数据源：
+参数、物性、环境、附件读取、特征根全部在这里，其他文件只调用不重复定义。
 
 % =====================================================================
 \section{闭式解文件 analytic\_p1.py 逐段解释}
 
 \subsection{它解决什么问题}
 
-问题一里温度场和水分场互不影响，而且烘房温度恰好是指数形式，
-所以温度场可以写成公式，不需要数值求解。
-这个公式就是第一部分没讲、第二部分也没讲的
-贝塞尔--杜阿梅尔展开式。
+这个文件给出问题一温度场的解析解。
+它的意义不是「多算一个结果」，而是给数值方法当标尺。
+
+问题一的物性都是常数，温度方程里不含含水率，
+所以温度场与水分场完全解耦，可以单独求解。
+又因为烘房温度恰好是指数型变化，温度场可以不离散地求出闭式表达式。
+有了它，后面所有关于谱方法精度的讨论才有依据：
+如果问题一也只有数值解，
+那整篇的验证就只剩「两种数值方法互相对得上」，
+而两只手互相挠背是证明不了任何事的。
 
 \why{有了数值解为什么还要写公式解}
 因为公式解是精确的，可以作为数值解的检验标准。
@@ -782,6 +1274,7 @@ $3850$ 的量纲是温度，只有和同样量纲的开尔文相除才是无量�
 
 \subsection{准静态分解的思路}
 
+闭式解的推导在第六部分完整展开，这里只说代码里的对应关系。
 方程是
 
 \begin{equation}
@@ -813,62 +1306,82 @@ w(r,t)=W(r)e^{-t/\tau_T}+\hat w(r,t).
 跟着外界温度走的准静态部分、从初值出发的瞬态级数部分。
 代码里的做法是先把各级常数算好，再在函数里把这三部分加起来。
 
-\subsection{代码实现}
+文件第 32 行到第 51 行是模块级的常数与系数：
 
 \begin{lstlisting}[language=Python]
+RHO, CP, K = 820.0, 2600.0, 0.36      # [kg/m3] [J/(kg K)] [W/(m K)]
+R = cm.R0                             # 药材半径 R0 [m]
+ALPHA = K / (RHO * CP)                # 热扩散率 alpha = k/(rho*cp) [m2/s]
+BI = cm.h * R / K                     # 传热 Biot 数 h*R0/k（无量纲）
+A = cm.Tset - cm.T0                   # 惯性式幅值 A = Tset - T0 [degC]
+# 准静态项的波数 kappa [1/m]：把 w = W(r)exp(-t/tauT) 代回方程后，指数因子上
+# 剩下的常数项给出 kappa^2 = 1/(alpha*tauT)，量纲上正是 1/热扩散长度。
+KAPPA = np.sqrt(1.0 / (ALPHA * cm.tauT))
+
+# ---------------- 特征函数展开的系数（取 NROOT 项） ----------------
+# 特征值 beta_n 由 Robin 条件分离变量得到，即 beta*J1(beta) = Bi*J0(beta) 的正根。
+NROOT = 200
 BET = cm.bessel_roots(BI, NROOT)
-GAM = ALPHA * BET ** 2 / R ** 2
-_B = cm.h * A / (K * KAPPA * j1(KAPPA * R) - cm.h * j0(KAPPA * R))
+GAM = ALPHA * BET ** 2 / R ** 2       # 模态衰减率 gamma_n = alpha*beta_n^2/R0^2 [1/s]
+# _NN 是归一化内积 N_n = 2*J1/(beta*(J0^2+J1^2))（J0、J1 在 beta_n 处取值），
+# BN 则是瞬态级数系数 b_n：把初值 w_hat(r,0) = -W(r) 按 J0(beta_n r/R0) 展开得到，
+# 其分母 beta_n^2/R0^2 - kappa^2 是本征波数与准静态波数的平方差：kappa 恰等于某个
+# beta_n/R0 时该项发散，本题二者相差较远，各 b_n 都是有限值。
 _NN = 2 * j1(BET) / (BET * (j0(BET) ** 2 + j1(BET) ** 2))
 BN = A * KAPPA ** 2 * _NN / (BET ** 2 / R ** 2 - KAPPA ** 2)
 \end{lstlisting}
 
-上面这五行是 \texttt{analytic\_p1.py} 的第 36 到 40 行，
-它们在导入模块的时候算好一次，后面反复使用。逐个说明。
+逐个说明。
 
-第一行求特征值 $\beta_n$，也就是方程 $\beta J_1(\beta)=\mathrm{Bi}J_0(\beta)$ 的根。
-这个方程没有解析解，只能用数值求根。
-程序调用 scipy 的 \texttt{brentq}，用的是布伦特法。
-布伦特法要求先给出一个两端函数值异号的区间，这样的区间叫括号。
-括号端点是这样来的：先用 \texttt{jnp\_zeros(1, n+2)} 取 $J_1$ 的前 $n+2$ 个正零点，
-再加上端点 $0$，把实轴切成 $[0,z_0]$、$[z_0,z_1]$ 这样一串小区间；
-然后在每个小区间里检查两端的函数值是否异号，异号才调用 \texttt{brentq} 求根。
-逐行的说明与理由在第六部分第八章，这里只把方法名称与必要步骤说准。
+第 32 行取出常数物性 $\rho$、$c_p$、$k$，第 33 行取出半径。
+第 34 行算热扩散率 $\alpha=\dfrac{k}{\rho c_p}$。
+第 35 行算传热 Biot 数 $\mathrm{Bi}=\dfrac{hR_0}{k}$，
+它是无量纲的，衡量表面换热与内部导热谁更强。
+第 36 行算惯性式的幅值 $A=T_{\mathrm{set}}-T_0$。
+第 39 行算准静态项的波数 $\kappa=\sqrt{1/(\alpha\tau_T)}$，
+它的物理意义是「热扩散长度的倒数」，量纲是 $1/$米。
 
-第二行算衰减率 $\gamma_n=\dfrac{\alpha\beta_n^2}{R^2}$。
-
-第三行算准静态部分的系数
-
+第 43 行取截断项数 $200$；第 44 行求特征值 $\beta_n$，
+也就是方程 $\beta J_1(\beta)=\mathrm{Bi}J_0(\beta)$ 的根，
+求根用的函数就是上一节讲的 \texttt{cm.bessel\_roots}。
+第 45 行算衰减率
 \begin{equation}
-B=\frac{hA}{k\kappa J_1(\kappa R)-hJ_0(\kappa R)} .
+\gamma_n=\frac{\alpha\beta_n^2}{R^2}.
 \end{equation}
-
-它就是准静态解 $W(r)=A+BJ_0(\kappa r)$ 里的系数 $B$，
-这个式子由表面处的 Robin 条件定出，推导在第六部分第三章。
-代码在导入时把它算好一次，名字前面的下划线表示这是内部使用的量；
-函数 \texttt{T\_exact} 换一组标定值调用时，会在内部把同一个式子重算一遍。
-
-第四行算归一化系数
-
+第 50 行算归一化系数
 \begin{equation}
-N_n=\frac{2J_1(\beta_n)}{\beta_n\left[J_0^2(\beta_n)+J_1^2(\beta_n)\right]}.
+N_n=\frac{2J_1(\beta_n)}{\beta_n\left[J_0^2(\beta_n)+J_1^2(\beta_n)\right]},
 \end{equation}
-
 \texttt{j0} 和 \texttt{j1} 是 scipy 提供的第一类贝塞尔函数。
-
-第五行算展开系数
-
+第 51 行算展开系数
 \begin{equation}
 b_n=\frac{A\kappa^2N_n}{\beta_n^2/R^2-\kappa^2}.
 \end{equation}
-
+这四行在模块导入时就算好了，一共取 $200$ 阶。
 这些式子的完整推导在第六部分，
 那里从齐次化、准静态分解、特征值问题一直写到第 $n$ 个展开系数 $b_n$ 的来历，
-一步都不跳。这里只是把公式直接翻译成代码。
+一步都不跳。
+
+\subsection{代码实现：T\_exact}
+
+文件第 54 行到第 73 行：
 
 \begin{lstlisting}[language=Python]
 def T_exact(r, t, Tset=None, tauT=None, nterm=NROOT):
-    ...
+    """闭式解 T(r,t) [degC]，r [m]、t [s]；返回与 r 同形状的数组。
+
+    Tset、tauT 不给就取 common.py 的标定值，传别的值可做环境参数敏感性分析；
+    nterm 为瞬态级数的截断项数，默认 NROOT = 200（n >= 2 的模态衰减很快）。
+    级数形式：T = T_air(t) + (A + B*J0(kappa*r))*exp(-t/tauT)
+                        + sum_n b_n*J0(beta_n*r/R0)*exp(-gamma_n*t)
+    """
+    Ts = cm.Tset if Tset is None else Tset
+    tau = cm.tauT if tauT is None else tauT
+    a = Ts - cm.T0
+    kap = np.sqrt(1.0 / (ALPHA * tau))
+    B = cm.h * a / (K * kap * j1(kap * R) - cm.h * j0(kap * R))
+    bn = a * kap ** 2 * _NN / (BET ** 2 / R ** 2 - kap ** 2)
+    r = np.atleast_1d(np.asarray(r, dtype=float))
     val = np.full(r.shape, Ts - (Ts - cm.T0) * np.exp(-t / tau))
     val += (a + B * j0(kap * r)) * np.exp(-t / tau)
     for n in range(nterm):
@@ -876,24 +1389,58 @@ def T_exact(r, t, Tset=None, tauT=None, nterm=NROOT):
     return val
 \end{lstlisting}
 
-清单里的省略号代表函数开头的六行，也就是文件里的第 45 到 50 行。
-这六行先从传进来的参数取出这一次要用的设定温度与时间常数，
-再据此重算 $a=T_{\mathrm{set}}-T_0$、
-$\kappa=\sqrt{1/(\alpha\tau_T)}$、
-$B=\dfrac{ha}{k\kappa J_1(\kappa R)-hJ_0(\kappa R)}$
-以及全部展开系数 $b_n=\dfrac{a\kappa^2N_n}{\beta_n^2/R^2-\kappa^2}$。
-这两个参数如果省略，函数就用模块级的 \texttt{cm.Tset} 与 \texttt{cm.tauT}，
-也就是生产口径；
-如果把另一组环境标定值传进来，
-函数会把 $\kappa$、$B$、$b_n$ 全部按新值重算一遍，
-而不是沿用导入时算好的那一套。
-第六部分第十章的敏感性检验就是从这个入口进去的：
-它把设定温度改成 $50.2100$ 或 $50.2140$，
-再调用同一个函数比较 $t=1800$ 秒的温度。
+逐行看。
 
-省略号之后的第一行是烘房温度本身。
-第二行加上准静态部分 $W(r)e^{-t/\tau_T}$。
-循环里逐项累加瞬态部分 $b_nJ_0(\beta_nr/R)e^{-\gamma_nt}$。
+第 62 行和第 63 行允许调用者临时换用别的设定值与时间常数，
+不给就用参数文件里的标准值，这为后续的参数敏感性分析留了接口。
+
+第 64 行 $a=T_{\mathrm{set}}-T_0$，是惯性式的幅值，
+也就是温度从初值升到设定值要涨多少。
+
+第 65 行算出准静态项的波数
+$\kappa=\sqrt{1/(\alpha\tau_T)}$。
+
+第 66 行算准静态项的系数
+\begin{equation}
+B=\frac{ha}{k\kappa J_1(\kappa R)-hJ_0(\kappa R)} .
+\end{equation}
+它就是准静态解 $W(r)=A+BJ_0(\kappa r)$ 里的系数 $B$，
+分母 $\kappa J_1(\kappa R)-hJ_0(\kappa R)$ 来自把 $W$ 代入 Robin 边界条件，
+推导在第六部分第三章。
+
+这里要特别说明一点：\textbf{最终版本里系数 $B$ 是在函数内部计算的}，
+不再是一个叫 \texttt{\_B} 的模块级常量。
+原因就是上面第 62 行和第 63 行允许换标定值：
+如果 $B$ 在导入时算好一次，那么换一组 $\tau_T$ 调用时，
+它还会沿用旧的值，敏感性分析的结果就是错的。
+所以函数把 $a$、$\kappa$、$B$、$b_n$ 全部按这一次传进来的
+$T_{\mathrm{set}}$ 与 $\tau_T$ 重算一遍。
+旧的模块级 \texttt{\_B} 已经删掉了；
+留在模块级的只有那些不随标定值变化的量，也就是
+\texttt{BET}、\texttt{GAM}、\texttt{\_NN} 与 \texttt{BN} 里的
+$\beta_n$、$\gamma_n$、$N_n$。
+
+第 67 行算瞬态级数的系数
+\begin{equation}
+b_n=\frac{a\kappa^2N_n}{\beta_n^2/R^2-\kappa^2},
+\end{equation}
+\texttt{\_NN} 是归一化内积，
+分母 $\beta_n^2/R^2-\kappa^2$ 是本征波数与准静态波数的平方差。
+
+第 68 行把输入统一转成数组，保证标量也能处理。
+接下来三行就是级数本身，写成一个初值再加上两段修正，
+形式上更接近「从环境值出发，再补上两个偏离量」：
+
+\begin{itemize}[leftmargin=1.8em,itemsep=2pt]
+\item 第 69 行的 \texttt{val} 是烘房环境温度本身
+  $T_{\mathrm{set}}-(T_{\mathrm{set}}-T_0)e^{-t/\tau}$。
+\item 第 70 行加上准静态部分
+  $(a+BJ_0(\kappa r))e^{-t/\tau}$，
+  也就是温度场相对于环境的稳定偏离。
+\item 第 71 行和第 72 行用循环把各阶瞬态模态
+  $b_nJ_0(\beta_nr/R)e^{-\gamma_nt}$ 累加上去，
+  每一阶都带一个随时间指数衰减的因子。
+\end{itemize}
 
 \why{循环只需要很少几次}
 因为衰减因子 $\gamma_nt$ 随 $n$ 增长很快。
@@ -901,37 +1448,202 @@ $B=\dfrac{ha}{k\kappa J_1(\kappa R)-hJ_0(\kappa R)}$
 $1.529$、$13.191$、$39.483$、$80.742$。
 第二项就已经被压到 $e^{-13.2}\approx2\times10^{-6}$ 以下，
 第三项更是小于 $10^{-17}$。
-所以实际上取两项就能达到机器精度。
+所以实际上取两项就能达到机器精度，
+默认的 $200$ 阶是留了很大余量的。
+
+\subsection{自检函数：让解析解自己证明自己}
+
+文件第 76 行到第 98 行，函数 \texttt{\_selftest} 的全部内容：
+
+\begin{lstlisting}[language=Python]
+def _selftest():
+    """返回自检报告文本：特征值方程残差、t=0 处的全场极差与 nterm 敏感性表。
+
+    t=0 的极差就是瞬态级数在初值处的截断残差（理论上为 0），nterm 加密后该值
+    与 T(0,1800)、T(R0,1800) 是否变化，说明截断项数取得够不够。供 run_all.py 打印。
+    """
+    out = []
+    out.append("alpha = %.6e m^2/s ; Bi = %.6f ; kappa = %.6f 1/m ; kappa*R = %.6f"
+               % (ALPHA, BI, KAPPA, KAPPA * R))
+    out.append("beta_1..4 = %s" % np.array2string(BET[:4], precision=10))
+    out.append("特征方程残差 max|beta*J1-Bi*J0| = %.3e"
+               % np.max(np.abs(BET * j1(BET) - BI * j0(BET))))
+    out.append("b_1..4   = %s" % np.array2string(BN[:4], precision=6))
+    out.append("gamma_n*t(1800) n=1..4 = %s" % np.array2string(GAM[:4] * 1800, precision=3))
+    rchk = np.linspace(0, R, 41)
+    out.append("t=0 全场极差（截断残差，应趋于 0）= %.3e" % np.ptp(T_exact(rchk, 0.0)))
+    out.append("  注：t>0 时 n>=2 项已被 exp(-gamma_n t) 压到 e^-13 以下，")
+    out.append("      故 t=1800 s 的结果对 nterm 不敏感（见下）。")
+    for nt in [1, 2, 3, 4, 8]:
+        out.append("nterm=%d  T(0,1800)=%.10f  T(R,1800)=%.10f"
+                   % (nt, T_exact(0.0, 1800.0, nterm=nt)[0],
+                      T_exact(R, 1800.0, nterm=nt)[0]))
+    return "\n".join(out)
+\end{lstlisting}
+
+它检查三件事。
+
+\textbf{第一，特征方程残差。}第 86 行和第 87 行把求出来的根代回方程，
+看左边减右边有多接近零。
+实际运行结果是 $1.8\times10^{-12}$，属于机器精度量级，说明特征根求对了。
+
+\textbf{第二，$t=0$ 时的全场极差。}第 90 行和第 91 行在 $0$ 到 $R_0$ 上取 $41$ 个点，
+算 $T_{\mathrm{exact}}(r,0)$ 的最大值减最小值。
+理论上 $t=0$ 处级数应该精确还原初值，极差为零。
+实际算出来是 $3.5\times10^{-8}$，
+这个小量就是级数截断到 $200$ 阶留下的残差。
+它同时告诉我们：级数本身的收敛速度足够快，
+取 $200$ 阶已经让截断误差降到可忽略。
+
+\textbf{第三，截断项数的敏感性。}第 94 行到第 97 行把 \texttt{nterm}
+分别取 $1$、$2$、$3$、$4$、$8$，
+看 $T(0,1800)$ 与 $T(R_0,1800)$ 变不变。
+实际结果是 \texttt{nterm} 从 $2$ 开始数值就完全不变了。
+原因是第二阶之后的衰减因子 $\gamma_nt$ 在 $t=1800$ 秒时
+已经达到 $13.2$、$39.5$、$80.7$，
+对应的指数 $e^{-13.2}\approx1.8\times10^{-6}$ 以下。
+
+\why{一个解析解为什么要带自检}
+因为解析解是基准。
+如果基准本身算错了，用它去校核数值方法就会得出「数值方法错了」的错误结论。
+\texttt{\_selftest} 让这段解析解能够自己证明自己：
+特征根残差说明求根对，$t=0$ 极差说明级数对，截断敏感性说明项数够。
+三件事都过关，它才有资格当标尺。
+这个函数不做自动断言、只打印出来供人判读，
+是因为它要报的是一组量级，不是一个非黑即白的判断。
 
 \keypoint
-代码部分讲完了。要点是：
-参数集中管理并支持搬迁，主求解器用通量形式实现方程，
-边界条件以物理量身份进入，闭式解用来检验数值解。
+闭式解文件的结构是：模块级算好不随标定值变化的特征根与归一化内积，
+函数内部按这一次传入的标定值重算 $a$、$\kappa$、$B$、$b_n$，
+最后把环境温度、准静态项、瞬态级数三部分相加；
+\texttt{\_selftest} 负责让这个基准自己证明自己。
 
 % =====================================================================
-\section{驱动脚本的作用}
+\section{驱动脚本逐段解释}
 
 \subsection{run\_all.py：一键复跑}
 
-这个脚本按顺序做四件事。第一，标定烘房环境并打印拟合参数。
-第二，求解四个问题并打印要求的表格。
-第三，运行全部验证，包括与闭式解比较、两种对照格式的互证、收敛性研究。
-第四，把所有输出写进一个文本文件。
+这个文件把四个问题的求解、三族离散的互证、网格与时间收敛性、
+烘干时刻与关键答案串成一趟跑完，写成一份文本报告。
 
-\why{为什么要把全部结果写进文件}
-因为屏幕输出会随窗口关闭而消失，而且控制台的编码可能把中文显示成乱码。
-写进文件以后可以随时打开查看，
-也可以作为真实运行过的证据保留下来。
+文件第 59 行到第 62 行：
 
-\subsection{sensitivity.py：参数扰动灵敏度分析}
+\begin{lstlisting}[language=Python]
+def w(s=""):
+    """写一行报告：同时进内存缓冲与屏幕（flush=True 便于重定向时实时看到进度）。"""
+    OUT.append(str(s))
+    print(str(s), flush=True)
+\end{lstlisting}
 
-这个脚本把物性经验式里的某个常数乘上一个扰动因子，
-重新求解并记录烘干时长的变化。一次扰动只改一个常数。
+报告不是边算边写文件的，而是先攒在内存列表 \texttt{OUT} 里，
+最后一次性落盘，也就是第 386 行：
 
-实现上用了 Python 的一个特性：函数可以被临时替换。
-代码先把原来的物性函数存在 \texttt{\_orig\_props} 里，
-换成带扰动的版本，求解完再换回去。
-模块级的常数 \texttt{hm}、\texttt{h}、\texttt{Tset} 也用同样的办法处理。
+\begin{lstlisting}[language=Python]
+open("复跑报告.txt", "w", encoding="utf-8").write("\n".join(OUT))
+\end{lstlisting}
+
+这样做的原因是：如果中途报错，
+磁盘上不会留下半份看起来像完整报告的文件。
+\texttt{encoding="utf-8"} 必须写，否则在中文系统上会用 GBK 写盘。
+
+报告分 $12$ 节，从环境标定一直排到关键答案汇总，
+每一节对应论文里的某一张表或某一组验证数据。读报告时可以拿论文逐条对位。
+十二节的内容依次是：第 0 节烘房环境标定、
+第 1 节闭式解自检、第 2 节问题一谱解的空间收敛性、
+第 3 节与第 4 节问题一的表 1 与表 2、
+第 5 节水分场的网格收敛性、第 6 节第三族离散的互证、
+第 7 节问题二的表 3 与表 4、第 8 节两种离散族在一点的互证、
+第 9 节问题三的烘干时间、第 10 节问题四含收缩的烘干时间、
+第 11 节对照格式的时间步敏感性、第 12 节关键答案汇总。
+
+文件开头还有一道防护，也就是第 40 行到第 43 行：
+
+\begin{lstlisting}[language=Python]
+if __name__ != "__main__":
+    raise RuntimeError(
+        "run_all 的复跑逻辑在模块顶层，import 会立刻重跑全流程并覆盖 复跑报告.txt。"
+        "请用 `python run_all.py` 运行。")
+\end{lstlisting}
+
+因为这个脚本的逻辑写在模块顶层而不是 \texttt{main()} 函数里，
+别人误写一句 \texttt{import run\_all} 就会触发十几分钟的完整计算，
+还会覆盖掉已有的报告。拦一道比事后解释便宜。
+
+第 386 行写的是相对路径，所以报告落在运行命令所在的目录里，
+在 \texttt{code/} 目录下运行就落在 \texttt{code/} 目录里。
+
+\subsection{sensitivity.py：参数扰动与环境口径}
+
+这个脚本回答两个问题：哪个参数最要紧，
+以及「怎么把实测序列变成边界条件」这件事影响多大。
+
+文件第 47 行到第 79 行，它把物性公式重写了一遍：
+
+\begin{lstlisting}[language=Python]
+def props_pert(prob, C, T, pert):
+    """按扰动因子重算物性，返回 (rho, cp, k, D)，与 common.props 的结构一致。
+    ...
+    """
+    C = np.asarray(C, dtype=float)
+    T = np.asarray(T, dtype=float)
+    Cf = np.maximum(C, C_FLOOR)
+    TK = T + 273.15
+    E = 3850.0 * pert.get("E", 1.0)
+    fD = pert.get("D0", 1.0)
+    fa = pert.get("a", 1.0)
+    if prob == 1:
+        rho = np.full_like(C, 820.0)
+        cp = np.full_like(C, 2600.0)
+        k = np.full_like(C, 0.36)
+        D = 7e-9 * fD * np.exp(-0.89 * fa / Cf)
+    elif prob in (2, 3):
+        rho = 650.0 + 128.0 * C
+        cp = 1450.0 + 2736.0 * C / (C + 1.0)
+        k = 0.21 + 0.38 * C / (C + 1.0)
+        D = 2.4e-3 * fD * np.exp(-0.45 * fa / Cf) * np.exp(-E / TK)
+    else:
+        rho = 760.0 + 90.0 * C
+        cp = 1850.0 + 2150.0 * C / (C + 1.0)
+        k = 0.12 + 0.20 * C / (C + 1.0)
+        D = 4.2e-4 * fD * np.exp(-0.30 * fa / Cf) * np.exp(-E / TK)
+    return rho, cp, k, D
+\end{lstlisting}
+
+每个因子乘上一个扰动倍数。
+\texttt{pert} 是一个字典，缺省值是 $1.0$ 也就是不扰动；
+取值写成 \texttt{pert.get(键, 缺省值)} 的形式，
+例如取 $E$ 的倍数就写 \texttt{pert.get("E", 1.0)}，
+意思是「没有这个键时就取 $1$」。
+清单里第一行的省略号代表 docstring 的其余各行，
+它们写明了每个键的含义与量纲。
+
+扰动的施加方式是临时替换模块属性，算完立刻还原。
+文件第 98 行到第 122 行与第 161 行到第 165 行：
+
+\begin{lstlisting}[language=Python]
+    import spectral
+    pert = pert or {}
+    base_props = cm.props
+    base_T, base_C = cm.T_air, cm.C_air
+    base_h, base_hm = cm.h, cm.hm
+    base_Tset = cm.Tset
+    ...
+    cm.props = _props
+    cm.h = base_h * pert.get("h", 1.0)
+    cm.hm = base_hm * pert.get("hm", 1.0)
+    if "Tset" in pert:
+        cm.Tset = base_Tset + pert["Tset"]
+    if ambient == "raw":
+        ...
+    finally:
+        cm.props = base_props
+        cm.T_air, cm.C_air = base_T, base_C
+        cm.h, cm.hm = base_h, base_hm
+        cm.Tset = base_Tset
+\end{lstlisting}
+
+\texttt{try/finally} 保证不管中间出不出错都会还原。
+这样各组扰动之间互不影响，也不会污染后面其他脚本的运行环境。
 
 \why{为什么要用这种临时替换的做法}
 因为主求解器在内部调用的是 \texttt{common.props}。
@@ -941,35 +1653,186 @@ $1.529$、$13.191$、$39.483$、$80.742$。
 主求解器一行都不用改。
 这种做法叫猴子补丁，在科学计算脚本里很常见。
 
-运行结果是十二行数字，第四部分会逐行解读。
-在 0.4 秒就能算完一次烘干时长的规模下，
-这种扫描是划算的。
+\why{设定值扰动为什么用加减而物性扰动用乘除}
+因为两者的量纲不同。
+$E$、$a$、$D_0$ 是系数，按百分比扰动比较自然，所以用乘法；
+而烘房设定值 $T_{\mathrm{set}}$ 是一个具体的温度，
+正负 $0.2$ 开尔文这样的小平移更符合「标定误差」的物理含义，所以用加法。
+另外，一阶惯性式的初值锚定在实测的 $T_{\mathrm{air}}(0)=28$ 度上，
+平移设定值不会改变初值，被扰动的是设定值与整条升温轨迹。
+这一点写在文件第 113 行到第 115 行的注释里。
 
-\subsection{env\_compare.py：烘房环境两种口径对比}
+\textbf{环境口径的分叉也在同一个脚本里。}文件第 116 行到第 122 行：
 
-这个脚本回答一个很容易被忽略的问题：
-附件 1 给的是 241 个时刻的实测数据，
-而程序用的是把它们拟合成的一条光滑曲线，
-那么直接用表格数据插值会有什么不同。
+\begin{lstlisting}[language=Python]
+    if ambient == "raw":
+        cm.T_air = lambda t: np.where(np.asarray(t, dtype=float) <= cm.T_END,
+                                      np.interp(np.asarray(t, dtype=float),
+                                                cm._t_env, cm._Ta_env), cm.Tset)
+        cm.C_air = lambda t: np.where(np.asarray(t, dtype=float) <= cm.T_END,
+                                      np.interp(np.asarray(t, dtype=float),
+                                                cm._t_env, cm._Ca_env), cm.Cset)
+\end{lstlisting}
 
-脚本同样是临时替换 \texttt{common.T\_air} 与 \texttt{common.C\_air} 两个函数：
-一种口径取拟合曲线，另一种口径在预热平衡段取表格线性插值，
-两类环境都求解同一批问题，最后比较结果的差别。
-恒温干燥段两种口径完全一样，所以这个实验隔离出的正是
-预热平衡段的处理方式所造成的影响。
+\texttt{ambient="fit"} 用拟合曲线，
+\texttt{ambient="raw"} 把温度与含湿量同时换回附件 1 实测序列的线性插值，
+$4$ 小时之后仍取各自设定值。
+这一对比回答的是「环境建模方式的选择对结果有多大影响」，
+不需要另写一个脚本。
 
-\subsection{本部分没有讲到的脚本放在哪里}
+\textbf{一共 $12$ 组参数扰动。}文件第 184 行到第 197 行：
 
-第二部分讲原理时提到的两套对照格式，
-分别是 \texttt{fv\_theta.py} 与 \texttt{fv\_uniform.py}，
-它们用来验证主求解器，代码本身也需要逐行看懂。
-把结果写成题目要求的四个表格文件的 \texttt{make\_results.py}，
-以及生成插图的 \texttt{make\_figs.py} 与 \texttt{make\_fig3.py}，
-也一样重要。
+\begin{lstlisting}[language=Python]
+    cases = [
+        ("E   +2%  (3850 -> 3927 K)",      {"E": 1.02}),
+        ("E   -2%  (3850 -> 3773 K)",      {"E": 0.98}),
+        ("a   +2%  (0.45 -> 0.459)",       {"a": 1.02}),
+        ("a   -2%  (0.45 -> 0.441)",       {"a": 0.98}),
+        ("D0  +2%",                        {"D0": 1.02}),
+        ("D0  -2%",                        {"D0": 0.98}),
+        ("h   +2%  (25 -> 25.5 W/m2K)",    {"h": 1.02}),
+        ("h   -2%",                        {"h": 0.98}),
+        ("hm  +2%  (8e-7 -> 8.16e-7)",     {"hm": 1.02}),
+        ("hm  -2%",                        {"hm": 0.98}),
+        ("Tset +0.2 K (50.212 -> 50.412)", {"Tset": 0.2}),
+        ("Tset -0.2 K",                    {"Tset": -0.2}),
+    ]
+\end{lstlisting}
 
-为了让这一部分不至于太长，这五个脚本放在第五部分讲解。
-读完第三部分以后可以直接接到第五部分，中间不需要别的预备知识。
+六个参数各正负两档：物性侧的活化温度 $E$、活化浓度指数 $a$、
+扩散系数前因子 $D_0$ 取 $\pm2\%$，
+传递侧的对流换热系数 $h$、对流传质系数 $h_m$ 取 $\pm2\%$，
+环境侧的烘房设定温度 $T_{\mathrm{set}}$ 取 $\pm0.2$ 开尔文。
+每个扰动都要从头重解一次问题三，合计 $12$ 次，
+再加上环境口径的两组，结果写进 \texttt{中间数据/sensitivity.txt}。
+在 $0.4$ 秒就能算完一次烘干时长的规模下，这种扫描是划算的。
+
+\textbf{基准值随网格而变，这一点脚本自己声明了。}文件第 172 行到第 174 行：
+
+\begin{lstlisting}[language=Python]
+    log("基准网格 N=%d，基准口径（问题 3 物性 + 一阶惯性拟合环境）" % BASE_N)
+    log("注意：基准值随网格而变（N=48 得 205572.3 s，N=64 得 205574.5 s，")
+    log("      连续极限 205575.5 s）。本表所有相对变化均以本基准为分母。")
+\end{lstlisting}
+
+因为表里所有的相对变化都是以本网格的基准 $t_{\mathrm{dry}}$ 为分母算出来的，
+换一个网格再跑，分母就变了，百分比也会跟着变。
+把这句话打在最前面，是为了防止有人拿不同网格的两张表直接对比。
+
+\subsection{verify\_data.py：四类扫描与一致性校验}
+
+这个脚本负责生成收敛性与积分器稳定性两组图要用的数据，
+一共四类扫描。文件第 41 行到第 50 行：
+
+\begin{lstlisting}[language=Python]
+CRIT = 0.15
+# 空间扫描的网格；时间扫描的步长（s）。两者都是论文 fig22 的自变量。
+SPACE_N = [24, 32, 48, 64, 96, 128]
+TIME_DT = [40.0, 20.0, 10.0, 5.0, 2.0, 1.0, 0.5, 0.25]
+SPACE_RTOL = 1e-11          # 与生产设置一致
+FV_N = 1600                 # 定步长 theta 法的空间网格（论文表 11）
+FV_SPACE_N = [800, 1600, 3200, 6400]   # fig22(a) 的经典 FV 空间对照
+FV_SPACE_DT = 1.0                      # 该对照固定用的时间步（时间误差按 c*dt 扣除）
+INTEG_CFG = [("BDF", 1e-9), ("BDF", 1e-10), ("BDF", 1e-12),
+             ("Radau", 1e-11), ("LSODA", 1e-10)]
+\end{lstlisting}
+
+四类分别是：谱解网格扫描（\texttt{SPACE\_N}）、
+定步长格式的时间步扫描（\texttt{TIME\_DT}，空间网格固定 $1600$）、
+经典有限体积的空间扫描（\texttt{FV\_SPACE\_N}，步长固定 $1$ 秒）、
+以及积分器与容差的组合（\texttt{INTEG\_CFG}，$5$ 组）。
+结果写进 \texttt{中间数据/verification.json}，
+带一个版本号 \texttt{DATA\_VERSION} 与生成命令。
+
+\textbf{最有价值的部分是一致性校验。}文件第 187 行到第 273 行，
+函数 \texttt{check\_consistency} 拿数据文件里存的烘干时刻与刚刚算出来的解对账，
+一共五条：
+
+\begin{enumerate}[leftmargin=1.8em,itemsep=2pt]
+\item 空间扫描的 $t_{\mathrm{dry}}$ 必须随 $N$ 单调不减；
+\item 空间扫描里 $N=64$ 的那一项必须等于解缓存里真实算出的 $t_{\mathrm{dry}}$
+  （差超过 $0.05$ 秒就说明数据文件过期）；
+\item 时间扫描的 $t_{\mathrm{dry}}$ 必须随步长减小而单调增大，
+  而且相邻增量对步长的双对数斜率必须接近 $1$，也就是严格一阶收敛；
+\item 经典有限体积的空间对照必须单调收敛，
+  扣掉时间误差 $c\Delta t$ 之后不能超过谱解的连续极限；
+\item 积分器与容差那 $6$ 个点的极差必须小于 $0.05$ 秒，
+  否则「极差只有 $0.007$ 秒」这个结论就不成立。
+\end{enumerate}
+
+任何一条不成立就抛异常并中止，报错信息里直接给出重新生成的命令。
+
+\why{为什么要专门写一个对账函数}
+因为图是「死的」，数据是「活的」。
+如果改了模型参数却忘了重新生成验证数据，
+图上画的还是旧解的收敛曲线，而正文引用的是新数，
+两者对不上却很难从图上发现。
+对账函数把这件事变成不可能：宁可不画图，也不画一张来源不明的图。
+\texttt{verify\_data.py} 自己也有两种用法：
+不带参数只做校验（秒级，\texttt{run\_all.py} 与 \texttt{make\_figures.py} 内部就是这么调它的），
+带 \texttt{--recompute} 才真实复跑四类扫描并重写数据文件（约 $22$ 分钟）。
+
+\subsection{console\_utf8.py：一个三十行的小文件}
+
+文件第 20 行到第 33 行：
+
+\begin{lstlisting}[language=Python]
+def fix_console():
+    """把 stdout/stderr 切到 UTF-8；失败时静默跳过，不阻断主流程。
+
+    参数与返回：均为空（就地重配两个标准流）。
+    errors="replace" 是关键：即使下游终端不接受 UTF-8，也只是把个别字显示成问号，
+    不会让整段复跑因为一次 print 抛 UnicodeEncodeError 而中断。
+    """
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        # 需要 Python 3.7+ 才有的 reconfigure，且个别环境的重定向流不支持；
+        # 这种情况退回平台默认编码即可，不影响任何计算结果。
+        pass
+\end{lstlisting}
+
+它只做一件事：把标准输出的编码切成 UTF-8。
+
+\why{为什么需要它}
+Windows 的控制台默认用 GBK 编码，而报告里全是中文和希腊字母，
+直接 print 会抛编码异常或者输出一堆乱码。
+这个函数必须在任何 print 之前调用，
+所以各个脚本的第一行有效代码就是它：
+
+\begin{lstlisting}[language=Python]
+from console_utf8 import fix_console
+fix_console()
+\end{lstlisting}
+
+\texttt{errors="replace"} 是关键：
+即使下游终端不接受 UTF-8，也只是把个别字显示成问号，
+不会让整段复跑因为一次 print 抛异常而中断。
+\texttt{try/except} 那一层也有用：
+\texttt{reconfigure} 需要 Python 3.7 以上，
+而且个别环境的重定向流不支持它，
+这时退回平台默认编码即可，不影响任何计算结果。
+这就是为什么把这个函数单独放一个文件：
+四个会打印中文的脚本都要用它，分别是
+\texttt{run\_all.py}（第 34 行）、\texttt{make\_results.py}（第 33 行）、
+\texttt{sensitivity.py}（第 26 行）与 \texttt{make\_figures.py}（第 29 行），
+写成模块以后每个脚本只要两行。
+
+\subsection{这一部分与第五部分的分工}
+
+第三部分讲的是出结果的代码：
+参数文件、主求解器、闭式解基准，以及直接调用它们的驱动脚本。
+第五部分讲的是出验证和出表出图的代码：
+两套对照求解器、结果文件生成、受控对照、以及整套插图体系。
+
+两部分的划分不是按重要性，而是按「读到哪一步」：
+看完第三部分，你能跑出结果；
+看完第五部分，你能知道结果可不可信、以及它是怎么变成论文里的表格和图的。
 
 \keypoint
-第三部分讲的是主干：参数、主求解器、闭式解、驱动脚本。
-第五部分讲的是配套：两套对照格式、结果表格、插图。
+第三部分涉及的七个文件构成主干：\texttt{common.py} 给参数，
+\texttt{spectral.py} 算解，\texttt{analytic\_p1.py} 给基准，
+\texttt{run\_all.py}、\texttt{sensitivity.py}、\texttt{verify\_data.py}
+各自跑一类分析，\texttt{console\_utf8.py} 保证中文能打出来。
+它们都通过 \texttt{common.py} 这一个数据源连接起来。
