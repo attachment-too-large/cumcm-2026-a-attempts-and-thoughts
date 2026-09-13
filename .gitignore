@@ -14,6 +14,10 @@ venv/
 *.fls
 *.fdb_latexmk
 
+# MiKTeX 便携配置目录（编译时在文档目录下临时创建）
+_mk*/
+_miktex/
+
 # 系统
 Thumbs.db
 desktop.ini
