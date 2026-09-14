@@ -7,7 +7,7 @@
 
 ## 序
 
-![仿费马边注](assets/费马式边注.png)
+![仿费马边注：手写动画](assets/费马式边注.gif)
 
 > *Cuius rei demonstrationem mirabilem sane detexi.*
 > *Hanc marginis exiguitas non caperet.*
