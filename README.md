@@ -16,8 +16,6 @@
 
 ![ATTACHMENT TOO LARGE](assets/attachment-too-large.gif)
 
-![WHY POST IT? BECAUSE IT NEVER GOT SUBMITTED.](assets/why-post-it.gif)
-
 ---
 
 ## 一、题目与主要结果
